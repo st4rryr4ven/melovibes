@@ -79,53 +79,75 @@ class User implements UserInterface
     #[ORM\Column()]
     private array $roles = ['ROLE_USER'];
 
+    /**
+     * Getters
+     */
     public function getId(): ?int
     {
         return $this->id;
     }
 
-    public function getLogin(): ?string
+    /**
+     * Returns the unique identifier used for authentification
+     */
+    public function getUserIdentifier(): string
     {
         return $this->login;
     }
 
-    public function setLogin(string $login): static
-    {
-        $this->login = $login;
 
-        return $this;
+    public function getLogin(): string
+    {
+        return $this->login;
     }
 
-    public function getPassword(): ?string
+    /**
+     * Returns hashed password
+     */
+    public function getPassword(): string
     {
         return $this->password;
     }
 
-    public function setPassword(string $password): static
+    public function getEmail(): string
+    {
+        return $this->email;
+    }
+
+    /**
+     * Returns user roles
+     */
+    public function getRoles(): array
+    {
+        return array_unique($this->roles);
+    }
+
+    /**
+     * Setters
+     */
+    public function setLogin(string $login): self
+    {
+        $this->login = $login;
+        return $this;
+    }
+
+    public function setEmail(string $email): static
+    {
+        $this->email = $email;
+        return $this;
+    }
+
+    /**
+     * Set hashed password
+     */
+    public function setPassword(string $password): self
     {
         $this->password = $password;
 
         return $this;
     }
 
-    public function getEmail(): ?string
-    {
-        return $this->email;
-    }
-
-    public function setEmail(string $email): static
-    {
-        $this->email = $email;
-
-        return $this;
-    }
-
-    public function getRoles(): ?array
-    {
-        return $this->roles;
-    }
-
-    public function setRoles(?array $roles): static
+    public function setRoles(array $roles): self
     {
         $this->roles = $roles;
 
@@ -137,14 +159,5 @@ class User implements UserInterface
      */
     public function eraseCredentials(): void
     {
-        // TODO: Implement eraseCredentials() method.
-    }
-
-    /**
-     * @return string
-     */
-    public function getUserIdentifier(): string
-    {
-        // TODO: Implement getUserIdentifier() method.
     }
 }
