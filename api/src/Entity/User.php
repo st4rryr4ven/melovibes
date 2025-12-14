@@ -10,11 +10,12 @@ use ApiPlatform\Metadata\Post;
 use ApiPlatform\Metadata\Put;
 use ApiPlatform\Metadata\Delete;
 use App\Repository\UserRepository;
-use App\State\UserPasswordProcessor;
+use App\State\UserProcessor;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\Security\Core\Validator\Constraints\UserPassword;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Serializer\Annotation\Groups;
 
@@ -36,13 +37,13 @@ use Symfony\Component\Serializer\Annotation\Groups;
             uriTemplate: '/users/register',
             denormalizationContext: ['groups' => ['serialization:user:create']],
             validationContext: ['groups' => ['Default', 'validation:user:create']],
-            processor: UserPasswordProcessor::class
+            processor: UserProcessor::class
         ),
         new Patch(
             denormalizationContext: ['groups' => ['serialization:user:update']],
             security: "(is_granted('ROLE_USER') and object == user) or is_granted('ROLE_ADMIN')",
             validationContext: ['groups' => ['Default', 'validation:user:update']],
-            processor: UserPasswordProcessor::class
+            processor: UserProcessor::class
         ),
 
         new Delete(
@@ -80,10 +81,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     /**
      * Plain password (not persisted)
      */
-    #[Assert\NotBlank(message: 'Le mot de passe est obligatoire.', groups: ['validation:user:create'])]
+    #[Assert\NotBlank(message: 'Le mot de passe est obligatoire.', groups: ['validation:user:create', 'validation:user:update'])]
     #[Assert\Length(min: 8, minMessage: "Le mot de passe doit contenir au moins 8 caractères.", groups: ['validation:user:create', 'validation:user:update'])]
     #[Groups(['serialization:user:create', 'serialization:user:update'])]
     private ?string $plainPassword = null;
+
+    #[UserPassword(message: "Mot de passe est incorrect.", groups: ['validation:user:update:password'])]
+    #[Groups(['serialization:user:update'])]
+    private ?string $currentPlainPassword = null;
 
     /**
      * User email address
@@ -98,7 +103,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      * User roles
      */
     #[ORM\Column(type: 'json')]
-    #[Groups(['user:read'])]
+    #[Groups(['user:read', 'serialization:user:update:admin'])]
     private array $roles = ['ROLE_USER'];
 
     /**
@@ -119,7 +124,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function eraseCredentials(): void
     {
-        $plainPassword = null;
+        $this->plainPassword = null;
+        $this->currentPlainPassword = null;
     }
 
     /**
@@ -188,6 +194,21 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setPlainPassword(string $plainPassword): self
     {
         $this->plainPassword = $plainPassword;
+        return $this;
+    }
+
+    public function addRole(string $role): self
+    {
+        if (!in_array($role, $this->roles)) {
+            $this->roles[] = $role;
+        }
+        return $this;
+    }
+
+    public function removeRole(string $role): self
+    {
+        $this->roles = array_filter($this->roles, fn($r) => $r !== $role);
+        return $this;
     }
 
 }
