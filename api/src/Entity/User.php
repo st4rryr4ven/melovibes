@@ -4,11 +4,16 @@ namespace App\Entity;
 
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\Metadata\Put;
 use ApiPlatform\Metadata\Delete;
 use App\Repository\UserRepository;
+use App\State\UserPasswordProcessor;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
+use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Serializer\Annotation\Groups;
@@ -17,25 +22,36 @@ use Symfony\Component\Serializer\Annotation\Groups;
 #[ORM\Table(name: 'user')]
 #[ORM\UniqueConstraint(name: 'UNIQ_LOGIN', columns: ['login'])]
 #[ORM\UniqueConstraint(name: 'UNIQ_EMAIL', columns: ['email'])]
+#[UniqueEntity(fields: ['login'], message: 'This login is already used.')]
+#[UniqueEntity(fields: ['email'], message: 'This email is already used.')]
 #[ApiResource(
     operations: [
-        new Post(
-            uriTemplate: '/users/register',
-            normalizationContext: ['groups' => ['user:read']],
-            denormalizationContext: ['groups' => ['user:write']]
+        new GetCollection(
+            security: "is_granted('ROLE_ADMIN')"
         ),
         new Get(
-            security: "is_granted('ROLE_USER') and object == user"
+            security: "(is_granted('ROLE_USER') and object == user) or is_granted('ROLE_ADMIN')"
         ),
-        new Put(
-            security: "is_granted('ROLE_USER') and object == user"
+        new Post(
+            uriTemplate: '/users/register',
+            denormalizationContext: ['groups' => ['serialization:user:create']],
+            validationContext: ['groups' => ['Default', 'validation:user:create']],
+            processor: UserPasswordProcessor::class
         ),
+        new Patch(
+            denormalizationContext: ['groups' => ['serialization:user:update']],
+            security: "(is_granted('ROLE_USER') and object == user) or is_granted('ROLE_ADMIN')",
+            validationContext: ['groups' => ['Default', 'validation:user:update']],
+            processor: UserPasswordProcessor::class
+        ),
+
         new Delete(
-            security: "is_granted('ROLE_USER') and object == user"
+            security: "(is_granted('ROLE_USER') and object == user) or is_granted('ROLE_ADMIN')"
         ),
-    ]
+    ],
+    normalizationContext: ['groups' => ['user:read']],
 )]
-class User implements UserInterface
+class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     /**
      * Unique identifier of the user
@@ -50,34 +66,61 @@ class User implements UserInterface
      * Unique username
      */
     #[ORM\Column(length: 30)]
-    #[Assert\NotBlank]
-    #[Assert\Length(min: 4, max: 30)]
-    #[Groups(['user:read', 'user:write'])]
-    private string $login;
+    #[Assert\NotBlank(groups: ['validation:user:create'])]
+    #[Assert\Length(min: 4, max: 30, groups: ['validation:user:create'])]
+    #[Groups(['user:read', 'serialization:user:create'])]
+    private ?string $login = null;
 
     /**
      * Hashed password
      */
-    #[ORM\Column()]
-    #[Assert\NotBlank]
-    #[Assert\Length(min: 8)]
-    #[Groups(['user:write'])]
+    #[ORM\Column]
     private string $password;
+
+    /**
+     * Plain password (not persisted)
+     */
+    #[Assert\NotBlank(message: 'Le mot de passe est obligatoire.', groups: ['validation:user:create'])]
+    #[Assert\Length(min: 8, minMessage: "Le mot de passe doit contenir au moins 8 caractères.", groups: ['validation:user:create', 'validation:user:update'])]
+    #[Groups(['serialization:user:create', 'serialization:user:update'])]
+    private ?string $plainPassword = null;
 
     /**
      * User email address
      */
     #[ORM\Column(length: 255)]
-    #[Assert\NotBlank]
-    #[Assert\Email]
-    #[Groups(['user:read', 'user:write'])]
-    private string $email;
+    #[Assert\NotBlank(groups: ['validation:user:create'])]
+    #[Assert\Email(groups: ['validation:user:create', 'validation:user:update'])]
+    #[Groups(['user:read', 'serialization:user:create', 'serialization:user:update'])]
+    private ?string $email = null;
 
     /**
      * User roles
      */
-    #[ORM\Column()]
+    #[ORM\Column(type: 'json')]
+    #[Groups(['user:read'])]
     private array $roles = ['ROLE_USER'];
+
+    /**
+     * Security methods
+     */
+    public function getUserIdentifier(): string
+    {
+        return $this->login;
+    }
+
+    /**
+     * Returns user roles
+     */
+    public function getRoles(): array
+    {
+        return array_unique(array_merge($this->roles, ['ROLE_USER']));
+    }
+
+    public function eraseCredentials(): void
+    {
+        $plainPassword = null;
+    }
 
     /**
      * Getters
@@ -86,15 +129,6 @@ class User implements UserInterface
     {
         return $this->id;
     }
-
-    /**
-     * Returns the unique identifier used for authentification
-     */
-    public function getUserIdentifier(): string
-    {
-        return $this->login;
-    }
-
 
     public function getLogin(): string
     {
@@ -114,12 +148,9 @@ class User implements UserInterface
         return $this->email;
     }
 
-    /**
-     * Returns user roles
-     */
-    public function getRoles(): array
+    public function getPlainPassword(): ?string
     {
-        return array_unique($this->roles);
+        return $this->plainPassword;
     }
 
     /**
@@ -154,10 +185,9 @@ class User implements UserInterface
         return $this;
     }
 
-    /**
-     * @return void
-     */
-    public function eraseCredentials(): void
+    public function setPlainPassword(string $plainPassword): self
     {
+        $this->plainPassword = $plainPassword;
     }
+
 }
