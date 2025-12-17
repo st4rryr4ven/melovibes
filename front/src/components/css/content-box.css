@@ -1,0 +1,35 @@
+div.content-box{
+  width:100%;
+  margin:10px auto;
+  display:flex;
+  flex-direction:column;
+}
+.top{
+  box-shadow: 0 0 0.3rem #999;
+  border-radius: 15px 15px 0px 0px;
+  background-color: rgb(140, 200, 250);
+  border-bottom: black 2px solid;
+  padding:8px;
+  font-size: 8pt;
+}
+.top .clickable{
+  font-size:16px;
+  font-weight: 600;
+  color:black;
+  text-decoration: none;
+}
+.top .clickable:hover{
+  color:aliceblue;
+}
+.content{
+  margin:0px;
+  padding:20px;
+  flex-grow: 1;
+  background-color: aliceblue;
+  box-shadow: 0 0 0.3rem #999;
+  font: 1.2em "Fira Sans", sans-serif;
+}
+.content.clickable:hover{
+  box-shadow: 0 0 0.3rem #000;
+  cursor: pointer;
+}

@@ -1,0 +1,10 @@
+{
+    "require": {
+        "symfony/runtime": "^8.0"
+    },
+    "config": {
+        "allow-plugins": {
+            "symfony/runtime": true
+        }
+    }
+}
