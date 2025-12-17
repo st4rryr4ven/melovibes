@@ -36,6 +36,12 @@ class Music
     #[ORM\Column]
     private ?bool $isValidated = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?array $requestJSON = null;
+
+    #[ORM\Column]
+    private ?int $popularity = null;
+
     public function __construct()
     {
         $this->artists = new ArrayCollection();
@@ -126,6 +132,30 @@ class Music
     public function setIsValidated(bool $isValidated): static
     {
         $this->isValidated = $isValidated;
+
+        return $this;
+    }
+
+    public function getRequestJSON(): ?array
+    {
+        return $this->requestJSON;
+    }
+
+    public function setRequestJSON(?array $requestJSON): static
+    {
+        $this->requestJSON = $requestJSON;
+
+        return $this;
+    }
+
+    public function getPopularity(): ?int
+    {
+        return $this->popularity;
+    }
+
+    public function setPopularity(int $popularity): static
+    {
+        $this->popularity = $popularity;
 
         return $this;
     }
