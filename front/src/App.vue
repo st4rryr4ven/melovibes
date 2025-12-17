@@ -1,71 +1,91 @@
 <template>
   <div id="wrapper">
     <header>
-      <h1 >Soundly</h1>
+      <h1 @click="router.push({ name: 'melovibes' })">Mélovibes</h1>
       <nav>
-        <div >Les musiques</div>
-        <div >S'inscrire</div>
-        <div >Se connecter</div>
+        <div @click="router.push({ name: 'melovibes' })">Les musiques</div>
+        <div v-if="!store.estConnecte" @click="router.push({ name: 'register' })">S'inscrire</div>
+        <div v-if="!store.estConnecte" @click="router.push({ name: 'login' })">Se connecter</div>
+        <div v-if="store.estConnecte" @click="logout">Se déconnecter</div>
       </nav>
     </header>
     <main>
-      <router-view />
+      <router-view/>
     </main>
   </div>
 </template>
 
+<script setup lang="ts">
+import {useRouter} from 'vue-router'
+import {storeAuthentification as store} from '@/stores/storeAuthentification'
+
+const router = useRouter()
+
+function logout() {
+  store.logout().then(result => {
+    if (result.success) router.push({name: 'melovibes'})
+    else alert(result.error)
+  })
+}
+</script>
+
 
 <style scoped>
-#wrapper{
-  display:flex;
+#wrapper {
+  display: flex;
   flex-direction: column;
-  align-items:center;
+  align-items: center;
   min-height: 100vh;
   background-color: rgb(225, 235, 250);
 }
-header{
+
+header {
   width: 100%;
-  position:sticky;
-  top:0px;
-  background-color: rgb(100, 210, 250);
+  position: sticky;
+  top: 0;
+  background-color: rgb(20, 101, 66);
   padding: 20px;
 }
-header h1{
+
+header h1 {
   text-align: center;
   font-family: helvetica, serif;
   font-weight: 700;
+  cursor: pointer;
 }
-nav{
+
+nav {
   box-shadow: 0 0 0.5rem #999;
-  display:flex;
-  justify-content:space-evenly;
-  width:80%;
+  display: flex;
+  justify-content: space-evenly;
+  width: 80%;
   margin: 0 auto;
 }
 
-nav >div{
-  padding:10px;
-  background-color: rgb(105, 190, 250);
-  flex-grow:1;
+nav > div {
+  padding: 10px;
+  background-color: rgb(7, 48, 30);
+  flex-grow: 1;
   text-align: center;
-  border: solid #22A 1px;
-}
-nav >div:hover{
-  box-shadow: 0 0 0.3rem #000;
+  border: solid #000 1px;
   cursor: pointer;
 }
-main{
+
+nav > div:hover {
+  box-shadow: 0 0 0.3rem #000;
+}
+
+main {
   max-width: 1280px;
-  width:780px;
+  width: 780px;
   padding: 10px;
   background-color: rgb(225, 240, 255);
-  flex-grow:1;
+  flex-grow: 1;
 }
 
 @media (max-width: 800px) {
   main {
-    width:80%;
+    width: 80%;
   }
 }
 </style>
-

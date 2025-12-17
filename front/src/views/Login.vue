@@ -1,36 +1,22 @@
 <script setup lang="ts">
 import {ref} from 'vue'
 import {useRouter} from 'vue-router'
-import {apiStore} from '@/util/apiStore'
+import {storeAuthentification} from '@/stores/storeAuthentification'
 
 const router = useRouter()
+const connectingUser = ref({login: '', password: ''})
+const errorMsg = ref<string | null>(null)
 
-const connectingUser = ref({
-  login: '',
-  password: ''
-})
-
-async function connect(): Promise<void> {
-  try {
-    const response = await apiStore.login(
-      connectingUser.value.login,
-      connectingUser.value.password
-    )
-
-    if (!response.ok) {
-      throw new Error('Login ou mot de passe incorrect')
-    }
-
-    const data = await response.json()
-
-    localStorage.setItem('jwt', data.token)
-
-    await router.push({name: 'soundly'})
-
-  } catch (error) {
-    console.error('Login échoué:', error)
-    alert('Login or mot de passe incorrect')
-  }
+function connect(): void {
+  storeAuthentification.login(connectingUser.value.login, connectingUser.value.password)
+      .then(result => {
+        if (result.success) {
+          router.push({name: 'melovibes'})
+        } else {
+          errorMsg.value = result.error ?? null
+          alert(result.error)
+        }
+      })
 }
 </script>
 

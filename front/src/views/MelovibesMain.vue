@@ -3,7 +3,7 @@
 </script>
 
 <template>
-Ceci est la vue de Soundly
+  Ceci est la vue de Melovibes
 </template>
 
 <style scoped>
