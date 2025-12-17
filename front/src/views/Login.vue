@@ -43,5 +43,5 @@ function connect(): void {
 </template>
 
 <style scoped>
-@import "@/components/css/content-box.css";
+@import "@/components/css/layout.css";
 </style>

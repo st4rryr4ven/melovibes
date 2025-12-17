@@ -35,8 +35,12 @@ export const apiStore = {
     register(user: { login: string, password: string, email: string }): Promise<Response> {
         return fetch(this.apiUrl + 'users/register', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(user)
+            headers: {'Content-Type': 'application/ld+json'},
+            body: JSON.stringify({
+                login: user.login,
+                plainPassword: user.password,
+                email: user.email
+            })
         })
     },
 
