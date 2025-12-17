@@ -1,2 +1,6 @@
 gesdinet_jwt_refresh_token:
     path: /api/token/refresh
+    methods: ['POST']
+gesdinet_jwt_invalidate_token:
+    path: /api/token/invalidate
+    methods: ['POST']
