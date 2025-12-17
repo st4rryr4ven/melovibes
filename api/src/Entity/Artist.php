@@ -15,10 +15,14 @@ class Artist
     #[ORM\Column]
     private ?int $id = null;
 
+    /**
+     * Name of the artist
+     */
     #[ORM\Column(length: 255)]
     private ?string $name = null;
 
     /**
+     * All the musics of the artist
      * @var Collection<int, Music>
      */
     #[ORM\ManyToMany(targetEntity: Music::class, mappedBy: 'artists')]
