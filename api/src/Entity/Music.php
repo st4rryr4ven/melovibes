@@ -33,6 +33,9 @@ class Music
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $link = null;
 
+    #[ORM\Column]
+    private ?bool $isValidated = null;
+
     public function __construct()
     {
         $this->artists = new ArrayCollection();
@@ -111,6 +114,18 @@ class Music
     public function setLink(?string $link): static
     {
         $this->link = $link;
+
+        return $this;
+    }
+
+    public function isValidated(): ?bool
+    {
+        return $this->isValidated;
+    }
+
+    public function setIsValidated(bool $isValidated): static
+    {
+        $this->isValidated = $isValidated;
 
         return $this;
     }
