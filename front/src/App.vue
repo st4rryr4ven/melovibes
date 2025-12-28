@@ -18,14 +18,20 @@
 <script setup lang="ts">
 import {useRouter} from 'vue-router'
 import {storeAuthentification as store} from '@/stores/storeAuthentification'
+import {apiStore} from '@/util/apiStore'
 
 const router = useRouter()
 
 function logout() {
-  store.logout().then(result => {
-    if (result.success) router.push({name: 'melovibes'})
-    else alert(result.error)
-  })
+  apiStore.logout()
+    .then(() => {
+      store.estConnecte = false
+      store.utilisateurConnecte = null
+      router.push({name: 'melovibes'})
+    })
+    .catch(err => {
+      alert(err.message)
+    })
 }
 </script>
 

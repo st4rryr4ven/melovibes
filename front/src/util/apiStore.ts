@@ -28,9 +28,11 @@ export const apiStore = {
             method: 'POST',
             credentials: 'include',
             headers: {'Content-Type': 'application/json'},
-        }).then(res => {
-            if (!res.ok) throw new Error('Logout failed');
-        });
+        })
+            .then(res => {
+                if (res.status === 204 || res.status === 200) return;
+                throw new Error(`Logout failed: ${res.status}`);
+            });
     },
     register(user: { login: string, password: string, email: string }): Promise<Response> {
         return fetch(this.apiUrl + 'users/register', {
