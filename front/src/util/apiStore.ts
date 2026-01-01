@@ -55,5 +55,20 @@ export const apiStore = {
             if (!res.ok) throw new Error('Token refresh failed');
             return res.json() as Promise<JwtResponse>;
         });
+    },
+    updateUser(id: number, data: any): Promise<any> {
+        return fetch(this.apiUrl + 'users/' + id, {
+            method: 'PATCH',
+            headers: {'Content-Type': 'application/merge-patch+json'},
+            credentials: 'include',
+            body: JSON.stringify(data)
+        }).then(async res => {
+            if (!res.ok) {
+                const error = await res.json().catch(() => null);
+                throw new Error(error?.message || 'Update failed');
+            }
+            return res.json();
+        });
     }
+
 }

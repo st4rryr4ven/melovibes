@@ -22,7 +22,7 @@ class AuthenticationSuccessListener
 
         $data['id'] = $user->getId();
         $data['login'] = $user->getLogin();
-        $data['adresseEmail'] = $user->getEmail();
+        $data['email'] = $user->getEmail();
 
         $jwt = $this->jwtManager->parse($data['token']);
         $data['token_exp'] = $jwtPayload['exp'] ?? null;

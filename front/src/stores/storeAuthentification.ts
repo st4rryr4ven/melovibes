@@ -1,9 +1,9 @@
 import {reactive} from 'vue'
-import type {JwtResponse, LoginResult} from '@/types'
+import type {LoginResult, User} from "@/types.ts";
 
 export const storeAuthentification = reactive({
   apiUrl: "https://localhost/site_de_musique/api/public/api/",
-  utilisateurConnecte: null as JwtResponse | null,
+  utilisateurConnecte: null as User | null,
   estConnecte: false,
 
   login(login: string, password: string): Promise<LoginResult> {

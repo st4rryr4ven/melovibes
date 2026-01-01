@@ -3,6 +3,7 @@ import Melovibes from '@/views/MelovibesMain.vue'
 import AllUsers from '@/views/AllUsers.vue'
 import Login from '@/views/Login.vue'
 import Register from '@/views/Register.vue'
+import Edit from '@/views/Profile.vue'
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -30,7 +31,14 @@ const router = createRouter({
             path: '/users',
             name: 'allUsers',
             component: AllUsers,
+        },
+        {
+            path: '/profile',
+            name: 'profile',
+            component: Edit,
+            meta: { requiresAuth: true }
         }
+
     ]
 })
 
