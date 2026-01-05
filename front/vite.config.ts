@@ -18,7 +18,15 @@ export default defineConfig({
   },
   server: {
     host: true,
-    port: 5173
+    port: 5173,
+    proxy: {
+      '/avatar-proxy': {
+        target: 'https://webinfo.iutmontp.univ-montp2.fr',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/avatar-proxy/, '/~mezencey/my-avatar/public/avatar'),
+        secure: false
+      }
+    }
   },
   base: "/melovibes/dist"
 })

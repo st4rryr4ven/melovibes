@@ -4,8 +4,16 @@ lexik_jwt_authentication:
     pass_phrase: '%env(JWT_PASSPHRASE)%'
 
     set_cookies:
-        BEARER: ~
+        BEARER:
+            path: /
+            domain: null
+            http_only: true
+            secure: false
+            same_site: lax
     token_extractors:
+        authorization_header:
+            enabled: true
+            prefix: Bearer
         cookie:
             enabled: true
             name: BEARER

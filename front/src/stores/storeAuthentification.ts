@@ -1,41 +1,27 @@
 import {reactive} from 'vue'
 import type {LoginResult, User} from "@/types.ts";
+import {apiStore} from "@/util/apiStore";
 
 export const storeAuthentification = reactive({
-  apiUrl: "https://localhost/site_de_musique/api/public/api/",
   utilisateurConnecte: null as User | null,
   estConnecte: false,
 
   login(login: string, password: string): Promise<LoginResult> {
-    return fetch(this.apiUrl + 'auth', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      credentials: 'include',
-      body: JSON.stringify({login, password})
-    })
-      .then(async response => {
-        const data = await response.json()
-        if (!response.ok) {
-          return {success: false, error: data.message || 'Login failed'}
-        }
-        this.utilisateurConnecte = data
+    return apiStore.login(login, password)
+      .then(user => {
+        this.utilisateurConnecte = user
         this.estConnecte = true
+        if (user.token) {
+          apiStore.currentToken = user.token
+        }
         return {success: true}
       })
       .catch(err => ({success: false, error: err.message}))
   },
 
   logout(): Promise<LoginResult> {
-    return fetch(this.apiUrl + 'token/invalidate', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      credentials: 'include'
-    })
-      .then(async response => {
-        const data = await response.json().catch(() => ({}))
-        if (!response.ok) {
-          return {success: false, error: data.message || 'Logout failed'}
-        }
+    return apiStore.logout()
+      .then(() => {
         this.utilisateurConnecte = null
         this.estConnecte = false
         return {success: true}
@@ -44,22 +30,19 @@ export const storeAuthentification = reactive({
   },
 
   refresh(): Promise<LoginResult> {
-    return fetch(this.apiUrl + 'token/refresh', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      credentials: 'include'
-    })
-      .then(async response => {
-        const data = await response.json()
-        if (!response.ok) {
-          this.utilisateurConnecte = null
-          this.estConnecte = false
-          return {success: false, error: data.message || 'Refresh failed'}
-        }
-        this.utilisateurConnecte = data
+    return apiStore.refresh()
+      .then(user => {
+        this.utilisateurConnecte = user
         this.estConnecte = true
+        if (user.token) {
+          apiStore.currentToken = user.token
+        }
         return {success: true}
       })
-      .catch(err => ({success: false, error: err.message}))
+      .catch(err => {
+        this.utilisateurConnecte = null
+        this.estConnecte = false
+        return {success: false, error: err.message}
+      })
   }
 })
