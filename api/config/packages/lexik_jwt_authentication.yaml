@@ -6,10 +6,9 @@ lexik_jwt_authentication:
     set_cookies:
         BEARER:
             path: /
-            domain: null
-            http_only: true
+            httpOnly: true
             secure: false
-            same_site: lax
+            samesite: lax
     token_extractors:
         authorization_header:
             enabled: true
@@ -17,6 +16,7 @@ lexik_jwt_authentication:
         cookie:
             enabled: true
             name: BEARER
+
     blocklist_token:
         enabled: true
         cache: cache.app

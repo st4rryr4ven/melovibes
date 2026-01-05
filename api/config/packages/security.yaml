@@ -12,6 +12,10 @@ security:
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
+        options:
+            pattern: ^/
+            methods: [ OPTIONS ]
+            security: false
         main:
             stateless: true
             provider: app_user_provider

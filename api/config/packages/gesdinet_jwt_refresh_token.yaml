@@ -3,7 +3,7 @@ gesdinet_jwt_refresh_token:
     single_use: true
     cookie:
         enabled: true
-        path: /site_de_musique/api/public/api
+        path: /api
         secure: true
         same_site: none
     logout_firewall: main
