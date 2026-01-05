@@ -28,13 +28,26 @@ async function register() {
       password: newUser.value.password
     })
 
-    if (!response.ok) throw new Error('Registration failed')
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+
+      if (errorData?.violations) {
+        errorMsg.value = errorData.violations[0].message
+      } else if (errorData?.message) {
+        errorMsg.value = errorData.message
+      } else {
+        errorMsg.value = 'Erreur lors de l\'inscription'
+      }
+
+      alert(errorMsg.value)
+      return
+    }
 
     alert('Utilisateur créé avec succès !')
     router.push({ name: 'login' })
   } catch (err) {
     console.error(err)
-    errorMsg.value = "Erreur lors de l'inscription"
+    errorMsg.value = (err as Error).message || "Erreur lors de l'inscription"
     alert(errorMsg.value)
   }
 }

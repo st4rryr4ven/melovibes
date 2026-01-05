@@ -104,7 +104,7 @@ export const apiStore = {
                 }
                 if (res.status === 204 || res.status === 200) return;
                 const error = await res.json().catch(() => ({}));
-                throw new Error(error.message || `Logout failed: ${res.status}`);
+                throw new Error(error.message || `Déconnexion échouée : ${res.status}`);
             });
     },
 

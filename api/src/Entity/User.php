@@ -25,8 +25,8 @@ use Symfony\Component\Serializer\Annotation\Groups;
 #[ORM\Table(name: 'user')]
 #[ORM\UniqueConstraint(name: 'UNIQ_LOGIN', columns: ['login'])]
 #[ORM\UniqueConstraint(name: 'UNIQ_EMAIL', columns: ['email'])]
-#[UniqueEntity(fields: ['login'], message: 'This login is already used.')]
-#[UniqueEntity(fields: ['email'], message: 'This email is already used.')]
+#[UniqueEntity(fields: ['login'], message: "Ce nom d'utilisateur est déjà utilisé.")]
+#[UniqueEntity(fields: ['email'], message: "Cet e-mail est déjà utilisé.")]
 #[ApiResource(
     operations: [
         new GetCollection(
