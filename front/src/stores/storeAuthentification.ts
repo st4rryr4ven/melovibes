@@ -6,7 +6,18 @@ export const storeAuthentification = reactive({
     estConnecte: false,
     utilisateurConnecte: null as User | null,
 
-    async login(login: string, password: string): Promise<LoginResult> {
+  async init(): Promise<void> {
+    try {
+      await apiStore.refresh();
+      this.utilisateurConnecte = await apiStore.me();
+      this.estConnecte = true;
+    } catch {
+      this.utilisateurConnecte = null;
+      this.estConnecte = false;
+    }
+  },
+
+  async login(login: string, password: string): Promise<LoginResult> {
         try {
             this.utilisateurConnecte = await apiStore.login(login, password);
             this.estConnecte = true;

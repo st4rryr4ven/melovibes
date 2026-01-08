@@ -37,7 +37,7 @@ export const apiStore = {
         const error = await res.json().catch(() => ({}));
         throw new Error(error.message || 'Login failed');
       }
-      return await (res.json() as Promise<User>);
+      return await (await res.json() as Promise<User>);
     },
 
     async logout(): Promise<any> {
@@ -107,5 +107,15 @@ export const apiStore = {
         throw new Error(error?.message || 'Delete failed');
       }
       return res;
-    }
+    },
+
+    async me(): Promise<User> {
+      const res = await fetch(this.apiUrl + 'me', {
+        method: 'GET',
+        credentials: 'include'
+      });
+      if (!res.ok) throw new Error('Not authenticated');
+      return await (await res.json() as Promise<User>);
+    },
+
 };
