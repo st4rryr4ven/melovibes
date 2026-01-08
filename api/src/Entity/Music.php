@@ -142,7 +142,6 @@ class Music
     private ?string $link = null;
 
     #[ORM\Column]
-    #[Groups(['music:admin'])]
     #[Groups(['music:admin:read', 'serialization:music:update'])]
     private ?bool $isValidated = null;
 
