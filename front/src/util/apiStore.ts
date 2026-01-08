@@ -4,8 +4,6 @@ export const API_URL = import.meta.env.VITE_API_URL;
 export const AVATAR_BASE_URL =
     "https://webinfo.iutmontp.univ-montp2.fr/~mezencey/my-avatar/public/avatar/";
 
-/* ---------------- AVATAR ---------------- */
-
 async function sha256(message: string): Promise<string> {
     const msgBuffer = new TextEncoder().encode(message);
     const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
@@ -25,12 +23,9 @@ export function getProfilePictureUrlSync(): string {
     return AVATAR_BASE_URL + 'placeholder';
 }
 
-/* ---------------- API STORE ---------------- */
-
 export const apiStore = {
     apiUrl: API_URL,
 
-    /* LOGIN → retourne l’utilisateur */
     login(login: string, password: string): Promise<User> {
         return fetch(this.apiUrl + 'auth', {
             method: 'POST',
