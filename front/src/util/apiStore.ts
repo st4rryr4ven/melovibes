@@ -26,87 +26,86 @@ export function getProfilePictureUrlSync(): string {
 export const apiStore = {
     apiUrl: API_URL,
 
-    login(login: string, password: string): Promise<User> {
-        return fetch(this.apiUrl + 'auth', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            credentials: 'include',
-            body: JSON.stringify({login, password})
-        }).then(async res => {
-            if (!res.ok) {
-                const error = await res.json().catch(() => ({}));
-                throw new Error(error.message || 'Login failed');
-            }
-            return res.json() as Promise<User>;
-        });
+    async login(login: string, password: string): Promise<User> {
+      const res = await fetch(this.apiUrl + 'auth', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        credentials: 'include',
+        body: JSON.stringify({login, password})
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.message || 'Login failed');
+      }
+      return await (res.json() as Promise<User>);
     },
 
-    logout(): Promise<void> {
-        return fetch(this.apiUrl + 'token/invalidate', {
-            method: 'POST',
-            credentials: 'include'
-        }).then(res => {
-            if (!res.ok) {
-                throw new Error('Logout failed');
-            }
-        });
+    async logout(): Promise<any> {
+      const res = await fetch(this.apiUrl + 'token/invalidate', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      if (!res.ok) {
+        throw new Error('Logout failed');
+      }
+      return res;
     },
 
-    register(user: { login: string; password: string; email: string }): Promise<void> {
-        return fetch(this.apiUrl + 'users/register', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/ld+json'},
-            credentials: 'include',
-            body: JSON.stringify({
-                login: user.login,
-                plainPassword: user.password,
-                email: user.email
-            })
-        }).then(res => {
-            if (!res.ok) {
-                throw new Error('Registration failed');
-            }
-        });
+    async register(user: { login: string; password: string; email: string }): Promise<any> {
+      const res = await fetch(this.apiUrl + 'users/register', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/ld+json'},
+        credentials: 'include',
+        body: JSON.stringify({
+          login: user.login,
+          plainPassword: user.password,
+          email: user.email
+        })
+      });
+      if (!res.ok) {
+        throw new Error('Registration failed');
+      }
+
+      return res;
     },
 
-    refresh(): Promise<void> {
-        return fetch(this.apiUrl + 'token/refresh', {
-            method: 'POST',
-            credentials: 'include'
-        }).then(res => {
-            if (!res.ok) {
-                throw new Error('Refresh failed');
-            }
-        });
+    async refresh(): Promise<any> {
+      const res = await fetch(this.apiUrl + 'token/refresh', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      if (!res.ok) {
+        throw new Error('Refresh failed');
+      }
+      return res;
     },
 
-    updateUser(id: number, data: any): Promise<any> {
-        return fetch(this.apiUrl + 'users/' + id, {
-            method: 'PATCH',
-            headers: {'Content-Type': 'application/json'},
-            credentials: 'include', // send cookies
-            body: JSON.stringify(data)
-        }).then(async res => {
-            if (!res.ok) {
-                const error = await res.json().catch(() => null);
-                if (res.status === 401) throw new Error('Authentification échouée. Veuillez vous reconnecter.');
-                throw new Error(error?.message || `Update failed with status ${res.status}`);
-            }
-            return res.json();
-        });
+    async updateUser(id: number, data: any): Promise<any> {
+      const res = await fetch(this.apiUrl + 'users/' + id, {
+        method: 'PATCH',
+        headers: {'Content-Type': 'application/json'},
+        credentials: 'include', // send cookies
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => null);
+        if (res.status === 401) throw new Error('Authentification échouée. Veuillez vous reconnecter.');
+        throw new Error(error?.message || `Update failed with status ${res.status}`);
+      }
+      return res;
     },
 
-    deleteUser(id: number): Promise<void> {
-        return fetch(this.apiUrl + 'users/' + id, {
-            method: 'DELETE',
-            headers: {'Content-Type': 'application/json'},
-            credentials: 'include'
-        }).then(async res => {
-            if (!res.ok) {
-                const error = await res.json().catch(() => null);
-                if (res.status === 401) throw new Error('Authentification échouée. Veuillez vous reconnecter.');
-                throw new Error(error?.message || 'Delete failed');
-            }
-        });
+    async deleteUser(id: number): Promise<any> {
+      const res = await fetch(this.apiUrl + 'users/' + id, {
+        method: 'DELETE',
+        headers: {'Content-Type': 'application/json'},
+        credentials: 'include'
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => null);
+        if (res.status === 401) throw new Error('Authentification échouée. Veuillez vous reconnecter.');
+        throw new Error(error?.message || 'Delete failed');
+      }
+      return res;
     }
 };
