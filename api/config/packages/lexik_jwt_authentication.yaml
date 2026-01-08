@@ -11,8 +11,7 @@ lexik_jwt_authentication:
             samesite: lax
     token_extractors:
         authorization_header:
-            enabled: true
-            prefix: Bearer
+            enabled: false
         cookie:
             enabled: true
             name: BEARER

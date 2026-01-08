@@ -2,12 +2,12 @@ export interface User {
     id: number;
     login: string;
     email: string;
-    token?: string;
 }
 
-export interface JwtResponse {
-    token: string
-    refresh_token?: string
+export interface UpdateUserPayload {
+    email?: string
+    plainPassword?: string
+    currentPlainPassword: string
 }
 
 export interface LoginResult {

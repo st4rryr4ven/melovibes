@@ -3,7 +3,7 @@ gesdinet_jwt_refresh_token:
     single_use: true
     cookie:
         enabled: true
-        path: /api
-        secure: true
-        same_site: none
+        path: /
+        secure: false
+        same_site: lax
     logout_firewall: main

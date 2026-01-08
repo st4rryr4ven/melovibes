@@ -1,48 +1,51 @@
-import {reactive} from 'vue'
-import type {LoginResult, User} from "@/types.ts";
-import {apiStore} from "@/util/apiStore";
+import {reactive} from 'vue';
+import {apiStore} from '@/util/apiStore';
+import type {LoginResult, User} from '@/types';
 
 export const storeAuthentification = reactive({
-  utilisateurConnecte: null as User | null,
-  estConnecte: false,
+    estConnecte: false,
+    utilisateurConnecte: null as User | null,
 
-  login(login: string, password: string): Promise<LoginResult> {
-    return apiStore.login(login, password)
-      .then(user => {
-        this.utilisateurConnecte = user
-        this.estConnecte = true
-        if (user.token) {
-          apiStore.currentToken = user.token
+    async login(login: string, password: string): Promise<LoginResult> {
+        try {
+            this.utilisateurConnecte = await apiStore.login(login, password);
+            this.estConnecte = true;
+            return { success: true };
+        } catch (err: any) {
+            this.utilisateurConnecte = null;
+            this.estConnecte = false;
+            return { success: false, error: err.message };
         }
-        return {success: true}
-      })
-      .catch(err => ({success: false, error: err.message}))
-  },
+    },
 
-  logout(): Promise<LoginResult> {
-    return apiStore.logout()
-      .then(() => {
-        this.utilisateurConnecte = null
-        this.estConnecte = false
-        return {success: true}
-      })
-      .catch(err => ({success: false, error: err.message}))
-  },
-
-  refresh(): Promise<LoginResult> {
-    return apiStore.refresh()
-      .then(user => {
-        this.utilisateurConnecte = user
-        this.estConnecte = true
-        if (user.token) {
-          apiStore.currentToken = user.token
+    async logout(): Promise<LoginResult> {
+        try {
+            await apiStore.logout();
+            this.utilisateurConnecte = null;
+            this.estConnecte = false;
+            return { success: true };
+        } catch (err: any) {
+            return { success: false, error: err.message };
         }
-        return {success: true}
-      })
-      .catch(err => {
-        this.utilisateurConnecte = null
-        this.estConnecte = false
-        return {success: false, error: err.message}
-      })
-  }
-})
+    },
+
+    async register(login: string, email: string, password: string): Promise<LoginResult> {
+        try {
+            await apiStore.register({ login, email, password });
+            return { success: true };
+        } catch (err: any) {
+            return { success: false, error: err.message };
+        }
+    },
+
+    async refresh(): Promise<LoginResult> {
+        try {
+            await apiStore.refresh();
+            return { success: true };
+        } catch {
+            this.utilisateurConnecte = null;
+            this.estConnecte = false;
+            return { success: false, error: 'Session expirée' };
+        }
+    }
+});

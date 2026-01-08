@@ -9,6 +9,7 @@ use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\Metadata\Put;
 use ApiPlatform\Metadata\Delete;
+use App\Controller\CurrentUserController;
 use App\Repository\UserRepository;
 use App\State\UserProcessor;
 use Doctrine\Common\Collections\ArrayCollection;

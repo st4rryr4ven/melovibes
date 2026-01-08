@@ -117,23 +117,20 @@ function update() {
     return
   }
 
-  const token = store.utilisateurConnecte?.token || apiStore.currentToken ||
-                (typeof localStorage !== 'undefined' ? localStorage.getItem('jwt_token') : null)
-
   apiStore.updateUser(store.utilisateurConnecte!.id, {
     login: login.value,
     email: email.value,
     plainPassword: plainPassword.value || undefined,
     currentPlainPassword: currentPlainPassword.value
-  }, token)
+  })
     .then(user => {
-      store.utilisateurConnecte = { ...user, token: user.token || token }
+      store.utilisateurConnecte = { ...user }
       updateProfilePicture()
       alert('Profil mis à jour')
     })
     .catch(err => {
       console.error('Update error:', err)
-      if (err.message && err.message.includes('401') || err.message.includes('Unauthorized')) {
+      if (err.message.includes('Authentification')) {
         alert("Session expirée. Veuillez vous reconnecter.")
         router.push({name: 'login'})
       } else {
@@ -141,6 +138,7 @@ function update() {
       }
     })
 }
+
 
 function deleteAccount() {
   if (!confirm('Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible.')) {
@@ -152,10 +150,7 @@ function deleteAccount() {
     return
   }
 
-  const token = store.utilisateurConnecte?.token || apiStore.currentToken ||
-                (typeof localStorage !== 'undefined' ? localStorage.getItem('jwt_token') : null)
-
-  apiStore.deleteUser(store.utilisateurConnecte!.id, token)
+  apiStore.deleteUser(store.utilisateurConnecte!.id)
     .then(() => {
       store.utilisateurConnecte = null
       store.estConnecte = false
@@ -164,13 +159,14 @@ function deleteAccount() {
     })
     .catch(err => {
       console.error('Delete error:', err)
-      if (err.message && (err.message.includes('401') || err.message.includes('Unauthorized'))) {
+      if (err.message.includes('401')) {
         alert("Session expirée. Veuillez vous reconnecter.")
         router.push({name: 'login'})
       } else {
         alert(err.message || 'Erreur lors de la suppression')
       }
     })
+
 }
 </script>
 <style scoped>
