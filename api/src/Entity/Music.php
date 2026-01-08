@@ -142,6 +142,7 @@ class Music
     private ?string $link = null;
 
     #[ORM\Column]
+    #[Groups(['music:admin'])]
     #[Groups(['music:admin:read', 'serialization:music:update'])]
     private ?bool $isValidated = null;
 
@@ -149,6 +150,18 @@ class Music
     #[Groups(['music:admin:read'])]
     private ?array $requestJSON = null;
 
+    /**
+     * Popularity of the music
+     */
+    #[Assert\PositiveOrZero(
+        message: 'La popularité doit être positive.',
+        groups: ['validation.music:create', 'validation.music:update']
+    )]
+    #[Assert\Range(
+        min: 0,
+        max: 100,
+        groups: ['validation.music:create', 'validation.music:update']
+    )]
     #[ORM\Column]
     #[Groups(['music:read', 'serialization:music:create'])]
     private ?int $popularity = null;
