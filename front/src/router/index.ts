@@ -4,6 +4,7 @@ import AllUsers from '@/views/AllUsers.vue'
 import Login from '@/views/Login.vue'
 import Register from '@/views/Register.vue'
 import Edit from '@/views/Profile.vue'
+import {storeAuthentification} from "@/stores/storeAuthentification.ts";
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -41,5 +42,14 @@ const router = createRouter({
 
     ]
 })
+
+router.beforeEach(async (to) => {
+  if (!to.meta.requiresAuth) return true;
+
+  await storeAuthentification.init();
+  if (!storeAuthentification.estConnecte) return { name: 'login' };
+
+  return true;
+});
 
 export default  router
