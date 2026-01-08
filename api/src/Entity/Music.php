@@ -10,17 +10,18 @@ use App\Api\Action\AlbumTracksAction;
 use App\Api\Action\MusicImportSpotifyTrackAction;
 use App\Api\Action\MusicNewReleasesAction;
 use App\Api\Action\MusicSearchAction;
+use ApiPlatform\Metadata\Delete;
+use ApiPlatform\Metadata\Patch;
 use App\Repository\MusicRepository;
+use App\State\MusicProcessor;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
-use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 use ApiPlatform\Doctrine\Orm\Filter\BooleanFilter;
 use ApiPlatform\Metadata\ApiFilter;
-use ApiPlatform\Metadata\Patch;
-use ApiPlatform\Metadata\Delete;
 
 #[ORM\Entity(repositoryClass: MusicRepository::class)]
 #[ORM\Table(name: 'music')]
@@ -97,17 +98,33 @@ class Music
 
     #[ORM\Column(length: 255)]
     #[Assert\NotNull]
-    #[Assert\NotNull(message: "La musique doit avoir un titre", groups: ['validation.music:create', 'validation.music:update'])]
+    #[Assert\NotBlank(
+        message: 'La musique doit avoir un titre.',
+        groups: ['validation.music:create', 'validation.music:update']
+    )]
     private ?string $title = null;
 
     /**
      * @var Collection<int, Artist>
      */
+    #[Assert\Count(
+        min: 1,
+        minMessage: 'Une musique doit avoir au moins un artiste.',
+        groups: ['validation.music:create', 'validation.music:update']
+    )]
     #[ORM\ManyToMany(targetEntity: Artist::class, inversedBy: 'musics')]
     #[Assert\NotNull]
     #[Assert\NotNull(message: "La musique doit avoir au moins un artiste", groups: ['validation.music:create', 'validation.music:update'])]
     private Collection $artists;
 
+    /**
+     * Genres of the music (can have more than one)
+     */
+    #[Assert\Count(
+        min: 1,
+        minMessage: 'Une musique doit avoir au moins un genre.',
+        groups: ['validation.music:create', 'validation.music:update']
+    )]
     #[ORM\Column(nullable: true)]
     private ?array $genre = null;
 
@@ -115,10 +132,14 @@ class Music
     private ?string $picture = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Assert\Url(
+        message: 'Le lien doit être une URL valide.',
+        groups: ['validation.music:create', 'validation.music:update']
+    )]
     private ?string $link = null;
 
     #[ORM\Column]
-    #[Groups(['music:update', 'music:read'])]
+    #[Groups(['music:admin', 'music:update', 'music:read'])]
     private ?bool $isValidated = null;
 
     #[ORM\Column(nullable: true)]
@@ -130,6 +151,7 @@ class Music
     public function __construct()
     {
         $this->artists = new ArrayCollection();
+        $this->isValidated = false;
     }
 
     public function getId(): ?int
