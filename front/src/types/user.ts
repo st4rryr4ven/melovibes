@@ -6,14 +6,14 @@ export interface User {
 }
 
 export interface UpdateUserPayload {
-    email?: string
-    plainPassword?: string
-    currentPlainPassword: string
+  email?: string
+  plainPassword?: string
+  currentPlainPassword: string
 }
 
 export interface LoginResult {
-    success: boolean
-    error?: string
+  success: boolean
+  error?: string
 }
 export interface Artist {
   id?: number;
