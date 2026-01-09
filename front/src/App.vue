@@ -7,6 +7,7 @@
         <div v-if="!store.estConnecte" @click="router.push({ name: 'register' })">S'inscrire</div>
         <div v-if="!store.estConnecte" @click="router.push({ name: 'login' })">Se connecter</div>
         <div v-if="store.estConnecte" @click="router.push({ name: 'profile' })">Mon profil</div>
+        <div v-if="store.estConnecte" @click="router.push({ name: 'allUsers' })">Liste d'utilisateurs</div>
         <div v-if="store.estConnecte" @click="logout">Se déconnecter</div>
       </nav>
     </header>

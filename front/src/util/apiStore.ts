@@ -118,4 +118,24 @@ export const apiStore = {
       return await (await res.json() as Promise<User>);
     },
 
+  async getAll<T>(resource: string): Promise<T[]> {
+    const res = await fetch(this.apiUrl + resource, {
+      method: 'GET',
+      headers: {'Content-Type': 'application/json'},
+      credentials: 'include'
+    });
+
+    if (!res.ok) {
+      if (res.status === 401) {
+        throw new Error('Non authentifié');
+      }
+      throw new Error(`GET ${resource} failed`);
+    }
+
+    const data = await res.json();
+
+    return data['hydra:member'] ?? data;
+  },
+
+
 };
