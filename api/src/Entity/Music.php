@@ -69,18 +69,22 @@ use Symfony\Component\Validator\Constraints as Assert;
             validate: false,
         ),
         new Patch(
-            security: "is_granted('ROLE_ADMIN')"
+            denormalizationContext: ['groups' => ['serialization:music:update']],
+            security: "is_granted('ROLE_ADMIN')",
+            validationContext: ['groups' => ['validation:music:update']]
         ),
         new Delete(
             security: "is_granted('ROLE_ADMIN')"
         )
     ],
+    normalizationContext: ['groups' => ['music:read']]
 )]
 class Music
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['music:read'])]
     private ?int $id = null;
 
     /**
@@ -105,8 +109,9 @@ class Music
     #[Assert\NotNull]
     #[Assert\NotBlank(
         message: 'La musique doit avoir un titre.',
-        groups: ['validation.music:create', 'validation.music:update']
+        groups: ['validation:music:create', 'validation:music:update']
     )]
+    #[Groups(['music:read', 'serialization:music:create', 'serialization:music:update'])]
     private ?string $title = null;
 
     /**
@@ -115,11 +120,11 @@ class Music
     #[Assert\Count(
         min: 1,
         minMessage: 'Une musique doit avoir au moins un artiste.',
-        groups: ['validation.music:create', 'validation.music:update']
+        groups: ['validation:music:create', 'validation:music:update']
     )]
     #[ORM\ManyToMany(targetEntity: Artist::class, inversedBy: 'musics')]
-    #[Assert\NotNull]
-    #[Assert\NotNull(message: "La musique doit avoir au moins un artiste", groups: ['validation.music:create', 'validation.music:update'])]
+    #[Assert\NotNull(groups: ['validation:music:create', 'validation:music:update'])]
+    #[Groups(['music:read', 'serialization:music:create', 'serialization:music:update'])]
     private Collection $artists;
 
     /**
@@ -128,29 +133,31 @@ class Music
     #[Assert\Count(
         min: 1,
         minMessage: 'Une musique doit avoir au moins un genre.',
-        groups: ['validation.music:create', 'validation.music:update']
+        groups: ['validation:music:create', 'validation:music:update']
     )]
     #[ORM\Column(nullable: true)]
+    #[Groups(['music:read', 'serialization:music:create', 'serialization:music:update'])]
     private ?array $genre = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['music:read', 'serialization:music:create', 'serialization:music:update'])]
     private ?string $picture = null;
 
     #[ORM\Column(length: 255, nullable: true)]
-    #[Assert\Url(
-        message: 'Le lien doit être une URL valide.',
-        groups: ['validation.music:create', 'validation.music:update']
-    )]
+    #[Assert\Url(groups: ['validation:music:create', 'validation:music:update'])]
+    #[Groups(['music:read', 'serialization:music:create', 'serialization:music:update'])]
     private ?string $link = null;
 
     #[ORM\Column]
-    #[Groups(['music:admin'])]
+    #[Groups(['music:admin:read', 'serialization:music:update'])]
     private ?bool $isValidated = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['music:admin:read'])]
     private ?array $requestJSON = null;
 
     #[ORM\Column]
+    #[Groups(['music:read', 'serialization:music:create'])]
     private ?int $popularity = null;
 
     public function __construct()
