@@ -6,12 +6,14 @@ div.content-box {
 }
 
 .top {
+  color: black;
   box-shadow: 0 0 0.3rem #999;
   border-radius: 15px 15px 0 0;
   background-color: rgb(225, 240, 255);
   border-bottom: black 2px solid;
-  padding: 8px;
-  font-size: 8pt;
+  padding: 12px 16px;
+  font-size: 1.5em;
+  font-weight: bold;
 }
 
 .top .clickable {
@@ -74,4 +76,23 @@ button:hover {
   background: transparent;
   font-size: 1.5rem;
   cursor: pointer;
+}
+
+.content {
+  color: black;
+  margin-bottom: 10px;
+}
+
+.group a {
+  color: rgb(20, 101, 66);
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.group a:hover {
+  text-decoration: underline;
+}
+
+.group {
+  margin-bottom: 15px;
 }
