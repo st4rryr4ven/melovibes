@@ -90,5 +90,9 @@ export const storeAuthentification = reactive({
       localStorage.removeItem(USER_STORAGE_KEY);
       return { success: false, error: 'Session expirée' };
     }
+  },
+
+  estAdmin(): boolean {
+    return this.utilisateurConnecte?.roles?.includes('ROLE_ADMIN') ?? false;
   }
 });

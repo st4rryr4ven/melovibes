@@ -2,6 +2,7 @@ export interface User {
     id: number;
     login: string;
     email: string;
+    roles: string[]
 }
 
 export interface UpdateUserPayload {

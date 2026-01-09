@@ -7,12 +7,15 @@
         <div v-if="!store.estConnecte" @click="router.push({ name: 'register' })">S'inscrire</div>
         <div v-if="!store.estConnecte" @click="router.push({ name: 'login' })">Se connecter</div>
         <div v-if="store.estConnecte" @click="router.push({ name: 'profile' })">Mon profil</div>
-        <div v-if="store.estConnecte" @click="router.push({ name: 'allUsers' })">Liste d'utilisateurs</div>
-        <div v-if="store.estConnecte" @click="logout">Se déconnecter</div>
+        <div v-if="store.estConnecte && store.estAdmin" @click="router.push({ name: 'allUsers' })">Liste d'utilisateurs</div>
+        <div v-if="store.estConnecte " @click="logout">Se déconnecter</div>
       </nav>
     </header>
     <main>
       <router-view/>
+      <div>
+
+      </div>
     </main>
   </div>
 </template>
@@ -20,8 +23,13 @@
 <script setup lang="ts">
 import {useRouter} from 'vue-router'
 import {storeAuthentification as store} from '@/stores/storeAuthentification'
+import {onMounted} from "vue";
 
 const router = useRouter()
+onMounted(()=>{
+  store.init();
+})
+
 
 function logout() {
   store.logout()
@@ -32,6 +40,7 @@ function logout() {
       alert(err.message)
     })
 }
+
 </script>
 
 
