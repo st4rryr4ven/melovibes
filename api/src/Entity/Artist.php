@@ -10,13 +10,24 @@ use App\Api\Action\ArtistImportSpotifyArtistAction;
 use App\Api\Action\ArtistMusicsAction;
 use App\Api\Action\ArtistSearchAction;
 use App\Api\Action\ArtistTopTracksAction;
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
 use App\Repository\ArtistRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 
 #[ORM\Entity(repositoryClass: ArtistRepository::class)]
+#[ApiResource(
+    operations: [
+        new GetCollection(),
+        new Get()
+    ],
+    normalizationContext: ['groups' => ['artist:read']],
+)]
 #[ORM\Table(name: 'artist')]
 #[ORM\UniqueConstraint(name: 'UNIQ_SPOTIFY_ID', columns: ['spotify_id'])]
 #[UniqueEntity(fields: ['spotify_id'], message: 'This spotifyId is already used.')]
@@ -67,6 +78,7 @@ class Artist
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['artist:read', 'music:read'])]
     private ?int $id = null;
 
     /**
@@ -76,6 +88,7 @@ class Artist
     private ?string $spotifyId = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['artist:read', 'music:read'])]
     private ?string $name = null;
 
     /**
