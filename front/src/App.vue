@@ -3,7 +3,7 @@
     <header>
       <h1 @click="router.push({ name: 'melovibes' })">Mélovibes</h1>
       <nav>
-        <div @click="router.push({ name: 'melovibes' })">Les musiques</div>
+        <div @click="router.push({ name: 'musics' })">Les musiques</div>
         <div v-if="!store.estConnecte" @click="router.push({ name: 'register' })">S'inscrire</div>
         <div v-if="!store.estConnecte" @click="router.push({ name: 'login' })">Se connecter</div>
         <div v-if="store.estConnecte" @click="router.push({ name: 'profile' })">Mon profil</div>

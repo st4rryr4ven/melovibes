@@ -52,7 +52,7 @@ use Symfony\Component\Serializer\Annotation\Groups;
         ),
         new Patch(
             uriTemplate: '/users/{id}/favorites',
-            denormalizationContext: ['groups' => ['serialization:user:update']],
+            denormalizationContext: ['groups' => ['serialization:user:update:favorites']],
             security: "is_granted('ROLE_USER') and object == user"
         ),
         new Delete(
@@ -123,7 +123,7 @@ class User implements UserInterface
 
 
     #[ORM\ManyToMany(targetEntity: Music::class)]
-    #[Groups(['user:read', 'serialization:user:update'])]
+    #[Groups(['user:read', 'serialization:user:update:favorites'])]
     private Collection $favoriteMusics;
 
     public function __construct()

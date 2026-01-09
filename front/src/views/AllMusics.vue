@@ -6,7 +6,7 @@ import {apiStore} from '@/util/apiStore';
 
 const musics = ref<Music[]>([]);
 
-apiStore.getAll('musics').then(data => {
+apiStore.getAllMusics().then(data => {
   musics.value = data as Music[];
 });
 </script>
