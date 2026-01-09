@@ -13,6 +13,9 @@ apiStore.getAllMusic().then(data => {
 
 <template>
   <div class="musics-page">
+    <button @click="$router.push({ name: 'music-create' })">
+      + Créer une musique
+    </button>
     <h2>Liste de toutes les musiques</h2>
     <MusicBox v-for="music in musics" :key="music.id" :music="music"/>
   </div>
