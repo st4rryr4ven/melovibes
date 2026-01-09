@@ -1,0 +1,62 @@
+div.content-box{
+  width:100%;
+  margin:10px auto;
+  display:flex;
+  flex-direction:column;
+}
+.top{
+  box-shadow: 0 0 0.3rem #999;
+  border-radius: 15px 15px 0 0;
+  background-color: rgb(225, 240, 255);
+  border-bottom: black 2px solid;
+  padding:8px;
+  font-size: 8pt;
+}
+
+.top .clickable{
+  font-size:16px;
+  font-weight: 600;
+  color:black;
+  text-decoration: none;
+}
+.top .clickable:hover{
+  color:aliceblue;
+}
+.content{
+  margin:0px;
+  padding:20px;
+  flex-grow: 1;
+  background-color: rgb(225, 240, 255);
+  box-shadow: 0 0 0.3rem #999;
+  font: 1.2em "Fira Sans", sans-serif;
+}
+.content.clickable:hover{
+  box-shadow: 0 0 0.3rem #000;
+  cursor: pointer;
+}
+.group label {
+  color: #000;
+  font-weight: bold;
+  margin-bottom: 5px;
+  display: block;
+}
+.group input {
+  padding: 8px;
+  border: 1px solid #000;
+  border-radius: 4px;
+  background-color: #fff;
+  color: #000;
+}
+button {
+  padding: 10px;
+  background-color: rgb(20,101,66);
+  color: white;
+  font-weight: bold;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: rgb(7,48,30);
+}

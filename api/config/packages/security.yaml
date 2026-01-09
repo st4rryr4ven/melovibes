@@ -12,7 +12,12 @@ security:
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
-        main:
+        options:
+            pattern: ^/
+            methods: [ OPTIONS ]
+            security: false
+        auth:
+            pattern: ^/api/auth
             stateless: true
             provider: app_user_provider
             json_login:
@@ -21,14 +26,17 @@ security:
                 password_path: password
                 success_handler: lexik_jwt_authentication.handler.authentication_success
                 failure_handler: lexik_jwt_authentication.handler.authentication_failure
+        api:
+            pattern: ^/api
+            stateless: true
+            provider: app_user_provider
             jwt: ~
-            entry_point: jwt
             refresh_jwt:
-                check_path: gesdinet_jwt_refresh_token
+                check_path: /api/token/refresh
             logout:
-                path: gesdinet_jwt_invalidate_token
-                delete_cookies: [ 'BEARER' ]
-
+                path: /api/token/invalidate
+                delete_cookies: [ 'BEARER', 'refresh_token' ]
+            entry_point: jwt
             # activate different ways to authenticate
             # https://symfony.com/doc/current/security.html#the-firewall
 
@@ -38,8 +46,9 @@ security:
     # Easy way to control access for large sections of your site
     # Note: Only the *first* access control that matches will be used
     access_control:
-    # - { path: ^/admin, roles: ROLE_ADMIN }
-    # - { path: ^/profile, roles: ROLE_USER }
+        - { path: ^/api/auth, roles: PUBLIC_ACCESS }
+        - { path: ^/api/users/register, roles: PUBLIC_ACCESS }
+        - { path: ^/api/users, roles: IS_AUTHENTICATED_FULLY }
     role_hierarchy:
         ROLE_ADMIN: ROLE_USER
 

@@ -25,8 +25,8 @@ use Symfony\Component\Serializer\Annotation\Groups;
 #[ORM\Table(name: 'user')]
 #[ORM\UniqueConstraint(name: 'UNIQ_LOGIN', columns: ['login'])]
 #[ORM\UniqueConstraint(name: 'UNIQ_EMAIL', columns: ['email'])]
-#[UniqueEntity(fields: ['login'], message: 'This login is already used.')]
-#[UniqueEntity(fields: ['email'], message: 'This email is already used.')]
+#[UniqueEntity(fields: ['login'], message: "Ce nom d'utilisateur est déjà utilisé.")]
+#[UniqueEntity(fields: ['email'], message: "Cet e-mail est déjà utilisé.")]
 #[ApiResource(
     operations: [
         new GetCollection(
@@ -42,6 +42,9 @@ use Symfony\Component\Serializer\Annotation\Groups;
             processor: UserProcessor::class
         ),
         new Patch(
+            inputFormats: [
+                'json' => ['application/merge-patch+json'],
+            ],
             denormalizationContext: ['groups' => ['serialization:user:update']],
             security: "(is_granted('ROLE_USER') and object == user) or is_granted('ROLE_ADMIN')",
             validationContext: ['groups' => ['Default', 'validation:user:update']],
@@ -54,7 +57,7 @@ use Symfony\Component\Serializer\Annotation\Groups;
     ],
     normalizationContext: ['groups' => ['user:read']],
 )]
-class User implements UserInterface, PasswordAuthenticatedUserInterface
+class User implements UserInterface
 {
     /**
      * Unique identifier of the user
@@ -83,12 +86,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     /**
      * Plain password (not persisted)
      */
-    #[Assert\NotBlank(message: 'Le mot de passe est obligatoire.', groups: ['validation:user:create', 'validation:user:update'])]
-    #[Assert\Length(min: 8, minMessage: "Le mot de passe doit contenir au moins 8 caractères.", groups: ['validation:user:create', 'validation:user:update'])]
+    #[Assert\NotBlank(message: 'Le mot de passe est obligatoire.', groups: ['validation:user:create'])]
+    #[Assert\Length(min: 8, minMessage: "Le mot de passe doit contenir au moins 8 caractères.", groups: ['validation:user:create'])]
     #[Groups(['serialization:user:create', 'serialization:user:update'])]
     private ?string $plainPassword = null;
 
-    #[UserPassword(message: "Mot de passe est incorrect.", groups: ['validation:user:update:password'])]
+    #[Assert\NotBlank(message: 'Le mot de passe est obligatoire pour faire les maj sur la compte.', groups: ['validation:user:update'])]
     #[Groups(['serialization:user:update'])]
     private ?string $currentPlainPassword = null;
 
@@ -245,12 +248,22 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function removeReview(Review $review): static
     {
         if ($this->reviews->removeElement($review)) {
-            // set the owning side to null (unless already changed)
             if ($review->getAuthor() === $this) {
                 $review->setAuthor(null);
             }
         }
 
+        return $this;
+    }
+
+    public function getCurrentPlainPassword(): ?string
+    {
+        return $this->currentPlainPassword;
+    }
+
+    public function setCurrentPlainPassword(?string $currentPlainPassword): self
+    {
+        $this->currentPlainPassword = $currentPlainPassword;
         return $this;
     }
 
