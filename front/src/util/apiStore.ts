@@ -1,4 +1,4 @@
-import type {User} from '@/types'
+import type {Music, User} from '@/types'
 import {storeAuthentification} from "@/stores/storeAuthentification.ts";
 
 export const API_URL = import.meta.env.VITE_API_URL;
@@ -118,4 +118,54 @@ export const apiStore = {
     return await (await res.json() as Promise<User>);
   },
 
+  async getFavorites(userId: number): Promise<any[]> {
+    const res = await fetch(`${this.apiUrl}users/${userId}/favorites`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      throw new Error('Failed to fetch favorites');
+    }
+    return await res.json();
+  },
+
+  async toggleFavorite(userId: number, musicId: number): Promise<{ action: string }> {
+    const res = await fetch(`${API_URL}users/${userId}/favorites`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      credentials: 'include',
+      body: JSON.stringify({musicId}),
+    });
+    if (!res.ok) {
+      throw new Error('Failed to toggle favorite');
+    }
+    return await res.json();
+  },
+
+  async getMusic(musicId: number): Promise<any> {
+    const res = await fetch(`${this.apiUrl}musics/${musicId}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    if (!res.ok) throw new Error('Failed to fetch music');
+    return await res.json();
+  },
+  async addFavorite(userId: number, musicId: number) {
+    const res = await fetch(`${API_URL}users/${userId}/favorites`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      credentials: 'include',
+      body: JSON.stringify({musicId})
+    });
+    if (!res.ok) throw new Error('Failed to add a favorite music');
+    return await res.json();
+  },
+  async getAllMusics(): Promise<Music[]> {
+    const res = await fetch(`${this.apiUrl}musics`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    if (!res.ok) throw new Error('Failed to fetch musics');
+    return await res.json() as Music[];
+  }
 };
