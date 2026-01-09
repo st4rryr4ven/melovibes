@@ -71,7 +71,7 @@
 </template>
 
 <script setup lang="ts">
-import {ref, computed, onMounted, watch} from 'vue'
+import {ref, onMounted, watch} from 'vue'
 import {useRouter} from 'vue-router'
 import {storeAuthentification as store} from '@/stores/storeAuthentification'
 import {apiStore, getProfilePictureUrl} from '@/util/apiStore'
@@ -111,34 +111,39 @@ function handleImageError(event: Event) {
   img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2RkZCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjOTk5IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+QXZhdGFyPC90ZXh0Pjwvc3ZnPg=='
 }
 
-function update() {
+async function update() {
   if (!currentPlainPassword.value) {
     alert("Vous devez entrer votre mot de passe actuel.")
     return
   }
 
-  apiStore.updateUser(store.utilisateurConnecte!.id, {
-    login: login.value,
-    email: email.value,
-    plainPassword: plainPassword.value || undefined,
-    currentPlainPassword: currentPlainPassword.value
-  })
-    .then(user => {
-      store.utilisateurConnecte = { ...user }
-      updateProfilePicture()
-      alert('Profil mis à jour')
+  try {
+    await apiStore.updateUser(store.utilisateurConnecte!.id, {
+      login: login.value,
+      email: email.value,
+      plainPassword: plainPassword.value || undefined,
+      currentPlainPassword: currentPlainPassword.value
     })
-    .catch(err => {
-      console.error('Update error:', err)
-      if (err.message.includes('Authentification')) {
-        alert("Session expirée. Veuillez vous reconnecter.")
-        router.push({name: 'login'})
-      } else {
-        alert(err.message || 'Erreur lors de la mise à jour')
-      }
-    })
-}
 
+    const refreshedUser = await apiStore.me()
+    store.utilisateurConnecte = {...refreshedUser}
+
+    await updateProfilePicture()
+
+    alert('Profil mis à jour')
+  } catch (err: any) {
+    console.error('Update error:', err)
+
+    if (err.message.includes('Authentification')) {
+      alert("Session expirée. Veuillez vous reconnecter.")
+      router.push({name: 'login'})
+    } else if (err.message.includes('422')) {
+      alert('Mot de passe incorrect.')
+    } else {
+      alert(err.message || 'Erreur lors de la mise à jour.')
+    }
+  }
+}
 
 function deleteAccount() {
   if (!confirm('Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible.')) {
@@ -171,30 +176,5 @@ function deleteAccount() {
 </script>
 <style scoped>
 @import "@/components/css/layout.css";
-
-.profile-picture-section {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 20px;
-}
-
-.profile-picture {
-  width: 150px;
-  height: 150px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 3px solid #146542;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-.delete-button {
-  background-color: #dc3545;
-  color: white;
-  margin-top: 10px;
-}
-
-.delete-button:hover {
-  background-color: #c82333;
-}
 </style>
 
