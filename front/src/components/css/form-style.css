@@ -1,0 +1,54 @@
+
+.music-form {
+  max-width: 600px;
+  margin: auto;
+  padding: 20px;
+  background-color: rgb(225, 240, 255);
+  border-radius: 10px;
+  box-shadow: 0 0 0.3rem #999;
+}
+
+.music-form h2 {
+  font-size: 1.5em;
+  margin-bottom: 15px;
+  color: #000;
+}
+
+.music-form label {
+  display: block;
+  font-weight: bold;
+  margin-top: 10px;
+  margin-bottom: 5px;
+  color: #000;
+}
+
+.music-form input {
+  width: 100%;
+  padding: 8px;
+  border-radius: 5px;
+  border: 1px solid #999;
+  margin-bottom: 10px;
+  font-size: 1em;
+}
+
+button {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background-color: rgb(20, 101, 66);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: rgb(7, 48, 30);
+}
+
+.dynamic-field {
+  margin-bottom: 15px;
+}
+
+.dynamic-field button {
+  margin-top: 5px;
+}

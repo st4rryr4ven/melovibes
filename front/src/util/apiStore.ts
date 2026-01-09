@@ -161,5 +161,21 @@ export const apiStore = {
     });
     if (!res.ok) throw new Error('Failed to fetch musics');
     return await res.json() as Music[];
+  },
+  async createMusic(music: Partial<Music>): Promise<Music> {
+    const res = await fetch(`${this.apiUrl}music`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      credentials: 'include',
+      body: JSON.stringify(music),
+    });
+
+    if (!res.ok) {
+      const error = await res.json().catch(() => null);
+      if (res.status === 401) throw new Error('Authentification échouée. Veuillez vous reconnecter.');
+      throw new Error(error?.message || 'Failed to create music');
+    }
+
+    return await res.json();
   }
 };
