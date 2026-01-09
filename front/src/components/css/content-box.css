@@ -115,3 +115,22 @@ button.icon-btn:hover {
   color: black;
   margin-bottom: 10px;
 }
+
+.content {
+  color: black;
+  margin-bottom: 10px;
+}
+
+.group a {
+  color: rgb(20, 101, 66);
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.group a:hover {
+  text-decoration: underline;
+}
+
+.group {
+  margin-bottom: 15px;
+}

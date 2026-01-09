@@ -68,26 +68,8 @@ class FavoritesController extends AbstractController
         $this->em->flush();
 
         return $this->json([
-            'status' => 'success',
             'action' => $action,
             'musicId' => $musicId,
         ]);
-    }
-
-    #[Route('', name: 'list_favorites', methods: ['GET'])]
-    public function listFavorites(int $id): JsonResponse
-    {
-        $user = $this->getUser();
-        if (!$user || $user->getId() !== $id) {
-            return $this->json(['error' => 'Unauthorized'], 401);
-        }
-
-        $favorites = $user->getFavoriteMusics()->map(fn($music) => [
-            'id' => $music->getId(),
-            'title' => $music->getTitle(),
-            'link' => $music->getLink(),
-        ])->toArray();
-
-        return $this->json($favorites);
     }
 }
