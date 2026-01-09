@@ -20,7 +20,23 @@ class FavoritesController extends AbstractController
     {
     }
 
-    #[Route('', name: 'add_remove_favorite', methods: ['POST'])]
+    #[Route('', methods: ['GET'])]
+    public function listFavorites(int $id, SerializerInterface $serializer): JsonResponse
+    {
+        $user = $this->getUser();
+
+        if (!$user || $user->getId() !== $id) {
+            return $this->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $favorites = $user->getFavoriteMusic()->toArray();
+
+        $json = $serializer->serialize($favorites, 'json', ['groups' => ['music:read']]);
+
+        return JsonResponse::fromJsonString($json);
+    }
+
+    #[Route('', methods: ['POST'])]
     public function toggleFavorite(int $id, Request $request): JsonResponse
     {
         $user = $this->getUser();
@@ -33,7 +49,7 @@ class FavoritesController extends AbstractController
         $musicId = $data['musicId'] ?? null;
 
         if (!$musicId) {
-            return $this->json(['error' => 'No music ID provided'], 400);
+            return $this->json(['error' => 'musicId missing'], 400);
         }
 
         $music = $this->musicRepo->find($musicId);
@@ -41,7 +57,7 @@ class FavoritesController extends AbstractController
             return $this->json(['error' => 'Music not found'], 404);
         }
 
-        if ($user->getFavoriteMusics()->contains($music)) {
+        if ($user->getFavoriteMusic()->contains($music)) {
             $user->removeFavoriteMusic($music);
             $action = 'removed';
         } else {
@@ -52,26 +68,8 @@ class FavoritesController extends AbstractController
         $this->em->flush();
 
         return $this->json([
-            'status' => 'success',
             'action' => $action,
             'musicId' => $musicId,
         ]);
-    }
-
-    #[Route('', name: 'list_favorites', methods: ['GET'])]
-    public function listFavorites(int $id): JsonResponse
-    {
-        $user = $this->getUser();
-        if (!$user || $user->getId() !== $id) {
-            return $this->json(['error' => 'Unauthorized'], 401);
-        }
-
-        $favorites = $user->getFavoriteMusics()->map(fn($music) => [
-            'id' => $music->getId(),
-            'title' => $music->getTitle(),
-            'link' => $music->getLink(),
-        ])->toArray();
-
-        return $this->json($favorites);
     }
 }
