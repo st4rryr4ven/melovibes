@@ -50,7 +50,11 @@ use Symfony\Component\Serializer\Annotation\Groups;
             validationContext: ['groups' => ['Default', 'validation:user:update']],
             processor: UserProcessor::class
         ),
-
+        new Patch(
+            uriTemplate: '/users/{id}/favorites',
+            denormalizationContext: ['groups' => ['serialization:user:update']],
+            security: "is_granted('ROLE_USER') and object == user"
+        ),
         new Delete(
             security: "(is_granted('ROLE_USER') and object == user) or is_granted('ROLE_ADMIN')"
         ),
@@ -117,9 +121,15 @@ class User implements UserInterface
     #[ORM\OneToMany(targetEntity: Review::class, mappedBy: 'author')]
     private Collection $reviews;
 
+
+    #[ORM\ManyToMany(targetEntity: Music::class)]
+    #[Groups(['user:read', 'serialization:user:update'])]
+    private Collection $favoriteMusics;
+
     public function __construct()
     {
         $this->reviews = new ArrayCollection();
+        $this->favoriteMusics = new ArrayCollection();
     }
 
     /**
@@ -264,6 +274,28 @@ class User implements UserInterface
     public function setCurrentPlainPassword(?string $currentPlainPassword): self
     {
         $this->currentPlainPassword = $currentPlainPassword;
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Music>
+     */
+    public function getFavoriteMusics(): Collection
+    {
+        return $this->favoriteMusics;
+    }
+
+    public function addFavoriteMusic(Music $music): self
+    {
+        if (!$this->favoriteMusics->contains($music)) {
+            $this->favoriteMusics->add($music);
+        }
+        return $this;
+    }
+
+    public function removeFavoriteMusic(Music $music): self
+    {
+        $this->favoriteMusics->removeElement($music);
         return $this;
     }
 
