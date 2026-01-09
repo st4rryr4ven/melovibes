@@ -118,21 +118,23 @@ export const apiStore = {
     return await (await res.json() as Promise<User>);
   },
 
-  async getFavorites(userId: number): Promise<any[]> {
-    const res = await fetch(`${this.apiUrl}users/${userId}/favorites`, {
+  async getFavorites(userId: number) {
+    const res = await fetch(`${API_URL}users/${userId}/favorites`, {
       method: 'GET',
       credentials: 'include',
     });
+
     if (!res.ok) {
       throw new Error('Failed to fetch favorites');
     }
+
     return await res.json();
   },
 
-  async toggleFavorite(userId: number, musicId: number): Promise<{ action: string }> {
+  async toggleFavorite(userId: number, musicId: number) {
     const res = await fetch(`${API_URL}users/${userId}/favorites`, {
-      method: 'PATCH',
-      headers: {'Content-Type': 'application/merge-patch+json'},
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
       credentials: 'include',
       body: JSON.stringify({musicId}),
     });
@@ -152,7 +154,7 @@ export const apiStore = {
     if (!res.ok) throw new Error('Failed to fetch music');
     return await res.json();
   },
-  async getAllMusics(): Promise<Music[]> {
+  async getAllMusic(): Promise<Music[]> {
     const res = await fetch(`${this.apiUrl}music`, {
       method: 'GET',
       credentials: 'include',

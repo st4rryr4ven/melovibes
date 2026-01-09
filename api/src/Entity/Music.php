@@ -153,11 +153,11 @@ class Music
     }
 
     /**
-     * @return Collection<int, Artist>
+     * @return array
      */
-    public function getArtists(): Collection
+    public function getArtists(): array
     {
-        return $this->artists;
+        return $this->artists->toArray();
     }
 
     public function addArtist(Artist $artist): static

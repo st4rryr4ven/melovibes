@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
@@ -50,11 +51,14 @@ use Symfony\Component\Serializer\Annotation\Groups;
             validationContext: ['groups' => ['Default', 'validation:user:update']],
             processor: UserProcessor::class
         ),
-        new Patch(
-            uriTemplate: '/users/{id}/favorites',
-            denormalizationContext: ['groups' => ['serialization:user:update:favorites']],
-            security: "is_granted('ROLE_USER') and object == user"
-        ),
+//        new Patch(
+//            uriTemplate: '/users/{id}/favorites',
+//            inputFormats: [
+//                'json' => ['application/merge-patch+json'],
+//            ],
+//            denormalizationContext: ['groups' => ['serialization:user:update:favorites']],
+//            security: "is_granted('ROLE_USER') and object == user"
+//        ),
         new Delete(
             security: "(is_granted('ROLE_USER') and object == user) or is_granted('ROLE_ADMIN')"
         ),
@@ -123,13 +127,14 @@ class User implements UserInterface
 
 
     #[ORM\ManyToMany(targetEntity: Music::class)]
-    #[Groups(['user:read', 'serialization:user:update:favorites'])]
-    private Collection $favoriteMusics;
+    #[Groups(['user:read'])]
+    #[ApiProperty(readableLink: true)]
+    private Collection $favoriteMusic;
 
     public function __construct()
     {
         $this->reviews = new ArrayCollection();
-        $this->favoriteMusics = new ArrayCollection();
+        $this->favoriteMusic = new ArrayCollection();
     }
 
     /**
@@ -280,22 +285,22 @@ class User implements UserInterface
     /**
      * @return Collection<int, Music>
      */
-    public function getFavoriteMusics(): Collection
+    public function getFavoriteMusic(): Collection
     {
-        return $this->favoriteMusics;
+        return $this->favoriteMusic;
     }
 
     public function addFavoriteMusic(Music $music): self
     {
-        if (!$this->favoriteMusics->contains($music)) {
-            $this->favoriteMusics->add($music);
+        if (!$this->favoriteMusic->contains($music)) {
+            $this->favoriteMusic->add($music);
         }
         return $this;
     }
 
     public function removeFavoriteMusic(Music $music): self
     {
-        $this->favoriteMusics->removeElement($music);
+        $this->favoriteMusic->removeElement($music);
         return $this;
     }
 
