@@ -44,9 +44,7 @@ const router = createRouter({
       name: 'unvalidatedMusics',
       component: UnvalidatedMusics,
       meta: {requiresAuth: true, requiresAdmin: true},
-
-    }
-
+    },
   ]
 })
 
