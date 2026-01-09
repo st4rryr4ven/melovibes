@@ -1,7 +1,8 @@
 import {createRouter, createWebHistory} from 'vue-router'
 import Melovibes from '@/views/MelovibesMain.vue'
 import AllUsers from '@/views/AllUsers.vue'
-import AllMusics from '@/views/AllMusics.vue'
+import AllMusic from '@/views/AllMusic.vue'
+import MusicCreate from '@/views/MusicForm.vue';
 import Login from '@/views/Login.vue'
 import Register from '@/views/Register.vue'
 import Edit from '@/views/Profile.vue'
@@ -46,8 +47,14 @@ const router = createRouter({
     },
     {
       path: '/music',
-      name: 'musics',
-      component: AllMusics
+      name: 'music',
+      component: AllMusic
+    },
+    {
+      path: '/music/create',
+      name: 'music-create',
+      component: MusicCreate,
+      meta: {requiresAuth: true}
     },
     {path: '/album/:albumId', name: 'albumTracks', component: AlbumTracks},
     {
@@ -62,7 +69,8 @@ const router = createRouter({
       component: UnvalidatedMusics,
       meta: {requiresAuth: true, requiresAdmin: true},
 
-    },
+    }
+
   ]
 })
 
@@ -81,6 +89,5 @@ router.beforeEach(async (to) => {
 
   return true;
 });
-
 
 export default router
