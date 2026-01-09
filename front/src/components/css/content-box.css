@@ -70,6 +70,7 @@ div.content-box {
   margin-bottom: 15px;
 }
 
+
 button {
   padding: 10px;
   background-color: rgb(20, 101, 66);
@@ -147,4 +148,12 @@ button.icon-btn:hover {
 
 .group {
   margin-bottom: 15px;
+}
+
+.favorite-btn {
+  float: right;
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  cursor: pointer;
 }

@@ -1,5 +1,3 @@
-import type {Music} from '@/types'
-import type {User} from '@/types/user.ts'
 import type {Music, User} from '@/types'
 import {useStoreAuthentification} from '@/stores/storeAuthentification'
 
@@ -210,9 +208,7 @@ export const apiStore = {
       throw new Error(error?.message || 'Failed to import music')
     }
     return await res.json() as Music
-  }
-
-}
+  },
 
   async getOne(resource: string, id: number): Promise<any> {
     const res = await fetch(`${this.apiUrl}${resource}/${id}`, {
@@ -228,8 +224,7 @@ export const apiStore = {
       throw new Error(`GET ${resource}/${id} échoué`);
     }
 
-    const data = await res.json();
-    return data;
+    return await res.json();
   },
 
   async patch(resource: string, payload: object): Promise<any> {
