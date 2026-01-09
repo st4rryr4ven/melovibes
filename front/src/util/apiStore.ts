@@ -115,10 +115,10 @@ export const apiStore = {
     return await res.json()
   },
 
-  async toggleFavorite(userId: number, musicId: number) {
-    const res = await fetch(`${this.apiUrl}users/${userId}/favorites`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+  async toggleFavorite(userId: number, musicId: number): Promise<{ action: string }> {
+    const res = await fetch(`${API_URL}users/${userId}/favorites`, {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/merge-patch+json'},
       credentials: 'include',
       body: JSON.stringify({musicId}),
     })
