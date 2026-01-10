@@ -78,7 +78,7 @@ class Artist
     private ?string $spotifyId = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['artist:read', 'music:read'])]
+    #[Groups(['artist:read'])]
     private ?string $name = null;
 
     /**
