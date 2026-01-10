@@ -46,8 +46,8 @@ use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
             validate: false,
         ),
         new Get(
-            uriTemplate: '/artist/{id}/music',
-            requirements: ['id' => '\\d+'],
+            uriTemplate: '/artist/{artistId}/music',
+            requirements: ['artistId' => '\\d+'],
             controller: ArtistMusicAction::class,
             output: false,
             read: false,

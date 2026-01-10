@@ -34,7 +34,7 @@ use ApiPlatform\Metadata\ApiFilter;
             requirements: ['id' => '\\d+'],
         ),
         new GetCollection(
-            security: "is_granted('ROLE_ADMIN')"
+//            security: "is_granted('ROLE_ADMIN')"
         ),
         new GetCollection(
             uriTemplate: '/music/search',
@@ -148,11 +148,11 @@ class Music
     private ?string $link = null;
 
     #[ORM\Column]
-    #[Groups(['music:admin:read', 'serialization:music:update'])]
-    private ?bool $isValidated = null;
+    #[Groups(['music:read', 'music:admin:read', 'serialization:music:update'])]
+    private ?bool $isValidated;
 
     #[ORM\Column(nullable: true)]
-    #[Groups(['music:admin:read'])]
+    //#[Groups(['music:admin:read'])]
     private ?array $requestJSON = null;
 
     /**
@@ -230,12 +230,9 @@ class Music
         return $this;
     }
 
-    /**
-     * @return array
-     */
-    public function getArtists(): array
+    public function getArtists(): Collection
     {
-        return $this->artists->toArray();
+        return $this->artists;
     }
 
     public function addArtist(Artist $artist): static
