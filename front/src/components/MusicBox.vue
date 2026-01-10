@@ -105,12 +105,12 @@ function editMusic() {
   <div class="content-box music-box">
     <div class="top">
       {{ props.music.title }}
-      <button v-if="authStore.estConnecte" @click="toggleFavorite" class="favorite-btn">
+      <button v-if="authStore.estConnecte" @click="toggleFavorite" class="icon-btn">
         {{ isFavorite ? '💖' : '🤍' }}
       </button>
       <div v-if="isAdmin" class="admin-actions">
-        <button @click="editMusic">✏️</button>
-        <button @click="deleteMusic">🗑️</button>
+        <button @click="editMusic" class="icon-btn">✏️</button>
+        <button @click="deleteMusic" class="icon-btn">🗑️</button>
       </div>
     </div>
     <div class="content">
