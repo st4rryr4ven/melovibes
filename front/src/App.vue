@@ -12,7 +12,7 @@
         <div v-if="!authStore.estConnecte" @click="router.push({ name: 'login' })">Se connecter
         </div>
         <div v-if="authStore.estConnecte" @click="router.push({ name: 'profile' })">Mon profil</div>
-        <div v-if="authStore.estConnecte && store.estAdmin()"
+        <div v-if="authStore.estConnecte && authStore.estAdmin"
              @click="router.push({ name: 'allUsers' })">Liste d'utilisateurs
         </div>
         <div v-if="store.estConnecte && store.estAdmin()"

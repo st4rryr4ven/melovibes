@@ -9,48 +9,23 @@ import Edit from '@/views/Profile.vue'
 import {useStoreAuthentification} from '@/stores/storeAuthentification'
 import AlbumTracks from '@/views/AlbumTracks.vue'
 import UnvalidatedMusics from '@/views/UnvalidatedMusics.vue'
-import {storeAuthentification} from "@/stores/storeAuthentification.ts";
 import MusicDetail from "@/views/MusicDetail.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    {
-      path: '/',
-      redirect: {name: 'melovibes'}
-    },
-    {
-      path: '/melovibes',
-      name: 'melovibes',
-      component: Melovibes
-    },
-    {
-      path: '/register',
-      name: 'register',
-      component: Register
-    },
-    {
-      path: '/login',
-      name: 'login',
-      component: Login
-    },
-    {
-      path: '/users',
-      name: 'allUsers',
-      component: AllUsers,
-      meta:{requiresAuth: true, requiresAdmin : true}
-    },
+    {path: '/', redirect: {name: 'melovibes'}},
+    {path: '/melovibes', name: 'melovibes', component: Melovibes},
+    {path: '/register', name: 'register', component: Register},
+    {path: '/login', name: 'login', component: Login},
+    {path: '/users', name: 'allUsers', component: AllUsers, meta:{requiresAuth: true, requiresAdmin : true}},
     {
       path: '/profile',
       name: 'profile',
       component: Edit,
-      meta: {requiresAuth: true}
+      meta: {requiresAuth: true},
     },
-    {
-      path: '/music',
-      name: 'music',
-      component: AllMusic
-    },
+    {path: '/music', name: 'music', component: AllMusic},
     {
       path: '/music/create',
       name: 'music-create',
@@ -76,19 +51,21 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
-  if (useStoreAuthentification.authStatus === 'unknown') {
-    await useStoreAuthentification.init();
+  const authStore = useStoreAuthentification();
+
+  if (authStore.authStatus === 'unknown') {
+    await authStore.init();
   }
 
-  if (to.meta.requiresAuth && !useStoreAuthentification.estConnecte) {
-    return { name: 'login' };
+  if (to.meta.requiresAuth && !authStore.estConnecte) {
+    return {name: 'login'};
   }
 
-  if (to.meta.requiresAdmin && !useStoreAuthentification.estAdmin()) {
-    return { name: 'melovibes' };
+  if (to.meta.requiresAdmin && !authStore.estAdmin) {
+    return {name: 'melovibes'};
   }
 
   return true;
-});
+})
 
 export default router
