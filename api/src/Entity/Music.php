@@ -21,6 +21,12 @@ use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Delete;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Patch;
+use ApiPlatform\Metadata\Post;
 use App\Repository\MusicRepository;
 use App\State\MusicProcessor;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -29,6 +35,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
+use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: MusicRepository::class)]
@@ -156,6 +163,18 @@ class Music
     #[Groups(['music:admin:read'])]
     private ?array $requestJSON = null;
 
+    /**
+     * Popularity of the music
+     */
+    #[Assert\PositiveOrZero(
+        message: 'La popularité doit être positive.',
+        groups: ['validation:music:create', 'validation:music:update']
+    )]
+    #[Assert\Range(
+        min: 0,
+        max: 100,
+        groups: ['validation:music:create', 'validation:music:update']
+    )]
     #[ORM\Column]
     #[Groups(['music:read', 'serialization:music:create'])]
     private ?int $popularity = null;
