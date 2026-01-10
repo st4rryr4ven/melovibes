@@ -32,6 +32,7 @@ const router = createRouter({
             path: '/users',
             name: 'allUsers',
             component: AllUsers,
+            meta:{requiresAuth: true, requiresAdmin : true}
         },
         {
             path: '/profile',
@@ -44,12 +45,21 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
-  if (!to.meta.requiresAuth) return true;
+  if (storeAuthentification.authStatus === 'unknown') {
+    await storeAuthentification.init();
+  }
 
-  await storeAuthentification.init();
-  if (!storeAuthentification.estConnecte) return { name: 'login' };
+  if (to.meta.requiresAuth && !storeAuthentification.estConnecte) {
+    return { name: 'login' };
+  }
+
+  if (to.meta.requiresAdmin && !storeAuthentification.estAdmin()) {
+    return { name: 'melovibes' };
+  }
 
   return true;
 });
+
+
 
 export default  router

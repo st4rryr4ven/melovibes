@@ -16,11 +16,12 @@ final class MeController extends AbstractController
         if (!$user) {
             return $this->json(['message' => 'Unauthenticated'], 401);
         }
-        
+
         return $this->json([
             'id' => $user->getId(),
             'login' => $user->getLogin(),
             'email' => $user->getEmail(),
+            'roles'=>$user->getRoles(),
         ]);
     }
 }

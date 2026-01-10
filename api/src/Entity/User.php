@@ -106,7 +106,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      * User roles
      */
     #[ORM\Column(type: 'json')]
-    #[Groups(['user:read', 'serialization:user:update:admin'])]
+    #[Groups(['user:read', 'serialization:user:update:admin', 'me:read'])]
     private array $roles = ['ROLE_USER'];
 
     /**

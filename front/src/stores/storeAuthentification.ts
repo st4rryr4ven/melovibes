@@ -9,7 +9,11 @@ export const storeAuthentification = reactive({
   utilisateurConnecte: null as User | null,
   authStatus: 'unknown' as 'unknown' | 'authenticated' | 'guest',
 
-  init(): void {
+   estAdmin(): boolean {
+    return this.utilisateurConnecte?.roles?.includes('ROLE_ADMIN') ?? false
+  },
+
+  async init(): Promise<void> {
     const stored = JSON.parse(localStorage.getItem(USER_STORAGE_KEY) || 'null') as User | null;
 
     this.utilisateurConnecte = stored;
@@ -18,35 +22,40 @@ export const storeAuthentification = reactive({
 
     if (!stored) return;
 
-    (async () => {
+    try {
+      let me: User;
       try {
-        let me: User | null;
-        try {
-          me = await apiStore.me();
-        } catch {
-          await apiStore.refresh();
-          me = await apiStore.me();
-        }
-        this.utilisateurConnecte = me;
-        this.estConnecte = true;
-        this.authStatus = 'authenticated';
-        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(me));
+        me = await apiStore.me();
       } catch {
-        this.utilisateurConnecte = null;
-        this.estConnecte = false;
-        this.authStatus = 'guest';
-        localStorage.removeItem(USER_STORAGE_KEY);
+        await apiStore.refresh();
+        me = await apiStore.me();
       }
-    })();
-  },
+
+      this.utilisateurConnecte = me;
+      this.estConnecte = true;
+      this.authStatus = 'authenticated';
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(me));
+    } catch {
+      this.utilisateurConnecte = null;
+      this.estConnecte = false;
+      this.authStatus = 'guest';
+      localStorage.removeItem(USER_STORAGE_KEY);
+    }
+  }
+  ,
 
   async login(login: string, password: string): Promise<LoginResult> {
     try {
       const user = await apiStore.login(login, password);
-      this.utilisateurConnecte = user;
+
+      const me = await apiStore.me();
+
+      this.utilisateurConnecte = me;
       this.estConnecte = true;
       this.authStatus = 'authenticated';
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(me));
+
       return { success: true };
     } catch (err: any) {
       this.utilisateurConnecte = null;
@@ -92,7 +101,4 @@ export const storeAuthentification = reactive({
     }
   },
 
-  estAdmin(): boolean {
-    return this.utilisateurConnecte?.roles?.includes('ROLE_ADMIN') ?? false;
-  }
 });
