@@ -44,9 +44,13 @@ const router = createRouter({
       path: '/profile',
       name: 'profile',
       component: Edit,
-      meta: {requiresAuth: true},
+      meta: {requiresAuth: true}
     },
-    {path: '/music', name: 'music', component: AllMusic},
+    {
+      path: '/music',
+      name: 'music',
+      component: AllMusic
+    },
     {
       path: '/music/create',
       name: 'music-create',
