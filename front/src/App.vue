@@ -57,6 +57,7 @@ header {
   width: 100%;
   position: sticky;
   top: 0;
+  z-index: 1000;
   background-color: rgb(20, 101, 66);
   padding: 20px;
 }

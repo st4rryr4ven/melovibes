@@ -35,7 +35,6 @@ function onKeydown(e: KeyboardEvent) {
       @input="onInput"
       @keydown="onKeydown"
     />
-    <div v-if="props.loading" class="searchbar__status">Chargement...</div>
   </div>
 </template>
 

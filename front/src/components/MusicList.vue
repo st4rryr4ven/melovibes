@@ -5,38 +5,35 @@ import type { MusicUiItem } from '@/types'
 const props = withDefaults(
   defineProps<{
     items: MusicUiItem[]
-    importingKey?: string | null
+    busyKey?: string | null
   }>(),
   {
-    importingKey: null
+    busyKey: null
   }
 )
 
 const emit = defineEmits<{
-  (e: 'import', spotifyTrackId: string, itemKey: string): void
+  (e: 'select', item: MusicUiItem): void
 }>()
-
-function onImport(spotifyTrackId: string, itemKey: string) {
-  emit('import', spotifyTrackId, itemKey)
-}
 </script>
 
 <template>
-  <div class="list">
+  <div class="list" role="list">
     <MusicCard
       v-for="item in props.items"
       :key="item.key"
       :item="item"
-      :importing="props.importingKey === item.key"
-      @import="(spotifyTrackId) => onImport(spotifyTrackId, item.key)"
+      :busy="props.busyKey === item.key"
+      @select="() => emit('select', item)"
     />
   </div>
 </template>
 
 <style scoped>
 .list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  padding-bottom: 16px;
 }
 </style>
