@@ -1,23 +1,22 @@
 <?php
 
-namespace App\Controller;
+namespace App\Service\Api;
 
 use App\Repository\ArtistRepository;
 use App\Repository\MusicRepository;
 use App\Service\Spotify\SpotifyApiClient;
 use App\Service\Spotify\SpotifyCatalogService;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Routing\Attribute\Route;
 
-/**
- * Artist endpoints: local-first search, on-demand Spotify imports, and Spotify top tracks display.
- */
-#[Route('/api/artist', name: 'api_artist_')]
-class ArtistController extends AbstractController
+final class ArtistActionsService
 {
-    #[Route('/search', name: 'search', methods: ['GET'])]
+    /**
+     * @param Request $request
+     * @param SpotifyApiClient $spotify
+     * @param ArtistRepository $artistRepository
+     * @return JsonResponse
+     */
     public function search(Request $request, SpotifyApiClient $spotify, ArtistRepository $artistRepository): JsonResponse
     {
         $q = trim((string) $request->query->get('q', ''));
@@ -125,7 +124,12 @@ class ArtistController extends AbstractController
         ]);
     }
 
-    #[Route('/import/spotify/{spotifyArtistId}', name: 'import_spotify_artist', methods: ['POST'])]
+    /**
+     * @param string $spotifyArtistId
+     * @param Request $request
+     * @param SpotifyCatalogService $catalog
+     * @return JsonResponse
+     */
     public function importSpotifyArtist(string $spotifyArtistId, Request $request, SpotifyCatalogService $catalog): JsonResponse
     {
         $market = (string) $request->query->get('market', 'FR');
@@ -138,7 +142,13 @@ class ArtistController extends AbstractController
         ], 201);
     }
 
-    #[Route('/{artistId}/musics', name: 'musics', methods: ['GET'])]
+    /**
+     * @param int $artistId
+     * @param Request $request
+     * @param ArtistRepository $artistRepository
+     * @param MusicRepository $musicRepository
+     * @return JsonResponse
+     */
     public function musics(int $artistId, Request $request, ArtistRepository $artistRepository, MusicRepository $musicRepository): JsonResponse
     {
         $artist = $artistRepository->find($artistId);
@@ -191,7 +201,14 @@ class ArtistController extends AbstractController
         ]);
     }
 
-    #[Route('/{artistId}/top-tracks', name: 'top_tracks', methods: ['GET'])]
+    /**
+     * @param int $artistId
+     * @param Request $request
+     * @param ArtistRepository $artistRepository
+     * @param MusicRepository $musicRepository
+     * @param SpotifyApiClient $spotify
+     * @return JsonResponse
+     */
     public function topTracks(int $artistId, Request $request, ArtistRepository $artistRepository, MusicRepository $musicRepository, SpotifyApiClient $spotify): JsonResponse
     {
         $artist = $artistRepository->find($artistId);

@@ -1,22 +1,24 @@
 <?php
 
-namespace App\Controller;
+namespace App\Service\Api;
 
 use App\Repository\MusicRepository;
 use App\Service\Spotify\SpotifyApiClient;
 use App\Service\Spotify\SpotifyCatalogService;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Routing\Attribute\Route;
 
 /**
- * Music endpoints: local-first search, curated lists, and on-demand Spotify imports.
+ * @phpstan-type MusicSearchItem array{source:string, local:array, spotify:mixed}
  */
-#[Route('/api/music', name: 'api_music_')]
-class MusicController extends AbstractController
+final class MusicActionsService
 {
-    #[Route('/search', name: 'search', methods: ['GET'])]
+    /**
+     * @param Request $request
+     * @param SpotifyApiClient $spotify
+     * @param MusicRepository $musicRepository
+     * @return JsonResponse
+     */
     public function search(Request $request, SpotifyApiClient $spotify, MusicRepository $musicRepository): JsonResponse
     {
         $q = trim((string) $request->query->get('q', ''));
@@ -139,7 +141,11 @@ class MusicController extends AbstractController
         ]);
     }
 
-    #[Route('/new-releases', name: 'new_releases', methods: ['GET'])]
+    /**
+     * @param Request $request
+     * @param MusicRepository $musicRepository
+     * @return JsonResponse
+     */
     public function newReleases(Request $request, MusicRepository $musicRepository): JsonResponse
     {
         $limit = max(1, min(50, (int) $request->query->get('limit', 20)));
@@ -187,7 +193,12 @@ class MusicController extends AbstractController
         ]);
     }
 
-    #[Route('/import/spotify/{spotifyTrackId}', name: 'import_spotify_track', methods: ['POST'])]
+    /**
+     * @param string $spotifyTrackId
+     * @param Request $request
+     * @param SpotifyCatalogService $catalog
+     * @return JsonResponse
+     */
     public function importSpotifyTrack(string $spotifyTrackId, Request $request, SpotifyCatalogService $catalog): JsonResponse
     {
         $market = (string) $request->query->get('market', 'FR');

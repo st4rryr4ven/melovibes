@@ -3,11 +3,12 @@
 namespace App\Entity;
 
 use ApiPlatform\Metadata\ApiResource;
-use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
-use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
+use App\Api\Action\MusicImportSpotifyTrackAction;
+use App\Api\Action\MusicNewReleasesAction;
+use App\Api\Action\MusicSearchAction;
 use App\Repository\MusicRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -17,15 +18,40 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: MusicRepository::class)]
 #[ORM\Table(name: 'music')]
-#[ORM\UniqueConstraint(name: 'UNIQ_SPOTIFY_ID', columns: ['spotifyId'])]
-#[UniqueEntity(fields: ['spotifyId'], message: 'This spotifyId is already used.')]
+#[ORM\UniqueConstraint(name: 'UNIQ_SPOTIFY_ID', columns: ['spotify_id'])]
+#[UniqueEntity(fields: ['spotify_id'], message: 'This spotifyId is already used.')]
 #[ApiResource(
     operations: [
+        new Get(
+            requirements: ['id' => '\\d+'],
+//            security: "(is_granted('ROLE_USER') and object == user) or is_granted('ROLE_ADMIN')"
+        ),
         new GetCollection(
             security: "is_granted('ROLE_ADMIN')"
         ),
-        new Get(
-            security: "(is_granted('ROLE_USER') and object == user) or is_granted('ROLE_ADMIN')"
+        new GetCollection(
+            uriTemplate: '/music/search',
+            controller: MusicSearchAction::class,
+            paginationEnabled: false,
+            output: false,
+            read: false,
+            deserialize: false,
+        ),
+        new GetCollection(
+            uriTemplate: '/music/new-releases',
+            controller: MusicNewReleasesAction::class,
+            paginationEnabled: false,
+            output: false,
+            read: false,
+            deserialize: false,
+        ),
+        new Post(
+            uriTemplate: '/music/import/spotify/{spotifyTrackId}',
+            controller: MusicImportSpotifyTrackAction::class,
+            output: false,
+            read: false,
+            deserialize: false,
+            validate: false,
         ),
     ],
 )]

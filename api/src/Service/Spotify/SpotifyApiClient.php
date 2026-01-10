@@ -34,7 +34,7 @@ class SpotifyApiClient
         private readonly CacheInterface $cache,
         #[Autowire('%env(CLIENT_ID)%')] string $clientId,
         #[Autowire('%env(CLIENT_SECRET)%')] string $clientSecret,
-        #[Autowire('%env(default:FR:SPOTIFY_DEFAULT_MARKET)%')] string $defaultMarket = 'FR',
+        #[Autowire('%env(SPOTIFY_DEFAULT_MARKET)%')] string $defaultMarket = 'FR',
     ) {
         $this->clientId = $clientId;
         $this->clientSecret = $clientSecret;
