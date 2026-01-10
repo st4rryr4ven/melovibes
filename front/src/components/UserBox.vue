@@ -76,18 +76,4 @@ const roleLabels = props.user.roles.map(getRoleLabel);
 
 <style scoped>
 @import "@/components/css/content-box.css";
-.delete-button {
-  margin-top: 10px;
-  padding: 8px 12px;
-  background-color: #e74c3c;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.delete-button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
 </style>
