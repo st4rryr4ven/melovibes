@@ -126,7 +126,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\ManyToMany(targetEntity: Music::class)]
     #[Groups(['user:read'])]
-    #[ApiProperty(readableLink: true)]
+    #[ApiProperty(readableLink: false)]
     private Collection $favoriteMusic;
 
     public function __construct()

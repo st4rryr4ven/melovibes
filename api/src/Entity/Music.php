@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
@@ -120,6 +121,7 @@ class Music
     #[ORM\ManyToMany(targetEntity: Artist::class, inversedBy: 'music')]
     #[Assert\NotNull(groups: ['validation:music:create', 'validation:music:update'])]
     #[Groups(['music:read', 'serialization:music:create', 'serialization:music:update'])]
+    #[ApiProperty(readableLink: false)]
     private Collection $artists;
 
     /**
