@@ -166,7 +166,7 @@ export const apiStore = {
     });
 
     if (!res.ok) {
-      console.error(await res.text()); // <-- montre le message exact de ApiPlatform
+      console.error(await res.text());
       if (res.status === 401) throw new Error('Non authentifié');
       if (res.status === 403) throw new Error('Interdit (403) - vérifier rôle utilisateur');
       throw new Error(`PATCH ${resource} failed`);
