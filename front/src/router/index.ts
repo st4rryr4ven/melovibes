@@ -2,10 +2,11 @@ import {createRouter, createWebHistory} from 'vue-router'
 import Melovibes from '@/views/MelovibesMain.vue'
 import AllUsers from '@/views/AllUsers.vue'
 import AllMusic from '@/views/AllMusic.vue'
-import MusicCreate from '@/views/MusicForm.vue';
+import MusicCreate from '@/views/MusicForm.vue'
 import Login from '@/views/Login.vue'
 import Register from '@/views/Register.vue'
 import Edit from '@/views/Profile.vue'
+import {useStoreAuthentification} from '@/stores/storeAuthentification'
 import AlbumTracks from '@/views/AlbumTracks.vue'
 import UnvalidatedMusics from '@/views/UnvalidatedMusics.vue'
 import {storeAuthentification} from "@/stores/storeAuthentification.ts";
@@ -37,19 +38,15 @@ const router = createRouter({
       path: '/users',
       name: 'allUsers',
       component: AllUsers,
-      meta: {requiresAuth: true, requiresAdmin: true}
+      meta:{requiresAuth: true, requiresAdmin : true}
     },
     {
       path: '/profile',
       name: 'profile',
       component: Edit,
-      meta: {requiresAuth: true}
+      meta: {requiresAuth: true},
     },
-    {
-      path: '/music',
-      name: 'music',
-      component: AllMusic
-    },
+    {path: '/music', name: 'music', component: AllMusic},
     {
       path: '/music/create',
       name: 'music-create',
@@ -75,16 +72,16 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
-  if (storeAuthentification.authStatus === 'unknown') {
-    await storeAuthentification.init()
+  if (useStoreAuthentification.authStatus === 'unknown') {
+    await useStoreAuthentification.init();
   }
 
-  if (to.meta.requiresAuth && !storeAuthentification.estConnecte) {
-    return {name: 'login'}
+  if (to.meta.requiresAuth && !useStoreAuthentification.estConnecte) {
+    return { name: 'login' };
   }
 
-  if (to.meta.requiresAdmin && !storeAuthentification.estAdmin()) {
-    return {name: 'melovibes'}
+  if (to.meta.requiresAdmin && !useStoreAuthentification.estAdmin()) {
+    return { name: 'melovibes' };
   }
 
   return true;

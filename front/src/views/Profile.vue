@@ -73,17 +73,19 @@
 <script setup lang="ts">
 import {ref, onMounted, watch} from 'vue'
 import {useRouter} from 'vue-router'
-import {storeAuthentification as store} from '@/stores/storeAuthentification'
 import {apiStore, getProfilePictureUrl} from '@/util/apiStore'
+import {useStoreAuthentification} from '@/stores/storeAuthentification'
+
+const authStore = useStoreAuthentification();
 
 const router = useRouter()
 
-if (!store.utilisateurConnecte) {
+if (!authStore.utilisateurConnecte) {
   router.push({name: 'login'})
 }
 
-const login = ref(store.utilisateurConnecte?.login ?? '')
-const email = ref(store.utilisateurConnecte?.email ?? '')
+const login = ref(authStore.utilisateurConnecte?.login ?? '')
+const email = ref(authStore.utilisateurConnecte?.email ?? '')
 const plainPassword = ref('')
 const currentPlainPassword = ref('')
 const profilePictureUrl = ref('')
@@ -107,7 +109,6 @@ watch(email, () => {
 function handleImageError(event: Event) {
   imageError.value = true
   const img = event.target as HTMLImageElement
-  // Set a default placeholder or hide the image
   img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2RkZCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjOTk5IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+QXZhdGFyPC90ZXh0Pjwvc3ZnPg=='
 }
 
@@ -118,7 +119,7 @@ async function update() {
   }
 
   try {
-    await apiStore.updateUser(store.utilisateurConnecte!.id, {
+    await apiStore.updateUser(authStore.utilisateurConnecte!.id, {
       login: login.value,
       email: email.value,
       plainPassword: plainPassword.value || undefined,
@@ -126,7 +127,7 @@ async function update() {
     })
 
     const refreshedUser = await apiStore.me()
-    store.utilisateurConnecte = {...refreshedUser}
+    authStore.utilisateurConnecte = {...refreshedUser}
 
     await updateProfilePicture()
 
@@ -155,10 +156,10 @@ function deleteAccount() {
     return
   }
 
-  apiStore.deleteUser(store.utilisateurConnecte!.id)
+  apiStore.deleteUser(authStore.utilisateurConnecte!.id)
     .then(() => {
-      store.utilisateurConnecte = null
-      store.estConnecte = false
+      authStore.utilisateurConnecte = null
+      authStore.estConnecte = false
       alert('Votre compte a été supprimé.')
       router.push({name: 'melovibes'})
     })

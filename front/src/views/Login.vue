@@ -1,22 +1,24 @@
 <script setup lang="ts">
 import {ref} from 'vue'
 import {useRouter} from 'vue-router'
-import {storeAuthentification} from '@/stores/storeAuthentification'
+import {useStoreAuthentification} from '@/stores/storeAuthentification'
+
+const authStore = useStoreAuthentification();
 
 const router = useRouter()
 const connectingUser = ref({login: '', password: ''})
 const errorMsg = ref<string | null>(null)
 
 function connect(): void {
-  storeAuthentification.login(connectingUser.value.login, connectingUser.value.password)
-      .then(result => {
-        if (result.success) {
-          router.push({name: 'melovibes'})
-        } else {
-          errorMsg.value = result.error ?? null
-          alert(result.error)
-        }
-      })
+  authStore.login(connectingUser.value.login, connectingUser.value.password)
+    .then(result => {
+      if (result.success) {
+        router.push({name: 'melovibes'})
+      } else {
+        errorMsg.value = result.error ?? null
+        alert(result.error)
+      }
+    })
 }
 </script>
 

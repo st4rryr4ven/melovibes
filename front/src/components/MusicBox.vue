@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {computed, ref, watchEffect} from 'vue';
 import type {Music} from '@/types';
-import {storeAuthentification} from '@/stores/storeAuthentification';
+import {useStoreAuthentification} from '@/stores/storeAuthentification'
 import {apiStore} from '@/util/apiStore';
 import router from "@/router";
 
@@ -12,11 +12,13 @@ const emit = defineEmits<{
 }>();
 
 const isFavorite = ref(false);
+const authStore = useStoreAuthentification();
 const loading = ref(false);
 
+
 async function initFavorite() {
-  if (storeAuthentification.utilisateurConnecte) {
-    const userId = storeAuthentification.utilisateurConnecte.id;
+  if (authStore.utilisateurConnecte) {
+    const userId = authStore.utilisateurConnecte.id;
     try {
       const favorites = await apiStore.getFavorites(userId);
       isFavorite.value = favorites.some((fav: any) => fav.id === props.music.id);
@@ -29,18 +31,18 @@ async function initFavorite() {
 initFavorite();
 
 watchEffect(() => {
-  if (!storeAuthentification.utilisateurConnecte) {
+  if (!authStore.utilisateurConnecte) {
     isFavorite.value = false;
   }
 });
 
 async function toggleFavorite() {
-  if (!storeAuthentification.utilisateurConnecte) {
+  if (!authStore.utilisateurConnecte) {
     alert('Vous devez être connecté pour gérer vos favoris.');
     return;
   }
 
-  const userId = storeAuthentification.utilisateurConnecte.id;
+  const userId = authStore.utilisateurConnecte.id;
 
   try {
     const result = await apiStore.toggleFavorite(userId, props.music.id);
@@ -57,7 +59,7 @@ async function toggleFavorite() {
 }
 
 const isAdmin = computed(() => {
-  const user = storeAuthentification.utilisateurConnecte;
+  const user = authStore.utilisateurConnecte;
   return user?.roles?.includes('ROLE_ADMIN') ?? false;
 });
 
@@ -103,7 +105,7 @@ function editMusic() {
   <div class="content-box music-box">
     <div class="top">
       {{ props.music.title }}
-      <button v-if="storeAuthentification.estConnecte" @click="toggleFavorite" class="favorite-btn">
+      <button v-if="authStore.estConnecte" @click="toggleFavorite" class="favorite-btn">
         {{ isFavorite ? '💖' : '🤍' }}
       </button>
       <div v-if="isAdmin" class="admin-actions">

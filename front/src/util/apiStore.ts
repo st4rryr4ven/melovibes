@@ -92,7 +92,6 @@ export const apiStore = {
       if (res.status === 401) throw new Error('Authentification échouée. Veuillez vous reconnecter.');
       throw new Error(error?.message || `Update failed with status ${res.status}`);
     }
-    storeAuthentification.init();
     return res;
   },
 
