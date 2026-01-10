@@ -1,6 +1,5 @@
 import type {Music} from '@/types'
 import type {User} from '@/types/user.ts'
-import type {Music, User} from '@/types'
 import {useStoreAuthentification} from '@/stores/storeAuthentification'
 
 export const API_URL = import.meta.env.VITE_API_URL

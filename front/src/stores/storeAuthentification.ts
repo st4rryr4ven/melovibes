@@ -25,7 +25,7 @@ export const useStoreAuthentification = defineStore('auth', {
       this.estConnecte = !!stored
       this.authStatus = stored ? 'authenticated' : 'guest'
 
-    if (!stored) return;
+      if (!stored) return
 
       try {
         let me: User

@@ -69,22 +69,6 @@ use ApiPlatform\Metadata\ApiFilter;
             deserialize: false,
             validate: false,
         ),
-        new Post(
-            denormalizationContext: ['groups' => ['serialization:music:create']],
-            security: "is_granted('ROLE_USER')",
-            validationContext: ['groups' => ['validation:music:create']],
-            processor: MusicProcessor::class
-        ),
-        new Patch(
-            inputFormats: [
-                'json' => ['application/merge-patch+json'],
-            ],
-            denormalizationContext: ['groups' => ['music:update']],
-            security: "is_granted('ROLE_ADMIN')"
-        ),
-        new Delete(security: "is_granted('ROLE_ADMIN')")
-
-
     ],
     normalizationContext: ['groups' => ['music:read']]
 )]

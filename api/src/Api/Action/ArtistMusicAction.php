@@ -32,7 +32,6 @@ final  class ArtistMusicAction extends AbstractController
      */
     public function __invoke(int $artistId, Request $request): JsonResponse
     {
-        return $this->service->musics($artistId, $request, $this->artistRepository, $this->musicRepository);
         return $this->service->music($artistId, $request, $artistRepository, $musicRepository);
     }
 }

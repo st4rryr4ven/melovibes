@@ -38,6 +38,9 @@ onMounted(() => {
   authStore.init();
 })
 const router = useRouter()
+onMounted(()=>{
+  store.init();
+})
 
 
 function logout() {
