@@ -159,7 +159,7 @@ export const apiStore = {
       method: 'GET',
       credentials: 'include',
     });
-    if (!res.ok) throw new Error('Failed to fetch musics');
+    if (!res.ok) throw new Error('Failed to fetch music');
     return await res.json() as Music[];
   },
   async createMusic(music: Partial<Music>): Promise<Music> {
@@ -177,6 +177,18 @@ export const apiStore = {
     }
 
     return await res.json();
+  },
+  async deleteMusic(musicId: number): Promise<void> {
+    const res = await fetch(`${this.apiUrl}music/${musicId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+
+    if (!res.ok) {
+      const error = await res.json().catch(() => null);
+      if (res.status === 401) throw new Error('Non autorisé');
+      throw new Error(error?.message || 'Failed to delete music');
+    }
   }
   },
   async getAll(resource: string): Promise<User[]> {
