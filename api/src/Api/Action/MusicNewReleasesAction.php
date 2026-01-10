@@ -13,12 +13,12 @@ use Symfony\Component\HttpFoundation\Request;
  */
 final class MusicNewReleasesAction extends AbstractController
 {
-    public function __construct(private readonly MusicActionsService $service)
-    {
-    }
+    public function __construct(private readonly MusicActionsService $service,
+                                private readonly SpotifyApiClient $spotify)
+    {}
 
-    public function __invoke(Request $request, SpotifyApiClient $spotify): JsonResponse
+    public function __invoke(Request $request): JsonResponse
     {
-        return $this->service->newReleases($request, $spotify);
+        return $this->service->newReleases($request, $this->spotify);
     }
 }

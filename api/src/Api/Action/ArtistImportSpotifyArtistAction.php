@@ -15,19 +15,20 @@ final  class ArtistImportSpotifyArtistAction extends AbstractController
 {
     /**
      * @param ArtistActionsService $service
+     * @param SpotifyCatalogService $catalog
      */
-    public function __construct(private readonly ArtistActionsService $service)
-    {
-    }
+    public function __construct(
+        private readonly ArtistActionsService $service,
+        private readonly SpotifyCatalogService $catalog
+    ){}
 
     /**
      * @param string $spotifyArtistId
      * @param Request $request
-     * @param SpotifyCatalogService $catalog
      * @return JsonResponse
      */
-    public function __invoke(string $spotifyArtistId, Request $request, SpotifyCatalogService $catalog): JsonResponse
+    public function __invoke(string $spotifyArtistId, Request $request): JsonResponse
     {
-        return $this->service->importSpotifyArtist($spotifyArtistId, $request, $catalog);
+        return $this->service->importSpotifyArtist($spotifyArtistId, $request, $this->catalog);
     }
 }

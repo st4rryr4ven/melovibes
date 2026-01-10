@@ -29,7 +29,7 @@ function spotifyPicture(track: SpotifyTrack): string | null {
 }
 
 function spotifyArtistsLabel(track: SpotifyTrack): string {
-  const names = (track.artists ?? []).map((a) => a.name).filter(Boolean)
+  const names = (track.artists ?? []).map((a: { name: never }) => a.name).filter(Boolean)
   return names.join(', ') || 'Artiste inconnu'
 }
 

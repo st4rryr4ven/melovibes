@@ -14,12 +14,14 @@ use Symfony\Component\HttpFoundation\Request;
  */
 final class AlbumTracksAction extends AbstractController
 {
-    public function __construct(private readonly MusicActionsService $service)
-    {
-    }
+    public function __construct(
+        private readonly MusicActionsService $service,
+        private readonly SpotifyApiClient $spotify,
+        private readonly MusicRepository $musicRepository
+    ){}
 
-    public function __invoke(string $spotifyAlbumId, Request $request, SpotifyApiClient $spotify, MusicRepository $musicRepository): JsonResponse
+    public function __invoke(string $spotifyAlbumId, Request $request): JsonResponse
     {
-        return $this->service->albumTracks($spotifyAlbumId, $request, $spotify, $musicRepository);
+        return $this->service->albumTracks($spotifyAlbumId, $request, $this->spotify, $this->musicRepository);
     }
 }
