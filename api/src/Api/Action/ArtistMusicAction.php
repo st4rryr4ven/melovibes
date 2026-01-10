@@ -12,7 +12,7 @@ use Symfony\Component\HttpFoundation\Request;
 /**
  * API Platform custom operation controller for /api/artist/{artistId}/musics.
  */
-final  class ArtistMusicsAction extends AbstractController
+final  class ArtistMusicAction extends AbstractController
 {
     /**
      * @param ArtistActionsService $service
@@ -33,5 +33,6 @@ final  class ArtistMusicsAction extends AbstractController
     public function __invoke(int $artistId, Request $request): JsonResponse
     {
         return $this->service->musics($artistId, $request, $this->artistRepository, $this->musicRepository);
+        return $this->service->music($artistId, $request, $artistRepository, $musicRepository);
     }
 }

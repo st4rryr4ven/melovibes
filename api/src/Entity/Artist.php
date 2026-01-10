@@ -7,7 +7,7 @@ use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Post;
 use App\Api\Action\ArtistImportSpotifyArtistAction;
-use App\Api\Action\ArtistMusicsAction;
+use App\Api\Action\ArtistMusicAction;
 use App\Api\Action\ArtistSearchAction;
 use App\Api\Action\ArtistTopTracksAction;
 use App\Repository\ArtistRepository;
@@ -46,9 +46,9 @@ use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
             validate: false,
         ),
         new Get(
-            uriTemplate: '/artist/{id}/musics',
+            uriTemplate: '/artist/{id}/music',
             requirements: ['id' => '\\d+'],
-            controller: ArtistMusicsAction::class,
+            controller: ArtistMusicAction::class,
             output: false,
             read: false,
             deserialize: false,

@@ -137,10 +137,15 @@ export const apiStore = {
     return await res.json()
   },
 
-  async getAllMusic() {
-    const res = await fetch(`${this.apiUrl}music`, {method: 'GET', credentials: 'include'})
+  async getAllMusic(): Promise<Music[]> {
+    const res = await fetch(`${this.apiUrl}music`, {
+      method: 'GET',
+      credentials: 'include'
+    })
     if (!res.ok) throw new Error('Failed to fetch music')
-    return await res.json() as Music[]
+
+    const data = await res.json()
+    return data['hydra:member'] ?? []
   },
 
   async createMusic(music: Partial<Music>) {
@@ -186,6 +191,23 @@ export const apiStore = {
     const data = await res.json()
     return data.member ?? data['hydra:member'] ?? []
   },
+  async getArtistMusics(artistId: number) {
+    const res = await fetch(`${this.apiUrl}artist/${artistId}/music`, { method: 'GET', credentials: 'include' })
+    if (!res.ok) throw new Error('Failed to fetch artist music')
+    return await res.json() as Music[]
+  },
+  async importMusicFromSpotify(spotifyTrackId: string) {
+    const res = await fetch(`${this.apiUrl}music/import/spotify/${spotifyTrackId}`, {
+      method: 'POST',
+      credentials: 'include',
+    })
+    if (!res.ok) {
+      const error = await res.json().catch(() => null)
+      throw new Error(error?.message || 'Failed to import music')
+    }
+    return await res.json() as Music
+  }
+
 }
 
   async getOne(resource: string, id: number): Promise<any> {

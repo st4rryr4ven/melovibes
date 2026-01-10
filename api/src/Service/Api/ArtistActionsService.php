@@ -149,7 +149,7 @@ final class ArtistActionsService
      * @param MusicRepository $musicRepository
      * @return JsonResponse
      */
-    public function musics(int $artistId, Request $request, ArtistRepository $artistRepository, MusicRepository $musicRepository): JsonResponse
+    public function music(int $artistId, Request $request, ArtistRepository $artistRepository, MusicRepository $musicRepository): JsonResponse
     {
         $artist = $artistRepository->find($artistId);
         if ($artist === null) {
