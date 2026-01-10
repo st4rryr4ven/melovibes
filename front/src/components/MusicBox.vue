@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {computed, ref, watchEffect} from 'vue';
+import {computed, onMounted, ref, watchEffect} from 'vue';
 import type {Music} from '@/types';
 import {useStoreAuthentification} from '@/stores/storeAuthentification'
 import {apiStore} from '@/util/apiStore';
@@ -74,6 +74,32 @@ function editMusic() {
   router.push({name: 'music-edit', params: {id: props.music.id}});
 }
 
+async function resolveArtists(artists: string[]) {
+  const baseUrl = import.meta.env.VITE_API_URL.replace(/\/$/, '')
+
+  return Promise.all(
+      artists.map(async iri => {
+        const cleanIri = iri.startsWith('/api/')
+            ? iri.replace('/api/', '/')
+            : iri
+
+        const res = await fetch(`${baseUrl}${cleanIri}`)
+        if (!res.ok) throw new Error('Artist fetch failed')
+
+        const data = await res.json()
+        return data.name
+      })
+  )
+}
+
+
+const artistNames = ref<string[]>([])
+
+onMounted(async () => {
+      artistNames.value = await resolveArtists(props.music.artists)
+    }
+)
+
 </script>
 
 <template>
@@ -89,9 +115,9 @@ function editMusic() {
       </div>
     </div>
     <div class="content">
-      <div class="group" v-if="props.music.artists?.length">
+      <div class="group" v-if="artistNames.length">
         <label>Artistes</label>
-        <div>{{ props.music.artists.map(a => a.name).join(', ') }}</div>
+        <div>{{ artistNames.join(', ') }}</div>
       </div>
       <div class="group" v-if="props.music.genre?.length">
         <label>Genre</label>

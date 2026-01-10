@@ -140,10 +140,11 @@ export const apiStore = {
       method: 'GET',
       credentials: 'include'
     })
+
     if (!res.ok) throw new Error('Failed to fetch music')
 
     const data = await res.json()
-    return data['hydra:member'] ?? []
+    return data.member ?? []
   },
 
   async createMusic(music: Partial<Music>) {
@@ -190,7 +191,10 @@ export const apiStore = {
     return data.member ?? data['hydra:member'] ?? []
   },
   async getArtistMusics(artistId: number) {
-    const res = await fetch(`${this.apiUrl}artist/${artistId}/music`, { method: 'GET', credentials: 'include' })
+    const res = await fetch(`${this.apiUrl}artist/${artistId}/music`, {
+      method: 'GET',
+      credentials: 'include'
+    })
     if (!res.ok) throw new Error('Failed to fetch artist music')
     return await res.json() as Music[]
   },
