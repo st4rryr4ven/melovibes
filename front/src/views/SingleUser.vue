@@ -8,7 +8,8 @@ const userId = Number(route.params.id)
 const user: User = {
   id: userId,
   login: "user" + userId,
-  email: "user" + userId + "@example.com"
+  email: "user" + userId + "@example.com",
+  roles: ["ROLE_USER"]
 };
 </script>
 

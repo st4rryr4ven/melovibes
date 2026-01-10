@@ -56,6 +56,20 @@ div.content-box {
   color: #000;
 }
 
+.group a {
+  color: rgb(20, 101, 66);
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.group a:hover {
+  text-decoration: underline;
+}
+
+.group {
+  margin-bottom: 15px;
+}
+
 button {
   padding: 10px;
   background-color: rgb(20, 101, 66);
@@ -70,29 +84,34 @@ button:hover {
   background-color: rgb(7, 48, 30);
 }
 
-.favorite-btn {
+button.icon-btn {
   float: right;
-  border: none;
-  background: transparent;
+  border: none !important;
+  background: transparent !important;
   font-size: 1.5rem;
   cursor: pointer;
+  padding: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+}
+
+button.icon-btn:hover {
+  color: #e63946;
+}
+
+.favorite-btn {
+  composes: icon-btn;
+}
+
+.admin-actions {
+  float: right;
+  display: flex;
+  gap: 8px;
 }
 
 .content {
   color: black;
   margin-bottom: 10px;
-}
-
-.group a {
-  color: rgb(20, 101, 66);
-  text-decoration: none;
-  font-weight: bold;
-}
-
-.group a:hover {
-  text-decoration: underline;
-}
-
-.group {
-  margin-bottom: 15px;
 }
