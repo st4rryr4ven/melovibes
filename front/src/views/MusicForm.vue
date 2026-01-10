@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import {ref} from 'vue';
 import type {Music} from '@/types';
-import {storeAuthentification} from '@/stores/storeAuthentification';
 import {apiStore} from '@/util/apiStore';
 import {useRouter} from 'vue-router';
+import {useStoreAuthentification} from '@/stores/storeAuthentification'
+
+const authStore = useStoreAuthentification()
 
 const router = useRouter();
 
@@ -34,7 +36,7 @@ function removeGenreField(index: number) {
 }
 
 async function submitMusic() {
-  if (!storeAuthentification.utilisateurConnecte) {
+  if (!authStore.utilisateurConnecte) {
     error.value = 'Vous devez être connecté pour ajouter une musique.';
     return;
   }

@@ -4,13 +4,15 @@
       <h1 @click="router.push({ name: 'melovibes' })">Mélovibes</h1>
       <nav>
         <div @click="router.push({ name: 'music' })">Les musiques</div>
-        <div v-if="store.estConnecte" @click="router.push({ name: 'music-create' })">Créer une
+        <div v-if="authStore.estConnecte" @click="router.push({ name: 'music-create' })">Créer une
           musique
         </div>
-        <div v-if="!store.estConnecte" @click="router.push({ name: 'register' })">S'inscrire</div>
-        <div v-if="!store.estConnecte" @click="router.push({ name: 'login' })">Se connecter</div>
-        <div v-if="store.estConnecte" @click="router.push({ name: 'profile' })">Mon profil</div>
-        <div v-if="store.estConnecte" @click="logout">Se déconnecter</div>
+        <div v-if="!authStore.estConnecte" @click="router.push({ name: 'register' })">S'inscrire
+        </div>
+        <div v-if="!authStore.estConnecte" @click="router.push({ name: 'login' })">Se connecter
+        </div>
+        <div v-if="authStore.estConnecte" @click="router.push({ name: 'profile' })">Mon profil</div>
+        <div v-if="authStore.estConnecte" @click="logout">Se déconnecter</div>
       </nav>
     </header>
     <main>
@@ -21,12 +23,15 @@
 
 <script setup lang="ts">
 import {useRouter} from 'vue-router'
-import {storeAuthentification as store} from '@/stores/storeAuthentification'
+import {useStoreAuthentification} from '@/stores/storeAuthentification'
+
+const authStore = useStoreAuthentification();
+authStore.init();
 
 const router = useRouter()
 
 function logout() {
-  store.logout()
+  authStore.logout()
     .then(() => {
       router.push({name: 'melovibes'})
     })

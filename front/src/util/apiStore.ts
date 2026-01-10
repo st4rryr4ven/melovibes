@@ -1,5 +1,4 @@
 import type {Music, User} from '@/types'
-import {storeAuthentification} from "@/stores/storeAuthentification.ts";
 
 export const API_URL = import.meta.env.VITE_API_URL;
 export const AVATAR_BASE_URL =
@@ -91,7 +90,6 @@ export const apiStore = {
       if (res.status === 401) throw new Error('Authentification échouée. Veuillez vous reconnecter.');
       throw new Error(error?.message || `Update failed with status ${res.status}`);
     }
-    storeAuthentification.init();
     return res;
   },
 
