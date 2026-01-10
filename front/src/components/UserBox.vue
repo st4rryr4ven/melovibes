@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type {User} from '@/types';
+import type {User} from '@/types/user.ts';
 import {apiStore} from "@/util/apiStore.ts";
 import {ref} from "vue";
 

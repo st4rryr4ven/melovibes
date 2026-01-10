@@ -1,6 +1,6 @@
 import { reactive } from 'vue';
 import { apiStore } from '@/util/apiStore';
-import type { LoginResult, User } from '@/types';
+import type { LoginResult, User } from '@/types/user.ts';
 
 const USER_STORAGE_KEY = 'melovibes_auth_user';
 

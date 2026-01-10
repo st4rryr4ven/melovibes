@@ -2,7 +2,7 @@
 
 import {ref, type Ref, computed} from 'vue';
 import UserBox from '@/components/UserBox.vue';
-import type {User} from '@/types';
+import type {User} from '@/types/user.ts';
 import {apiStore} from '@/util/apiStore';
 
 

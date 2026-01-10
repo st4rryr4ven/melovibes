@@ -1,4 +1,4 @@
-import type {User} from '@/types'
+import type {User} from '@/types/user.ts'
 import {storeAuthentification} from "@/stores/storeAuthentification.ts";
 
 export const API_URL = import.meta.env.VITE_API_URL;
