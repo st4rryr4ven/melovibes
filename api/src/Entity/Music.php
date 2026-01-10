@@ -6,6 +6,7 @@ use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Post;
+use App\Api\Action\AlbumTracksAction;
 use App\Api\Action\MusicImportSpotifyTrackAction;
 use App\Api\Action\MusicNewReleasesAction;
 use App\Api\Action\MusicSearchAction;
@@ -30,7 +31,6 @@ use ApiPlatform\Metadata\Delete;
     operations: [
         new Get(
             requirements: ['id' => '\\d+'],
-//            security: "(is_granted('ROLE_USER') and object == user) or is_granted('ROLE_ADMIN')"
         ),
         new GetCollection(
             security: "is_granted('ROLE_ADMIN')"
@@ -46,6 +46,14 @@ use ApiPlatform\Metadata\Delete;
         new GetCollection(
             uriTemplate: '/music/new-releases',
             controller: MusicNewReleasesAction::class,
+            paginationEnabled: false,
+            output: false,
+            read: false,
+            deserialize: false,
+        ),
+        new GetCollection(
+            uriTemplate: '/albums/spotify/{spotifyAlbumId}/tracks',
+            controller: AlbumTracksAction::class,
             paginationEnabled: false,
             output: false,
             read: false,
@@ -78,21 +86,12 @@ class Music
     #[ORM\Column]
     private ?int $id = null;
 
-    /**
-     * Spotify identifier when the record comes from Spotify.
-     */
     #[ORM\Column(length: 64, unique: true, nullable: true)]
     private ?string $spotifyId = null;
 
-    /**
-     * Import source label for filtering curated lists.
-     */
     #[ORM\Column(length: 64, nullable: true)]
     private ?string $importSource = null;
 
-    /**
-     * Date when the record was imported or last tagged by a sync process.
-     */
     #[ORM\Column(type: 'datetime_immutable', nullable: true)]
     private ?\DateTimeImmutable $importedAt = null;
 

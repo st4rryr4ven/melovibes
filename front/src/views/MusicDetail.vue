@@ -11,10 +11,10 @@ const props = defineProps<{ id: number }>()
 
 <style scoped>
 .page {
+  padding: 10px 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 8px 0;
 }
 
 .muted {

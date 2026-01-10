@@ -6,6 +6,7 @@ use App\Entity\Artist;
 use App\Entity\Music;
 use App\Repository\ArtistRepository;
 use App\Repository\MusicRepository;
+use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -80,7 +81,7 @@ readonly class SpotifyCatalogService
 
                 $music = $this->upsertTrackInternal($track, $artistDetailsById, $updateExisting, $dryRun);
                 if ($music !== null) {
-                    $now = new \DateTimeImmutable();
+                    $now = new DateTimeImmutable();
                     $music->setImportSource('spotify:new_releases');
                     $music->setImportedAt($now);
                     $count++;
@@ -105,12 +106,89 @@ readonly class SpotifyCatalogService
             $music->setImportSource('spotify:on_demand');
         }
         if ($music->getImportedAt() === null) {
-            $music->setImportedAt(new \DateTimeImmutable());
+            $music->setImportedAt(new DateTimeImmutable());
         }
 
         $this->entityManager->flush();
 
         return $music;
+    }
+
+    /**
+     * @return Music[]
+     */
+    public function importAlbumById(string $albumId, string $market = 'FR', bool $updateExisting = true): array
+    {
+        $trackIds = [];
+        $offset = 0;
+
+        while (true) {
+            $page = $this->spotify->getAlbumTracks($albumId, 50, $offset, $market);
+            $items = $page['items'] ?? [];
+            if (!is_array($items) || count($items) === 0) {
+                break;
+            }
+
+            foreach ($items as $t) {
+                if (is_array($t) && isset($t['id'])) {
+                    $id = trim((string) $t['id']);
+                    if ($id !== '') {
+                        $trackIds[] = $id;
+                    }
+                }
+            }
+
+            $next = $page['next'] ?? null;
+            if (!is_string($next) || $next === '') {
+                break;
+            }
+
+            $offset += 50;
+        }
+
+        $trackIds = array_values(array_unique($trackIds));
+        if (count($trackIds) === 0) {
+            return [];
+        }
+
+        $fullTracks = [];
+
+        foreach (array_chunk($trackIds, 50) as $chunk) {
+            $payload = $this->spotify->getTracks($chunk, $market);
+            $tracks = $payload['tracks'] ?? [];
+            if (is_array($tracks)) {
+                foreach ($tracks as $t) {
+                    if (is_array($t)) {
+                        $fullTracks[] = $t;
+                    }
+                }
+            }
+        }
+
+        if (count($fullTracks) === 0) {
+            return [];
+        }
+
+        $artistDetailsById = $this->fetchArtistsByTracks($fullTracks);
+        $now = new DateTimeImmutable();
+        $importSource = substr('spotify:album:' . $albumId, 0, 64);
+
+        $imported = [];
+
+        foreach ($fullTracks as $track) {
+            $music = $this->upsertTrackInternal($track, $artistDetailsById, $updateExisting, false);
+            if ($music === null) {
+                continue;
+            }
+
+            $music->setImportSource($importSource);
+            $music->setImportedAt($now);
+            $imported[] = $music;
+        }
+
+        $this->entityManager->flush();
+
+        return $imported;
     }
 
     public function importArtistById(string $artistId, string $market = 'FR', bool $updateExisting = true, bool $importTopTracks = true): Artist
