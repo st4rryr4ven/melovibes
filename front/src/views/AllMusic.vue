@@ -3,21 +3,23 @@ import {ref} from 'vue';
 import MusicBox from '@/components/MusicBox.vue';
 import type {Music} from '@/types';
 import {apiStore} from '@/util/apiStore';
+import {storeAuthentification} from "@/stores/storeAuthentification.ts";
 
-const musics = ref<Music[]>([]);
+const music = ref<Music[]>([]);
 
 apiStore.getAllMusic().then(data => {
-  musics.value = data.member;
+  music.value = data.member;
 });
 </script>
 
 <template>
-  <div class="musics-page">
-    <button @click="$router.push({ name: 'music-create' })">
+  <div class="music-page">
+    <button v-if="storeAuthentification.estConnecte"
+            @click="$router.push({ name: 'music-create' })">
       + Créer une musique
     </button>
     <h2>Liste de toutes les musiques</h2>
-    <MusicBox v-for="music in musics" :key="music.id" :music="music"/>
+    <MusicBox v-for="music in music" :key="music.id" :music="music"/>
   </div>
 </template>
 
