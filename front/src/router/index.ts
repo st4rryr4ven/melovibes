@@ -5,7 +5,6 @@ import Login from '@/views/Login.vue'
 import Register from '@/views/Register.vue'
 import Edit from '@/views/Profile.vue'
 import AlbumTracks from '@/views/AlbumTracks.vue'
-import { storeAuthentification } from '@/stores/storeAuthentification.ts'
 import UnvalidatedMusics from '@/views/UnvalidatedMusics.vue'
 import {storeAuthentification} from "@/stores/storeAuthentification.ts";
 import MusicDetail from "@/views/MusicDetail.vue";
