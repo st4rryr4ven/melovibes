@@ -15,19 +15,19 @@ final  class MusicImportSpotifyTrackAction extends AbstractController
 {
     /**
      * @param MusicActionsService $service
+     * @param SpotifyCatalogService $catalog
      */
-    public function __construct(private readonly MusicActionsService $service)
+    public function __construct(private readonly MusicActionsService $service, SpotifyCatalogService $catalog)
     {
     }
 
     /**
      * @param string $spotifyTrackId
      * @param Request $request
-     * @param SpotifyCatalogService $catalog
      * @return JsonResponse
      */
-    public function __invoke(string $spotifyTrackId, Request $request, SpotifyCatalogService $catalog): JsonResponse
+    public function __invoke(string $spotifyTrackId, Request $request): JsonResponse
     {
-        return $this->service->importSpotifyTrack($spotifyTrackId, $request, $catalog);
+        return $this->service->importSpotifyTrack($spotifyTrackId, $request, $this->catalog);
     }
 }

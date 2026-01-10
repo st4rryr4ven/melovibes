@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {useRoute} from 'vue-router'
 import UserBox from '@/components/UserBox.vue';
-import type {User} from '@/types';
+import type {User} from '@/types/user.ts';
 
 const route = useRoute()
 const userId = Number(route.params.id)

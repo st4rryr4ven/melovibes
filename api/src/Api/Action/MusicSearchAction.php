@@ -16,19 +16,19 @@ final  class MusicSearchAction extends AbstractController
 {
     /**
      * @param MusicActionsService $service
+     * @param SpotifyApiClient $spotify
+     * @param MusicRepository $musicRepository
      */
-    public function __construct(private readonly MusicActionsService $service)
+    public function __construct(private readonly MusicActionsService $service, private readonly SpotifyApiClient $spotify, private readonly MusicRepository $musicRepository)
     {
     }
 
     /**
      * @param Request $request
-     * @param SpotifyApiClient $spotify
-     * @param MusicRepository $musicRepository
      * @return JsonResponse
      */
-    public function __invoke(Request $request, SpotifyApiClient $spotify, MusicRepository $musicRepository): JsonResponse
+    public function __invoke(Request $request): JsonResponse
     {
-        return $this->service->search($request, $spotify, $musicRepository);
+        return $this->service->search($request, $this->spotify, $this->musicRepository);
     }
 }

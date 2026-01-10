@@ -17,21 +17,25 @@ final  class ArtistTopTracksAction extends AbstractController
 {
     /**
      * @param ArtistActionsService $service
+     * @param ArtistRepository $artistRepository
+     * @param MusicRepository $musicRepository
+     * @param SpotifyApiClient $spotify
      */
-    public function __construct(private readonly ArtistActionsService $service)
+    public function __construct(private readonly ArtistActionsService $service,
+                                private readonly ArtistRepository $artistRepository,
+                                private readonly MusicRepository $musicRepository,
+                                private readonly SpotifyApiClient $spotify
+    )
     {
     }
 
     /**
      * @param int $artistId
      * @param Request $request
-     * @param ArtistRepository $artistRepository
-     * @param MusicRepository $musicRepository
-     * @param SpotifyApiClient $spotify
      * @return JsonResponse
      */
-    public function __invoke(int $artistId, Request $request, ArtistRepository $artistRepository, MusicRepository $musicRepository, SpotifyApiClient $spotify): JsonResponse
+    public function __invoke(int $artistId, Request $request): JsonResponse
     {
-        return $this->service->topTracks($artistId, $request, $artistRepository, $musicRepository, $spotify);
+        return $this->service->topTracks($artistId, $request, $this->artistRepository, $this->musicRepository, $this->spotify);
     }
 }

@@ -76,6 +76,13 @@ class SpotifyApiClient
         ]);
     }
 
+    public function getAlbum(string $albumId, ?string $market = null): array
+    {
+        return $this->apiGet('/albums/' . rawurlencode($albumId), [
+            'market' => $market ?? $this->defaultMarket,
+        ]);
+    }
+
     public function getAlbumTracks(string $albumId, int $limit = 50, int $offset = 0, ?string $market = null): array
     {
         return $this->apiGet('/albums/' . rawurlencode($albumId) . '/tracks', [

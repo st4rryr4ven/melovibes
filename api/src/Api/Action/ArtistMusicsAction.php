@@ -16,20 +16,22 @@ final  class ArtistMusicsAction extends AbstractController
 {
     /**
      * @param ArtistActionsService $service
+     * @param ArtistRepository $artistRepository
+     * @param MusicRepository $musicRepository
      */
-    public function __construct(private readonly ArtistActionsService $service)
+    public function __construct(private readonly ArtistActionsService $service,
+                                private readonly ArtistRepository $artistRepository,
+                                private readonly MusicRepository $musicRepository)
     {
     }
 
     /**
      * @param int $artistId
      * @param Request $request
-     * @param ArtistRepository $artistRepository
-     * @param MusicRepository $musicRepository
      * @return JsonResponse
      */
-    public function __invoke(int $artistId, Request $request, ArtistRepository $artistRepository, MusicRepository $musicRepository): JsonResponse
+    public function __invoke(int $artistId, Request $request): JsonResponse
     {
-        return $this->service->musics($artistId, $request, $artistRepository, $musicRepository);
+        return $this->service->musics($artistId, $request, $this->artistRepository, $this->musicRepository);
     }
 }
