@@ -10,7 +10,7 @@ const authStore = useStoreAuthentification();
 const music = ref<Music[]>([]);
 
 apiStore.getAllMusic().then(data => {
-  music.value = data.member;
+  music.value = data;
 });
 </script>
 

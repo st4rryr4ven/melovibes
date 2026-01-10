@@ -133,7 +133,7 @@ class MusicRepository extends ServiceEntityRepository
     }
 
     /**
-     * Counts musics linked to a given artist (local database).
+     * Counts music linked to a given artist (local database).
      */
     public function countByArtistId(int $artistId): int
     {
