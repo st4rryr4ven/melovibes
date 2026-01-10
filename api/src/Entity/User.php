@@ -57,7 +57,7 @@ use Symfony\Component\Serializer\Annotation\Groups;
     ],
     normalizationContext: ['groups' => ['user:read']],
 )]
-class User implements UserInterface
+class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     /**
      * Unique identifier of the user
@@ -268,3 +268,4 @@ class User implements UserInterface
     }
 
 }
+
