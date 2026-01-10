@@ -35,15 +35,15 @@ class Artist
     private ?string $name = null;
 
     /**
-     * All the musics of the artist
+     * All the music of the artist
      * @var Collection<int, Music>
      */
     #[ORM\ManyToMany(targetEntity: Music::class, mappedBy: 'artists')]
-    private Collection $musics;
+    private Collection $music;
 
     public function __construct()
     {
-        $this->musics = new ArrayCollection();
+        $this->music = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -66,15 +66,15 @@ class Artist
     /**
      * @return Collection<int, Music>
      */
-    public function getMusics(): Collection
+    public function getMusic(): Collection
     {
-        return $this->musics;
+        return $this->music;
     }
 
     public function addMusic(Music $music): static
     {
-        if (!$this->musics->contains($music)) {
-            $this->musics->add($music);
+        if (!$this->music->contains($music)) {
+            $this->music->add($music);
             $music->addArtist($this);
         }
 
@@ -83,7 +83,7 @@ class Artist
 
     public function removeMusic(Music $music): static
     {
-        if ($this->musics->removeElement($music)) {
+        if ($this->music->removeElement($music)) {
             $music->removeArtist($this);
         }
 

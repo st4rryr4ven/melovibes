@@ -67,7 +67,7 @@ class Music
         minMessage: 'Une musique doit avoir au moins un artiste.',
         groups: ['validation:music:create', 'validation:music:update']
     )]
-    #[ORM\ManyToMany(targetEntity: Artist::class, inversedBy: 'musics')]
+    #[ORM\ManyToMany(targetEntity: Artist::class, inversedBy: 'music')]
     #[Assert\NotNull(groups: ['validation:music:create', 'validation:music:update'])]
     #[Groups(['music:read', 'serialization:music:create', 'serialization:music:update'])]
     private Collection $artists;

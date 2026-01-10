@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import {ref, watchEffect} from 'vue';
+import {computed, ref, watchEffect} from 'vue';
 import type {Music} from '@/types';
 import {storeAuthentification} from '@/stores/storeAuthentification';
 import {apiStore} from '@/util/apiStore';
+import router from "@/router";
 
 const props = defineProps<{ music: Music }>();
 
@@ -49,15 +50,41 @@ async function toggleFavorite() {
     alert(err.message || 'Erreur lors de la gestion des favoris.');
   }
 }
+
+const isAdmin = computed(() => {
+  const user = storeAuthentification.utilisateurConnecte;
+  return user?.roles?.includes('ROLE_ADMIN') ?? false;
+});
+
+async function deleteMusic() {
+  if (!confirm('Supprimer cette musique ?')) return;
+
+  try {
+    await apiStore.deleteMusic(props.music.id);
+    alert('Musique supprimée');
+    window.location.reload();
+  } catch (err: any) {
+    alert(err.message || 'Erreur suppression');
+  }
+}
+
+function editMusic() {
+  router.push({name: 'music-edit', params: {id: props.music.id}});
+}
+
 </script>
 
 <template>
   <div class="content-box music-box">
     <div class="top">
       {{ props.music.title }}
-      <button @click="toggleFavorite" class="favorite-btn">
+      <button v-if="storeAuthentification.estConnecte" @click="toggleFavorite" class="favorite-btn">
         {{ isFavorite ? '💖' : '🤍' }}
       </button>
+      <div v-if="isAdmin" class="admin-actions">
+        <button @click="editMusic">✏️</button>
+        <button @click="deleteMusic">🗑️</button>
+      </div>
     </div>
     <div class="content">
       <div class="group" v-if="props.music.artists?.length">
