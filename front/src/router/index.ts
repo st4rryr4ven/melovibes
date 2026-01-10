@@ -4,6 +4,7 @@ import AllUsers from '@/views/AllUsers.vue'
 import Login from '@/views/Login.vue'
 import Register from '@/views/Register.vue'
 import Edit from '@/views/Profile.vue'
+import UnvalidatedMusics from '@/views/UnvalidatedMusics.vue'
 import {storeAuthentification} from "@/stores/storeAuthentification.ts";
 
 const router = createRouter({
@@ -39,7 +40,13 @@ const router = createRouter({
             name: 'profile',
             component: Edit,
             meta: { requiresAuth: true }
-        }
+        },
+      {
+        path: '/unvalidatedMusics',
+        name: 'unvalidatedMusics',
+        component: UnvalidatedMusics,
+        meta:{requiresAuth: true, requiresAdmin : true}
+      },
 
     ]
 })

@@ -136,4 +136,59 @@ export const apiStore = {
     const data = await res.json()
     return data.member ?? data['hydra:member'] ?? []
   },
+
+  async getOne(resource: string, id: number): Promise<any> {
+    const res = await fetch(`${this.apiUrl}${resource}/${id}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+    });
+
+    if (!res.ok) {
+      if (res.status === 401) {
+        throw new Error('Non authentifié');
+      }
+      throw new Error(`GET ${resource}/${id} échoué`);
+    }
+
+    const data = await res.json();
+    return data;
+  },
+
+  async patch(resource: string, payload: object): Promise<any> {
+    const res = await fetch(`${this.apiUrl}${resource}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/merge-patch+json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      console.error(await res.text()); // <-- montre le message exact de ApiPlatform
+      if (res.status === 401) throw new Error('Non authentifié');
+      if (res.status === 403) throw new Error('Interdit (403) - vérifier rôle utilisateur');
+      throw new Error(`PATCH ${resource} failed`);
+    }
+
+    return await res.json();
+  },
+
+  async delete(resource: string): Promise<void> {
+    const res = await fetch(`${this.apiUrl}${resource}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+
+    if (!res.ok) {
+      if (res.status === 401) throw new Error('Non authentifié');
+      throw new Error(`DELETE ${resource} failed`);
+    }
+  }
+
+
+
+
+
 };

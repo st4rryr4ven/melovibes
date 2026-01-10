@@ -8,6 +8,7 @@
         <div v-if="!store.estConnecte" @click="router.push({ name: 'login' })">Se connecter</div>
         <div v-if="store.estConnecte" @click="router.push({ name: 'profile' })">Mon profil</div>
         <div v-if="store.estConnecte && store.estAdmin()" @click="router.push({ name: 'allUsers' })">Liste d'utilisateurs</div>
+        <div v-if="store.estConnecte && store.estAdmin()" @click="router.push({ name: 'unvalidatedMusics' })">Musiques en attente de validation</div>
         <div v-if="store.estConnecte " @click="logout">Se déconnecter</div>
       </nav>
     </header>

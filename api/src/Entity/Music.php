@@ -14,12 +14,18 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
+use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
+use ApiPlatform\Doctrine\Orm\Filter\BooleanFilter;
+use ApiPlatform\Metadata\ApiFilter;
+use ApiPlatform\Metadata\Patch;
+use ApiPlatform\Metadata\Delete;
 
 #[ORM\Entity(repositoryClass: MusicRepository::class)]
 #[ORM\Table(name: 'music')]
 #[ORM\UniqueConstraint(name: 'UNIQ_SPOTIFY_ID', columns: ['spotify_id'])]
-#[UniqueEntity(fields: ['spotify_id'], message: 'This spotifyId is already used.')]
+#[UniqueEntity(fields: ['spotifyId'], message: 'This spotifyId is already used.')]
+#[ApiFilter(BooleanFilter::class, properties: ['isValidated'])]
 #[ApiResource(
     operations: [
         new Get(
@@ -53,6 +59,16 @@ use Symfony\Component\Validator\Constraints as Assert;
             deserialize: false,
             validate: false,
         ),
+        new Patch(
+            inputFormats: [
+                'json' => ['application/merge-patch+json'],
+            ],
+            denormalizationContext: ['groups' => ['music:update']],
+            security: "is_granted('ROLE_ADMIN')"
+        ),
+        new Delete(security: "is_granted('ROLE_ADMIN')")
+
+
     ],
 )]
 class Music
@@ -103,6 +119,7 @@ class Music
     private ?string $link = null;
 
     #[ORM\Column]
+    #[Groups(['music:update', 'music:read'])]
     private ?bool $isValidated = null;
 
     #[ORM\Column(nullable: true)]
