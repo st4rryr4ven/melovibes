@@ -4,7 +4,9 @@ import type {Music} from '@/types';
 import {useStoreAuthentification} from '@/stores/storeAuthentification';
 import {apiStore} from '@/util/apiStore';
 import router from '@/router';
+import ReviewModal from '@/components/ReviewModal.vue';
 
+const showReviewModal = ref(false);
 const props = defineProps<{ music: Music }>();
 const emit = defineEmits<{
   (e: 'deleted', id: number): void;
@@ -115,6 +117,12 @@ onMounted(async () => {
       <button v-if="authStore.estConnecte" @click="toggleFavorite" class="icon-btn">
         {{ isFavorite ? '💖' : '🤍' }}
       </button>
+      <button v-if="authStore.estConnecte" class="icon-btn" @click="showReviewModal = true">
+        💬
+      </button>
+
+      <ReviewModal v-if="showReviewModal" :music-id="props.music.id" @close="showReviewModal = false" @submitted="showReviewModal = false"/>
+
       <div v-if="isAdmin" class="admin-actions">
         <button @click="editMusic" class="icon-btn">✏️</button>
         <button @click="deleteMusic" class="icon-btn" :disabled="loading">🗑️</button>

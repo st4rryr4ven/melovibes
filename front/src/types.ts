@@ -28,3 +28,12 @@ export interface Music {
   isValidated: boolean;
 }
 
+export interface Review {
+  id: number;
+  music: Music;
+  author: User;
+  comment?: string;
+  rating: number;
+  createdAt?: string;
+}
+

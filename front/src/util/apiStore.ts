@@ -269,7 +269,26 @@ export const apiStore = {
       if (res.status === 401) throw new Error('Non authentifié');
       throw new Error(`DELETE ${resource} failed`);
     }
+  },
+
+  async post(url: string, body: any) {
+    const res = await fetch(`${this.apiUrl}${url}`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(err || 'POST failed');
+    }
+
+    return res.json();
   }
+
 
 
 };
