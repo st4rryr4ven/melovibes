@@ -1,20 +1,19 @@
 <script setup lang="ts">
 import {computed, onMounted, ref, watchEffect} from 'vue';
 import type {Music} from '@/types';
-import {useStoreAuthentification} from '@/stores/storeAuthentification'
+import {useStoreAuthentification} from '@/stores/storeAuthentification';
 import {apiStore} from '@/util/apiStore';
-import router from "@/router";
+import router from '@/router';
 
 const props = defineProps<{ music: Music }>();
 const emit = defineEmits<{
-  (e: 'deleted', id: number): void
-  (e: 'validated', id: number): void
+  (e: 'deleted', id: number): void;
+  (e: 'validated', id: number): void;
 }>();
 
 const isFavorite = ref(false);
 const authStore = useStoreAuthentification();
 const loading = ref(false);
-
 
 async function initFavorite() {
   if (authStore.utilisateurConnecte) {
@@ -46,12 +45,7 @@ async function toggleFavorite() {
 
   try {
     const result = await apiStore.toggleFavorite(userId, props.music.id);
-
-    if (result.action === 'added') {
-      isFavorite.value = true;
-    } else if (result.action === 'removed') {
-      isFavorite.value = false;
-    }
+    isFavorite.value = result.action === 'added';
   } catch (err: any) {
     console.error('Toggle favorite error:', err);
     alert(err.message || 'Erreur lors de la gestion des favoris.');
@@ -63,17 +57,21 @@ const isAdmin = computed(() => {
   return user?.roles?.includes('ROLE_ADMIN') ?? false;
 });
 
+function editMusic() {
+  router.push({name: 'music-edit', params: {id: props.music.id}});
+}
+
 async function deleteMusic() {
-  if (!confirm(`Voulez-vous vraiment supprimer ${props.music.title} ?`)) return;
+  if (!confirm(`Supprimer cette musique ?`)) return;
 
   try {
     loading.value = true;
     await apiStore.delete(`music/${props.music.id}`);
-    emit('deleted', props.music.id);
     alert('Musique supprimée avec succès !');
-  } catch (err) {
+    emit('deleted', props.music.id);
+  } catch (err: any) {
     console.error(err);
-    alert('Erreur lors de la suppression de la musique.');
+    alert(err.message || 'Erreur lors de la suppression de la musique.');
   } finally {
     loading.value = false;
   }
@@ -87,44 +85,31 @@ async function validateMusic() {
     await apiStore.patch(`music/${props.music.id}`, {isValidated: true});
     emit('validated', props.music.id);
     alert('Musique validée avec succès !');
-  } catch (err) {
+  } catch (err: any) {
     console.error(err);
-    alert('Erreur lors de la validation de la musique.');
+    alert(err.message || 'Erreur lors de la validation de la musique.');
   } finally {
     loading.value = false;
   }
 }
 
-function editMusic() {
-  router.push({name: 'music-edit', params: {id: props.music.id}});
-}
-
 async function resolveArtists(artists: string[]) {
-  const baseUrl = import.meta.env.VITE_API_URL.replace(/\/$/, '')
-
+  const baseUrl = import.meta.env.VITE_API_URL.replace(/\/$/, '');
   return Promise.all(
-      artists.map(async iri => {
-        const cleanIri = iri.startsWith('/api/')
-            ? iri.replace('/api/', '/')
-            : iri
-
-        const res = await fetch(`${baseUrl}${cleanIri}`)
-        if (!res.ok) throw new Error('Artist fetch failed')
-
-        const data = await res.json()
-        return data.name
-      })
-  )
+    artists.map(async iri => {
+      const cleanIri = iri.startsWith('/api/') ? iri.replace('/api/', '/') : iri;
+      const res = await fetch(`${baseUrl}${cleanIri}`);
+      if (!res.ok) throw new Error('Artist fetch failed');
+      const data = await res.json();
+      return data.name;
+    })
+  );
 }
 
-
-const artistNames = ref<string[]>([])
-
+const artistNames = ref<string[]>([]);
 onMounted(async () => {
-      artistNames.value = await resolveArtists(props.music.artists)
-    }
-)
-
+  artistNames.value = await resolveArtists(props.music.artists);
+});
 </script>
 
 <template>
@@ -136,27 +121,26 @@ onMounted(async () => {
       </button>
       <div v-if="isAdmin" class="admin-actions">
         <button @click="editMusic" class="icon-btn">✏️</button>
-        <button @click="deleteMusic" class="icon-btn">🗑️</button>
+        <button @click="deleteMusic" class="icon-btn" :disabled="loading">🗑️</button>
+        <button @click="validateMusic" class="icon-btn" :disabled="loading">✅</button>
       </div>
     </div>
+
     <div class="content">
       <div class="group" v-if="artistNames.length">
         <label>Artistes</label>
         <div>{{ artistNames.join(', ') }}</div>
       </div>
+
       <div class="group" v-if="props.music.genre?.length">
         <label>Genre</label>
         <div>{{ props.music.genre.join(', ') }}</div>
       </div>
+
       <div class="group" v-if="props.music.link">
         <label>Lien</label>
         <a :href="props.music.link" target="_blank">Écouter</a>
       </div>
-    </div>
-
-    <div class="actions">
-      <button class="delete-button" @click="deleteMusic" :disabled="loading">Supprimer</button>
-      <button class="validate-button" @click="validateMusic" :disabled="loading">Valider</button>
     </div>
   </div>
 </template>
@@ -164,41 +148,8 @@ onMounted(async () => {
 <style scoped>
 @import "@/components/css/content-box.css";
 
-.delete-button {
-  margin-top: 10px;
-  padding: 8px 12px;
-  background-color: #e74c3c;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
+.admin-actions .icon-btn {
+  margin-left: 5px;
 }
 
-.delete-button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-
-.validate-button {
-  margin-top: 10px;
-  padding: 8px 12px;
-  background-color: #2ecc71;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.validate-button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-
-.favorite-btn {
-  margin-left: 10px;
-  background: none;
-  border: none;
-  font-size: 1.2em;
-  cursor: pointer;
-}
 </style>
