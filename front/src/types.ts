@@ -25,5 +25,6 @@ export interface Music {
   link?: string;
   picture?: string;
   popularity?: number;
+  isValidated: boolean;
 }
 

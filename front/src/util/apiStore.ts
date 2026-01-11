@@ -135,17 +135,29 @@ export const apiStore = {
     return await res.json()
   },
 
-  async getAllMusic(): Promise<Music[]> {
-    const res = await fetch(`${this.apiUrl}music`, {
+  async getAllMusic(filters: Record<string, any> = {}): Promise<Music[]> {
+    const query = new URLSearchParams();
+
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        query.append(key, String(value));
+      }
+    });
+
+    const url =
+      `${this.apiUrl}music` + (query.toString() ? `?${query}` : '');
+
+    const res = await fetch(url, {
       method: 'GET',
-      credentials: 'include'
-    })
+      credentials: 'include',
+    });
 
-    if (!res.ok) throw new Error('Failed to fetch music')
+    if (!res.ok) throw new Error('Failed to fetch music');
 
-    const data = await res.json()
-    return data.member ?? []
-  },
+    const data = await res.json();
+    return data.member ?? [];
+  }
+  ,
 
   async createMusic(music: Partial<Music>) {
     const res = await fetch(`${this.apiUrl}music`, {

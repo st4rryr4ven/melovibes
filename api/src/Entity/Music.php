@@ -32,7 +32,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new Get(requirements: ['id' => '\d+']),
-        new GetCollection(security: "is_granted('ROLE_ADMIN')"),
+        new GetCollection(security: "is_granted('ROLE_USER')"),
         new GetCollection(
             uriTemplate: '/music/search',
             controller: MusicSearchAction::class,
@@ -129,7 +129,11 @@ class Music
     private ?string $link = null;
 
     #[ORM\Column]
-    #[Groups(['music:update', 'music:read', 'music:admin:read'])]
+    #[Groups([
+        'music:read',
+        'music:admin:read',
+        'serialization:music:update'
+    ])]
     private ?bool $isValidated = false;
 
     #[ORM\Column(nullable: true)]

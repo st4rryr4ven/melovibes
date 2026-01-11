@@ -15,9 +15,6 @@
         <div v-if="authStore.estConnecte && authStore.estAdmin"
              @click="router.push({ name: 'allUsers' })">Liste d'utilisateurs
         </div>
-        <div v-if="authStore.estConnecte && authStore.estAdmin"
-             @click="router.push({ name: 'unvalidatedMusics' })">Musiques en attente de validation
-        </div>
         <div v-if="authStore.estConnecte " @click="logout">Se déconnecter</div>
       </nav>
     </header>

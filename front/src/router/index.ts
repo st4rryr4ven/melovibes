@@ -8,7 +8,6 @@ import Register from '@/views/Register.vue'
 import Edit from '@/views/Profile.vue'
 import {useStoreAuthentification} from '@/stores/storeAuthentification'
 import AlbumTracks from '@/views/AlbumTracks.vue'
-import UnvalidatedMusics from '@/views/UnvalidatedMusics.vue'
 import MusicDetail from "@/views/MusicDetail.vue";
 
 const router = createRouter({
@@ -38,12 +37,6 @@ const router = createRouter({
       name: 'musicDetail',
       component: MusicDetail,
       props: (route) => ({id: Number(route.params.id)})
-    },
-    {
-      path: '/unvalidatedMusics',
-      name: 'unvalidatedMusics',
-      component: UnvalidatedMusics,
-      meta: {requiresAuth: true, requiresAdmin: true},
     },
   ]
 })

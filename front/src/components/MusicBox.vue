@@ -118,7 +118,7 @@ onMounted(async () => {
       <div v-if="isAdmin" class="admin-actions">
         <button @click="editMusic" class="icon-btn">✏️</button>
         <button @click="deleteMusic" class="icon-btn" :disabled="loading">🗑️</button>
-        <button @click="validateMusic" class="icon-btn" :disabled="loading">✅</button>
+        <button  @click="validateMusic" class="icon-btn" :disabled="loading">✅</button>
       </div>
     </div>
 
