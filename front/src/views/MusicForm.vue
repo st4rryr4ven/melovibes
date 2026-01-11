@@ -1,111 +1,144 @@
 <script setup lang="ts">
-import {ref} from 'vue';
-import type {Music} from '@/types';
-import {apiStore} from '@/util/apiStore';
-import {useRouter} from 'vue-router';
-import {useStoreAuthentification} from '@/stores/storeAuthentification'
+import {ref, reactive, watch} from 'vue'
+import {searchArtists, createArtist} from '@/api/artistApi'
+import {importSpotifyTrack, searchMusic} from '@/api/musicApi'
+import type {Artist, ImportedMusic} from '@/types'
 
-const authStore = useStoreAuthentification()
+// Form state
+const form = reactive({
+  title: '',
+  spotifyTrackId: '',
+  artists: [] as Artist[],
+  selectedArtist: null as Artist | null,
+})
 
-const router = useRouter();
+// Autocomplete search state
+const artistQuery = ref('')
+const artistResults = ref<Artist[]>([])
+const artistLoading = ref(false)
 
-const title = ref('');
-const artists = ref<string[]>(['']);
-const genres = ref<string[]>(['']);
-const link = ref('');
-const picture = ref('');
-const popularity = ref<number | null>(50);
-
-const error = ref<string | null>(null);
-const success = ref<string | null>(null);
-
-function addArtistField() {
-  artists.value.push('');
-}
-
-function removeArtistField(index: number) {
-  if (artists.value.length > 1) artists.value.splice(index, 1);
-}
-
-function addGenreField() {
-  genres.value.push('');
-}
-
-function removeGenreField(index: number) {
-  if (genres.value.length > 1) genres.value.splice(index, 1);
-}
-
-async function submitMusic() {
-  if (!authStore.utilisateurConnecte) {
-    error.value = 'Vous devez être connecté pour ajouter une musique.';
-    return;
+watch(artistQuery, async (q) => {
+  if (!q) {
+    artistResults.value = []
+    return
   }
+  artistLoading.value = true
+  artistResults.value = (await searchArtists({q, limit: 5})).items
+  artistLoading.value = false
+})
 
-  if (!title.value.trim() || artists.value.some(a => !a.trim()) || genres.value.some(g => !g.trim())) {
-    error.value = 'Veuillez remplir tous les champs obligatoires.';
-    return;
-  }
+// Import from Spotify
+const importing = ref(false)
 
-  const musicPayload: Partial<Music> = {
-    title: title.value,
-    artists: artists.value.map((name) => `/artists/${artistIdFromName(name)}`),
-    genre: genres.value,
-    link: link.value || undefined,
-    picture: picture.value || undefined,
-    popularity: popularity.value || 0,
-  };
+async function onImportSpotify() {
+  if (!form.spotifyTrackId) return
+  importing.value = true
 
   try {
-    await apiStore.createMusic(musicPayload);
-    success.value = 'Musique créée avec succès !';
-    router.push('/music');
+    const imported: ImportedMusic = await importSpotifyTrack(form.spotifyTrackId)
+    form.title = imported.title
+    form.artists = imported.artists
   } catch (err: any) {
-    error.value = err.message || 'Erreur lors de la création de la musique.';
+    alert(err.message || 'Failed to import track from Spotify')
+  } finally {
+    importing.value = false
   }
+}
+
+// Manual artist creation
+async function addNewArtist(name: string) {
+  if (!name) return
+  const newArtist = await createArtist({name})
+  form.artists.push(newArtist)
+  form.selectedArtist = newArtist
 }
 </script>
 
 <template>
-  <div class="music-form">
-    <h2>Créer une musique</h2>
+  <form @submit.prevent="console.log(form)">
+    <h2>Create Music</h2>
 
-    <div v-if="error" class="alert alert-danger">{{ error }}</div>
-    <div v-if="success" class="alert alert-success">{{ success }}</div>
-
-    <label>Titre *</label>
-    <input v-model="title" type="text" placeholder="Titre de la musique"/>
-
-    <div class="dynamic-field">
-      <label>Artistes *</label>
-      <div v-for="(artist, i) in artists" :key="i" class="artist-field">
-        <input v-model="artists[i]" type="text" placeholder="Nom de l'artiste"/>
-        <button type="button" @click="removeArtistField(i)" v-if="artists.length > 1">❌</button>
-      </div>
-      <button type="button" @click="addArtistField">Ajouter un artiste</button>
+    <!-- Spotify Import -->
+    <div>
+      <label>Spotify Track ID or URL</label>
+      <input v-model="form.spotifyTrackId" type="text" placeholder="Spotify track ID or URL"/>
+      <button type="button" @click="onImportSpotify" :disabled="importing">
+        {{ importing ? 'Importing...' : 'Import from Spotify' }}
+      </button>
     </div>
 
-    <div class="dynamic-field">
-      <label>Genres *</label>
-      <div v-for="(genre, i) in genres" :key="i" class="genre-field">
-        <input v-model="genres[i]" type="text" placeholder="Genre"/>
-        <button type="button" @click="removeGenreField(i)" v-if="genres.length > 1">❌</button>
-      </div>
-      <button type="button" @click="addGenreField">Ajouter un genre</button>
+    <hr/>
+
+    <!-- Manual creation -->
+    <div>
+      <label>Title</label>
+      <input v-model="form.title" type="text" placeholder="Music title"/>
     </div>
 
-    <label>Lien (Spotify, YouTube...)</label>
-    <input v-model="link" type="url" placeholder="https://..."/>
+    <div class="artist-field">
+      <label>Artist</label>
+      <input
+        v-model="artistQuery"
+        type="text"
+        placeholder="Search for artist..."
+      />
+      <div v-if="artistLoading">Searching...</div>
+      <ul v-if="artistResults.length">
+        <li
+          v-for="artist in artistResults"
+          :key="artist.id"
+          @click="form.selectedArtist = artist; form.artists = [artist]; artistQuery = artist.name"
+        >
+          {{ artist.name }}
+        </li>
+      </ul>
 
-    <label>Image (URL)</label>
-    <input v-model="picture" type="url" placeholder="https://..."/>
+      <button
+        type="button"
+        @click="addNewArtist(artistQuery)"
+      >
+        Create New Artist "{{ artistQuery }}"
+      </button>
+    </div>
 
-    <label>Popularité (0-100)</label>
-    <input v-model.number="popularity" type="number" min="0" max="100"/>
+    <hr/>
 
-    <button type="button" @click="submitMusic">Créer la musique</button>
-  </div>
+    <div>
+      <button type="submit">Save Music</button>
+    </div>
+  </form>
 </template>
 
 <style scoped>
-@import "@/components/css/form-style.css";
+.music-form {
+  max-width: 600px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.artist-field ul {
+  background: white;
+  border: 1px solid #cbd5e1;
+  margin-top: 0;
+  padding: 0;
+  list-style: none;
+  position: absolute;
+  z-index: 10;
+  width: 200px;
+}
+
+.artist-field li {
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.artist-field li:hover {
+  background-color: #e2e8f0;
+}
+
+button {
+  cursor: pointer;
+}
 </style>
