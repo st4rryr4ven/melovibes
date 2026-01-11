@@ -4,13 +4,14 @@ import {searchArtists, createArtist, importSpotifyArtist} from '@/api/artistApi'
 import {importSpotifyTrack, createMusic} from '@/api/musicApi'
 import {apiJson} from '@/api/httpClient'
 import {API_URL} from '@/util/apiStore'
-import type {Artist, ImportedMusic, Music} from '@/types'
+import type {Artist} from '@/types/artist'
+import type {ImportedMusic} from '@/types/music'
+import type {Music} from '@/types'
 
 const form = reactive({
   title: '',
   spotifyTrackId: '',
-  artists: [] as Artist[],
-  selectedArtist: null as Artist | null,
+  selectedArtists: [] as Artist[],
 })
 
 const artistQuery = ref('')
@@ -44,43 +45,59 @@ function highlightQuery(name: string) {
 
 // Select an artist from search results
 function selectArtist(artist: any) {
+  let selectedArtist: Artist | null = null
+
   // Handle Spotify artist
   if (artist?.spotify) {
-    form.selectedArtist = {
+    selectedArtist = {
       id: artist.local?.artistId || null,
       spotifyId: artist.spotify.id,
       name: artist.spotify.name,
-      images: artist.spotify.images,
     }
-    artistQuery.value = artist.spotify.name
   }
   // Handle local artist
   else if (artist?.local) {
-    form.selectedArtist = {
+    selectedArtist = {
       id: artist.local.artistId,
       spotifyId: artist.local.spotifyId,
       name: artist.local.name,
-      images: [],
     }
-    artistQuery.value = artist.local.name
-  } else {
-    return
   }
-  artistResults.value = [] // hide dropdown
+
+  if (selectedArtist) {
+    // Check if artist is already selected (by spotifyId or id)
+    const alreadySelected = form.selectedArtists.some((a: Artist) =>
+      (a.spotifyId && selectedArtist!.spotifyId && a.spotifyId === selectedArtist!.spotifyId) ||
+      (a.id && selectedArtist!.id && a.id === selectedArtist!.id)
+    )
+
+    if (!alreadySelected) {
+      form.selectedArtists.push(selectedArtist)
+    }
+    artistQuery.value = ''
+    artistResults.value = [] // hide dropdown
+  }
+}
+
+// Remove an artist from selection
+function removeArtist(index: number) {
+  form.selectedArtists.splice(index, 1)
 }
 
 // Create a new artist manually
 async function addNewArtist(name: string) {
   if (!name) return
   const newArtist = await createArtist({name})
-  form.artists.push(newArtist)
-  form.selectedArtist = {
-    id: newArtist.id,
-    spotifyId: newArtist.spotifyId, // may be undefined if created manually
-    name: newArtist.name,
-    images: [],
+
+  // Check if artist is already selected
+  const alreadySelected = form.selectedArtists.some((a: Artist) =>
+    a.id === newArtist.id || (a.name === newArtist.name && !a.id)
+  )
+
+  if (!alreadySelected) {
+    form.selectedArtists.push(newArtist)
   }
-  artistQuery.value = newArtist.name
+  artistQuery.value = ''
   artistResults.value = []
 }
 
@@ -107,31 +124,40 @@ async function saveMusic() {
 
   importing.value = true
   try {
-    let dbArtistId: number | null = null
+    // 1️⃣ Handle artists - ensure all have DB IDs
+    if (form.selectedArtists.length === 0) {
+      alert('Veuillez sélectionner au moins un artiste.')
+      return
+    }
 
-    // 1️⃣ Handle artist
-    if (form.selectedArtist) {
+    const dbArtistIds: number[] = []
+
+    for (const artist of form.selectedArtists) {
+      let dbArtistId: number | null = null
+
       // If artist already has a DB ID (from local search), use it
-      if (form.selectedArtist.id) {
-        dbArtistId = form.selectedArtist.id
+      if (artist.id) {
+        dbArtistId = artist.id
       }
       // If artist has Spotify ID but no DB ID, import from Spotify
-      else if (form.selectedArtist.spotifyId) {
+      else if (artist.spotifyId) {
         try {
-          const imported = await importSpotifyArtist(form.selectedArtist.spotifyId)
+          const imported = await importSpotifyArtist(artist.spotifyId)
           dbArtistId = imported.id
-          form.selectedArtist.id = dbArtistId
+          artist.id = imported.id // imported.id is always a number
         } catch (err: any) {
-          alert(err.message || 'Erreur lors de l\'importation de l\'artiste depuis Spotify')
+          alert(err.message || `Erreur lors de l'importation de l'artiste "${artist.name}" depuis Spotify`)
           return
         }
       } else {
-        alert('Erreur: l\'artiste sélectionné n\'a pas d\'identifiant valide.')
+        alert(`Erreur: l'artiste "${artist.name}" n'a pas d'identifiant valide.`)
         return
       }
-    } else {
-      alert('Veuillez sélectionner ou créer un artiste.')
-      return
+
+      // dbArtistId should always be a number at this point
+      if (dbArtistId !== null && dbArtistId !== undefined) {
+        dbArtistIds.push(dbArtistId)
+      }
     }
 
     // 2️⃣ Check if music exists locally and search Spotify for matching track
@@ -153,26 +179,30 @@ async function saveMusic() {
         }>
       }>(`music/search?q=${encodeURIComponent(form.title)}&limit=20`)
 
-      // First check if it exists locally
+      // First check if it exists locally (match title and at least one artist)
       const localMatch = searchResults.items.find(item => {
         if (item.source !== 'local' || !item.local) return false
         const titleMatch = item.local.title.toLowerCase() === form.title.toLowerCase()
-        const artistMatch = item.local.artists?.some(a => a.id === dbArtistId) ?? false
+        const artistMatch = item.local.artists?.some((a: { id: number }) => dbArtistIds.includes(a.id)) ?? false
         return titleMatch && artistMatch
       })
 
       if (localMatch?.local) {
-        alert(`La musique "${form.title}" existe déjà dans la base de données pour cet artiste.`)
+        alert(`La musique "${form.title}" existe déjà dans la base de données.`)
         resetForm()
         return
       }
 
-      // Then check Spotify results for a matching track
-      if (form.selectedArtist?.spotifyId) {
+      // Then check Spotify results for a matching track (match title and at least one artist)
+      const spotifyArtistIds = form.selectedArtists
+        .map((a: Artist) => a.spotifyId)
+        .filter((id: string | null | undefined): id is string => id !== null && id !== undefined)
+
+      if (spotifyArtistIds.length > 0) {
         const spotifyMatch = searchResults.items.find(item => {
           if (item.source !== 'spotify' || !item.spotify) return false
           const titleMatch = item.spotify.name.toLowerCase() === form.title.toLowerCase()
-          const artistMatch = item.spotify.artists?.some(a => a.id === form.selectedArtist!.spotifyId) ?? false
+          const artistMatch = item.spotify.artists?.some(a => spotifyArtistIds.includes(a.id)) ?? false
           return titleMatch && artistMatch
         })
 
@@ -196,10 +226,13 @@ async function saveMusic() {
     // API Platform expects IRI references (e.g., /api/artists/1)
     // Construct the IRI path from API_URL
     const basePath = API_URL.replace(/^https?:\/\/[^\/]+/, '') // Get path part (e.g., /api/)
-    const artistIri = `${basePath}artists/${dbArtistId}`.replace(/([^:])\/\/+/g, '$1/') // Normalize slashes
+    const artistIris = dbArtistIds.map(id =>
+      `${basePath}artists/${id}`.replace(/([^:])\/\/+/g, '$1/') // Normalize slashes
+    )
+
     await createMusic({
       title: form.title,
-      artists: [artistIri],
+      artists: artistIris,
       spotifyTrackId: importedTrack?.id ?? null,
     })
     alert(`Musique "${form.title}" créée avec succès !`)
@@ -215,8 +248,7 @@ async function saveMusic() {
 function resetForm() {
   form.title = ''
   form.spotifyTrackId = ''
-  form.artists = []
-  form.selectedArtist = null
+  form.selectedArtists = []
   artistQuery.value = ''
   artistResults.value = []
 }
@@ -250,19 +282,37 @@ function resetForm() {
       </div>
 
       <div class="form-group artist-field">
-        <label>Artiste</label>
+        <label>Artistes</label>
+
+        <!-- Selected artists -->
+        <div v-if="form.selectedArtists.length > 0" class="selected-artists">
+          <div
+            v-for="(artist, index) in form.selectedArtists"
+            :key="artist.id || artist.spotifyId || artist.name"
+            class="selected-artist"
+          >
+            <span class="artist-name">{{ artist.name }}</span>
+            <button
+              type="button"
+              @click="removeArtist(index)"
+              class="remove-artist"
+              title="Retirer cet artiste"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+
         <input v-model="artistQuery" type="text" placeholder="Rechercher un artiste..."/>
         <div v-if="artistLoading" class="status">Recherche en cours...</div>
 
-        <ul v-if="artistResults.length">
+        <ul v-if="artistResults.length" class="artist-results">
           <li v-for="artist in artistResults"
               :key="artist.spotify?.id || artist.local?.artistId || artist.local?.name"
               @click="selectArtist(artist)">
             <img :src="artist.spotify?.images?.[2]?.url || ''" alt="" class="artist-avatar"/>
-            <span class="artist-name"
-                  v-html="highlightQuery(artist.spotify?.name || artist.local?.name || '')"></span>
-            <span v-if="artist.spotify?.popularity"
-                  class="artist-popularity">⭐ {{ artist.spotify.popularity }}</span>
+            <span class="artist-name" v-html="highlightQuery(artist.spotify?.name || artist.local?.name || '')"></span>
+            <span v-if="artist.spotify?.popularity" class="artist-popularity">⭐ {{ artist.spotify.popularity }}</span>
           </li>
         </ul>
 
@@ -271,7 +321,7 @@ function resetForm() {
           type="button"
           @click="addNewArtist(artistQuery)"
         >
-          Créer l’artiste "{{ artistQuery }}"
+          Créer l'artiste "{{ artistQuery }}"
         </button>
       </div>
 
@@ -355,7 +405,51 @@ button:disabled {
   cursor: not-allowed;
 }
 
-.artist-field ul {
+.selected-artists {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.selected-artist {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  background-color: #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.875rem;
+}
+
+.selected-artist .artist-name {
+  color: #111;
+  font-weight: 500;
+}
+
+.remove-artist {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 1.25rem;
+  line-height: 1;
+  padding: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.2s, color 0.2s;
+}
+
+.remove-artist:hover {
+  background-color: #cbd5e1;
+  color: #dc2626;
+}
+
+.artist-results {
   background: #fff;
   border: 1px solid #cbd5e1;
   margin-top: 4px;
