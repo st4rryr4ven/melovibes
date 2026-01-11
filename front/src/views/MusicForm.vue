@@ -2,6 +2,8 @@
 import {ref, reactive, watch} from 'vue'
 import {searchArtists, createArtist, importSpotifyArtist} from '@/api/artistApi'
 import {importSpotifyTrack, createMusic} from '@/api/musicApi'
+import {apiJson} from '@/api/httpClient'
+import {API_URL} from '@/util/apiStore'
 import type {Artist, ImportedMusic, Music} from '@/types'
 
 const form = reactive({
@@ -42,14 +44,28 @@ function highlightQuery(name: string) {
 
 // Select an artist from search results
 function selectArtist(artist: any) {
-  if (!artist?.spotify) return
-  form.selectedArtist = {
-    id: artist.spotify.id,
-    spotifyId: artist.spotify.id,
-    name: artist.spotify.name,
-    images: artist.spotify.images,
+  // Handle Spotify artist
+  if (artist?.spotify) {
+    form.selectedArtist = {
+      id: artist.local?.artistId || null,
+      spotifyId: artist.spotify.id,
+      name: artist.spotify.name,
+      images: artist.spotify.images,
+    }
+    artistQuery.value = artist.spotify.name
   }
-  artistQuery.value = artist.spotify.name
+  // Handle local artist
+  else if (artist?.local) {
+    form.selectedArtist = {
+      id: artist.local.artistId,
+      spotifyId: artist.local.spotifyId,
+      name: artist.local.name,
+      images: [],
+    }
+    artistQuery.value = artist.local.name
+  } else {
+    return
+  }
   artistResults.value = [] // hide dropdown
 }
 
@@ -95,38 +111,78 @@ async function saveMusic() {
 
     // 1️⃣ Handle artist
     if (form.selectedArtist) {
-      // Try to find artist in DB by Spotify ID
-      try {
-        const artistDb = await apiJson<{
-          id: number
-        }>(`artists/spotify/${form.selectedArtist.spotifyId}`)
-        dbArtistId = artistDb.id
-      } catch {
-        // Artist not found → import from Spotify
-        const imported = await importSpotifyArtist(form.selectedArtist.spotifyId!)
-        dbArtistId = imported.id
-        form.selectedArtist.id = dbArtistId
+      // If artist already has a DB ID (from local search), use it
+      if (form.selectedArtist.id) {
+        dbArtistId = form.selectedArtist.id
+      }
+      // If artist has Spotify ID but no DB ID, import from Spotify
+      else if (form.selectedArtist.spotifyId) {
+        try {
+          const imported = await importSpotifyArtist(form.selectedArtist.spotifyId)
+          dbArtistId = imported.id
+          form.selectedArtist.id = dbArtistId
+        } catch (err: any) {
+          alert(err.message || 'Erreur lors de l\'importation de l\'artiste depuis Spotify')
+          return
+        }
+      } else {
+        alert('Erreur: l\'artiste sélectionné n\'a pas d\'identifiant valide.')
+        return
       }
     } else {
       alert('Veuillez sélectionner ou créer un artiste.')
       return
     }
 
-    // 2️⃣ Check if music exists locally
-    let existingMusic = await apiJson<{
-      exists: boolean
-    }>(`music/search?title=${encodeURIComponent(form.title)}&artistId=${dbArtistId}`)
-    if (existingMusic.exists) {
-      alert(`La musique "${form.title}" existe déjà dans la base de données.`)
-      resetForm()
-      return
-    }
-
-    // 3️⃣ Try to import music from Spotify by title
+    // 2️⃣ Check if music exists locally and search Spotify for matching track
     let importedTrack = null
     try {
-      importedTrack = await importSpotifyTrack(form.title)
+      const searchResults = await apiJson<{
+        items: Array<{
+          source: 'local' | 'spotify'
+          local?: {
+            musicId: number
+            title: string
+            artists: Array<{ id: number }>
+          }
+          spotify?: {
+            id: string
+            name: string
+            artists: Array<{ id: string; name: string }>
+          }
+        }>
+      }>(`music/search?q=${encodeURIComponent(form.title)}&limit=20`)
+
+      // First check if it exists locally
+      const localMatch = searchResults.items.find(item => {
+        if (item.source !== 'local' || !item.local) return false
+        const titleMatch = item.local.title.toLowerCase() === form.title.toLowerCase()
+        const artistMatch = item.local.artists?.some(a => a.id === dbArtistId) ?? false
+        return titleMatch && artistMatch
+      })
+
+      if (localMatch?.local) {
+        alert(`La musique "${form.title}" existe déjà dans la base de données pour cet artiste.`)
+        resetForm()
+        return
+      }
+
+      // Then check Spotify results for a matching track
+      if (form.selectedArtist?.spotifyId) {
+        const spotifyMatch = searchResults.items.find(item => {
+          if (item.source !== 'spotify' || !item.spotify) return false
+          const titleMatch = item.spotify.name.toLowerCase() === form.title.toLowerCase()
+          const artistMatch = item.spotify.artists?.some(a => a.id === form.selectedArtist!.spotifyId) ?? false
+          return titleMatch && artistMatch
+        })
+
+        if (spotifyMatch?.spotify?.id) {
+          // Import the matching track
+          importedTrack = await importSpotifyTrack(spotifyMatch.spotify.id)
+        }
+      }
     } catch {
+      // If search or import fails, continue to manual creation
       importedTrack = null
     }
 
@@ -137,9 +193,13 @@ async function saveMusic() {
     }
 
     // 4️⃣ Music not found anywhere → create manually
+    // API Platform expects IRI references (e.g., /api/artists/1)
+    // Construct the IRI path from API_URL
+    const basePath = API_URL.replace(/^https?:\/\/[^\/]+/, '') // Get path part (e.g., /api/)
+    const artistIri = `${basePath}artists/${dbArtistId}`.replace(/([^:])\/\/+/g, '$1/') // Normalize slashes
     await createMusic({
       title: form.title,
-      artistId: dbArtistId,
+      artists: [artistIri],
       spotifyTrackId: importedTrack?.id ?? null,
     })
     alert(`Musique "${form.title}" créée avec succès !`)
@@ -195,11 +255,14 @@ function resetForm() {
         <div v-if="artistLoading" class="status">Recherche en cours...</div>
 
         <ul v-if="artistResults.length">
-          <li v-for="artist in artistResults" :key="artist.spotify.id"
+          <li v-for="artist in artistResults"
+              :key="artist.spotify?.id || artist.local?.artistId || artist.local?.name"
               @click="selectArtist(artist)">
-            <img :src="artist.spotify.images[2]?.url || ''" alt="" class="artist-avatar"/>
-            <span class="artist-name" v-html="highlightQuery(artist.spotify.name)"></span>
-            <span class="artist-popularity">⭐ {{ artist.spotify.popularity }}</span>
+            <img :src="artist.spotify?.images?.[2]?.url || ''" alt="" class="artist-avatar"/>
+            <span class="artist-name"
+                  v-html="highlightQuery(artist.spotify?.name || artist.local?.name || '')"></span>
+            <span v-if="artist.spotify?.popularity"
+                  class="artist-popularity">⭐ {{ artist.spotify.popularity }}</span>
           </li>
         </ul>
 

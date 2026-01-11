@@ -19,17 +19,19 @@ readonly class SpotifyCatalogService
         private MusicRepository        $musicRepository,
         private ArtistRepository       $artistRepository,
         private EntityManagerInterface $entityManager,
-    ) {
+    )
+    {
     }
 
     public function syncNewReleases(
         string $country = 'FR',
-        int $albumLimit = 20,
-        int $albumOffset = 0,
-        int $maxTracksPerAlbum = 50,
-        bool $updateExisting = true,
-        bool $dryRun = false,
-    ): int {
+        int    $albumLimit = 20,
+        int    $albumOffset = 0,
+        int    $maxTracksPerAlbum = 50,
+        bool   $updateExisting = true,
+        bool   $dryRun = false,
+    ): int
+    {
         $count = 0;
 
         $payload = $this->spotify->getNewReleases($albumLimit, $albumOffset, $country);
@@ -44,7 +46,7 @@ readonly class SpotifyCatalogService
                 continue;
             }
 
-            $albumId = (string) $album['id'];
+            $albumId = (string)$album['id'];
             $tracksPage = $this->spotify->getAlbumTracks($albumId, min(50, $maxTracksPerAlbum), 0, $country);
             $items = $tracksPage['items'] ?? [];
 
@@ -56,7 +58,7 @@ readonly class SpotifyCatalogService
 
             foreach ($items as $t) {
                 if (is_array($t) && isset($t['id'])) {
-                    $trackIds[] = (string) $t['id'];
+                    $trackIds[] = (string)$t['id'];
                 }
             }
 
@@ -131,7 +133,7 @@ readonly class SpotifyCatalogService
 
             foreach ($items as $t) {
                 if (is_array($t) && isset($t['id'])) {
-                    $id = trim((string) $t['id']);
+                    $id = trim((string)$t['id']);
                     if ($id !== '') {
                         $trackIds[] = $id;
                     }
@@ -196,6 +198,12 @@ readonly class SpotifyCatalogService
         $artistPayload = $this->spotify->getArtist($artistId);
         $artist = $this->upsertArtistFromSpotify($artistPayload, $updateExisting);
 
+        // Flush the artist if it's new (has no ID yet) to avoid duplicate key errors
+        // when importing top tracks that might reference the same artist
+        if ($artist->getId() === null) {
+            $this->entityManager->flush();
+        }
+
         if ($importTopTracks) {
             $top = $this->spotify->getArtistTopTracks($artistId, $market);
             $tracks = $top['tracks'] ?? [];
@@ -229,7 +237,7 @@ readonly class SpotifyCatalogService
 
             foreach (($track['artists'] ?? []) as $artist) {
                 if (is_array($artist) && isset($artist['id'])) {
-                    $artistIds[] = (string) $artist['id'];
+                    $artistIds[] = (string)$artist['id'];
                 }
             }
         }
@@ -250,7 +258,7 @@ readonly class SpotifyCatalogService
 
             foreach ($artists as $a) {
                 if (is_array($a) && isset($a['id'])) {
-                    $byId[(string) $a['id']] = $a;
+                    $byId[(string)$a['id']] = $a;
                 }
             }
         }
@@ -277,9 +285,9 @@ readonly class SpotifyCatalogService
      */
     private function upsertTrackInternal(array $track, array $artistDetailsById, bool $updateExisting, bool $dryRun): ?Music
     {
-        $trackSpotifyId = isset($track['id']) ? trim((string) $track['id']) : '';
-        $spotifyUrl = (string) ($track['external_urls']['spotify'] ?? '');
-        $title = (string) ($track['name'] ?? '');
+        $trackSpotifyId = isset($track['id']) ? trim((string)$track['id']) : '';
+        $spotifyUrl = (string)($track['external_urls']['spotify'] ?? '');
+        $title = (string)($track['name'] ?? '');
 
         if ($title === '') {
             return null;
@@ -302,7 +310,7 @@ readonly class SpotifyCatalogService
         $picture = null;
         $images = $track['album']['images'] ?? null;
         if (is_array($images) && isset($images[0]['url'])) {
-            $picture = (string) $images[0]['url'];
+            $picture = (string)$images[0]['url'];
         }
 
         $genres = $this->computeGenres($track, $artistDetailsById);
@@ -318,7 +326,7 @@ readonly class SpotifyCatalogService
         }
         $music->setPicture($picture);
         $music->setGenre($genres);
-        $music->setPopularity((int) ($track['popularity'] ?? 0));
+        $music->setPopularity((int)($track['popularity'] ?? 0));
         $music->setIsValidated(true);
 
         $music->setRequestJSON([
@@ -328,7 +336,7 @@ readonly class SpotifyCatalogService
                     return null;
                 }
 
-                return $artistDetailsById[(string) $a['id']] ?? $a;
+                return $artistDetailsById[(string)$a['id']] ?? $a;
             }, $track['artists'] ?? []))),
         ]);
 
@@ -351,8 +359,8 @@ readonly class SpotifyCatalogService
 
     private function upsertArtistFromSpotify(array $artistPayload, bool $updateExisting): Artist
     {
-        $spotifyId = isset($artistPayload['id']) ? trim((string) $artistPayload['id']) : '';
-        $name = (string) ($artistPayload['name'] ?? '');
+        $spotifyId = isset($artistPayload['id']) ? trim((string)$artistPayload['id']) : '';
+        $name = (string)($artistPayload['name'] ?? '');
 
         if ($spotifyId === '' || $name === '') {
             throw new SpotifyApiException('Invalid artist payload', 500, ['artist' => $artistPayload]);
@@ -394,14 +402,16 @@ readonly class SpotifyCatalogService
     private function upsertArtistsForTrack(array $track): array
     {
         $artists = [];
+        $uow = $this->entityManager->getUnitOfWork();
+        $scheduledInserts = $uow->getScheduledEntityInsertions();
 
         foreach (($track['artists'] ?? []) as $artistData) {
             if (!is_array($artistData)) {
                 continue;
             }
 
-            $artistSpotifyId = isset($artistData['id']) ? trim((string) $artistData['id']) : '';
-            $name = (string) ($artistData['name'] ?? '');
+            $artistSpotifyId = isset($artistData['id']) ? trim((string)$artistData['id']) : '';
+            $name = (string)($artistData['name'] ?? '');
 
             if ($name === '') {
                 continue;
@@ -409,10 +419,36 @@ readonly class SpotifyCatalogService
 
             $artist = null;
 
+            // First check if there's a pending artist with the same Spotify ID in the unit of work
             if ($artistSpotifyId !== '') {
+                foreach ($scheduledInserts as $entity) {
+                    if ($entity instanceof Artist && $entity->getSpotifyId() === $artistSpotifyId) {
+                        $artist = $entity;
+                        break;
+                    }
+                }
+            }
+
+            // If not found in unit of work, check the database
+            if ($artist === null && $artistSpotifyId !== '') {
                 $artist = $this->artistRepository->findOneBySpotifyId($artistSpotifyId);
             }
 
+            // Also check by name in unit of work if still not found
+            if ($artist === null) {
+                foreach ($scheduledInserts as $entity) {
+                    if ($entity instanceof Artist && strtolower($entity->getName()) === strtolower($name)) {
+                        // If the pending artist has no Spotify ID but we have one, update it
+                        if ($entity->getSpotifyId() === null && $artistSpotifyId !== '') {
+                            $entity->setSpotifyId($artistSpotifyId);
+                        }
+                        $artist = $entity;
+                        break;
+                    }
+                }
+            }
+
+            // If still not found, check database by name
             if ($artist === null) {
                 $artist = $this->artistRepository->findOneByName($name);
                 if ($artist !== null && $artistSpotifyId !== '' && $artist->getSpotifyId() === null) {
@@ -420,6 +456,7 @@ readonly class SpotifyCatalogService
                 }
             }
 
+            // Create new artist only if not found anywhere
             if ($artist === null) {
                 $artist = new Artist();
                 $artist->setName($name);
@@ -471,7 +508,7 @@ readonly class SpotifyCatalogService
                 continue;
             }
 
-            $details = $artistDetailsById[(string) $artistData['id']] ?? null;
+            $details = $artistDetailsById[(string)$artistData['id']] ?? null;
             if (!is_array($details)) {
                 continue;
             }
