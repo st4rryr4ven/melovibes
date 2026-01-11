@@ -1,5 +1,4 @@
-import type {Music} from '@/types'
-import type {User} from '@/types/user.ts'
+import type {Music, User} from '@/types'
 import {useStoreAuthentification} from '@/stores/storeAuthentification'
 
 export const API_URL = import.meta.env.VITE_API_URL
@@ -71,6 +70,12 @@ export const apiStore = {
     if (!res.ok) throw new Error('Refresh failed')
   },
 
+  async me(): Promise<User> {
+    const res = await fetch(`${this.apiUrl}me`, {method: 'GET', credentials: 'include'})
+    if (!res.ok) throw new Error('Not authenticated')
+    return await res.json() as User
+  },
+
   async updateUser(id: number, data: any): Promise<void> {
     const res = await fetch(`${this.apiUrl}users/${id}`, {
       method: 'PATCH',
@@ -83,7 +88,6 @@ export const apiStore = {
       if (res.status === 401) throw new Error('Authentification échouée. Veuillez vous reconnecter.')
       throw new Error(error?.message || `Update failed with status ${res.status}`)
     }
-
     const authStore = useStoreAuthentification()
     await authStore.init()
   },
@@ -101,10 +105,57 @@ export const apiStore = {
     }
   },
 
-  async me(): Promise<User> {
-    const res = await fetch(`${this.apiUrl}me`, {method: 'GET', credentials: 'include'})
-    if (!res.ok) throw new Error('Not authenticated')
-    return await res.json() as User
+  async getAll(resource: string): Promise<User[]> {
+    const res = await fetch(`${this.apiUrl}${resource}`, {
+      method: 'GET',
+      headers: {'Content-Type': 'application/json'},
+      credentials: 'include',
+    })
+    if (!res.ok) {
+      if (res.status === 401) throw new Error('Non authentifié')
+      throw new Error(`GET ${resource} failed`)
+    }
+    const data = await res.json()
+    return data.member ?? data['hydra:member'] ?? []
+  },
+
+  async getOne(resource: string, id: number): Promise<any> {
+    const res = await fetch(`${this.apiUrl}${resource}/${id}`, {
+      method: 'GET',
+      headers: {'Content-Type': 'application/json'},
+      credentials: 'include',
+    })
+    if (!res.ok) {
+      if (res.status === 401) throw new Error('Non authentifié')
+      throw new Error(`GET ${resource}/${id} échoué`)
+    }
+    return await res.json()
+  },
+
+  async patch(resource: string, payload: object): Promise<any> {
+    const res = await fetch(`${this.apiUrl}${resource}`, {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/merge-patch+json'},
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) {
+      if (res.status === 401) throw new Error('Non authentifié')
+      if (res.status === 403) throw new Error('Interdit (403) - vérifier rôle utilisateur')
+      throw new Error(`PATCH ${resource} failed`)
+    }
+    return await res.json()
+  },
+
+  async delete(resource: string): Promise<void> {
+    const res = await fetch(`${this.apiUrl}${resource}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    })
+    if (!res.ok) {
+      if (res.status === 401) throw new Error('Non authentifié')
+      throw new Error(`DELETE ${resource} failed`)
+    }
   },
 
   async getFavorites(userId: number) {
@@ -137,13 +188,8 @@ export const apiStore = {
   },
 
   async getAllMusic(): Promise<Music[]> {
-    const res = await fetch(`${this.apiUrl}music`, {
-      method: 'GET',
-      credentials: 'include'
-    })
-
+    const res = await fetch(`${this.apiUrl}music`, {method: 'GET', credentials: 'include'})
     if (!res.ok) throw new Error('Failed to fetch music')
-
     const data = await res.json()
     return data.member ?? []
   },
@@ -166,7 +212,7 @@ export const apiStore = {
   async deleteMusic(musicId: number): Promise<void> {
     const res = await fetch(`${this.apiUrl}music/${musicId}`, {
       method: 'DELETE',
-      credentials: 'include',
+      credentials: 'include'
     })
     if (!res.ok) {
       const error = await res.json().catch(() => null)
@@ -174,23 +220,7 @@ export const apiStore = {
       throw new Error(error?.message || 'Failed to delete music')
     }
   },
-  async getAll(resource: string): Promise<User[]> {
-    const res = await fetch(this.apiUrl + resource, {
-      method: 'GET',
-      headers: {'Content-Type': 'application/json'},
-      credentials: 'include'
-    })
 
-    if (!res.ok) {
-      if (res.status === 401) {
-        throw new Error('Non authentifié')
-      }
-      throw new Error(`GET ${resource} failed`)
-    }
-
-    const data = await res.json()
-    return data.member ?? data['hydra:member'] ?? []
-  },
   async getArtistMusics(artistId: number) {
     const res = await fetch(`${this.apiUrl}artist/${artistId}/music`, {
       method: 'GET',
@@ -199,72 +229,16 @@ export const apiStore = {
     if (!res.ok) throw new Error('Failed to fetch artist music')
     return await res.json() as Music[]
   },
+
   async importMusicFromSpotify(spotifyTrackId: string) {
     const res = await fetch(`${this.apiUrl}music/import/spotify/${spotifyTrackId}`, {
       method: 'POST',
-      credentials: 'include',
+      credentials: 'include'
     })
     if (!res.ok) {
       const error = await res.json().catch(() => null)
       throw new Error(error?.message || 'Failed to import music')
     }
     return await res.json() as Music
-  }
-
+  },
 }
-
-  async getOne(resource: string, id: number): Promise<any> {
-    const res = await fetch(`${this.apiUrl}${resource}/${id}`, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-    });
-
-    if (!res.ok) {
-      if (res.status === 401) {
-        throw new Error('Non authentifié');
-      }
-      throw new Error(`GET ${resource}/${id} échoué`);
-    }
-
-    const data = await res.json();
-    return data;
-  },
-
-  async patch(resource: string, payload: object): Promise<any> {
-    const res = await fetch(`${this.apiUrl}${resource}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/merge-patch+json',
-      },
-      credentials: 'include',
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) {
-      console.error(await res.text());
-      if (res.status === 401) throw new Error('Non authentifié');
-      if (res.status === 403) throw new Error('Interdit (403) - vérifier rôle utilisateur');
-      throw new Error(`PATCH ${resource} failed`);
-    }
-
-    return await res.json();
-  },
-
-  async delete(resource: string): Promise<void> {
-    const res = await fetch(`${this.apiUrl}${resource}`, {
-      method: 'DELETE',
-      credentials: 'include',
-    });
-
-    if (!res.ok) {
-      if (res.status === 401) throw new Error('Non authentifié');
-      throw new Error(`DELETE ${resource} failed`);
-    }
-  }
-
-
-
-
-
-};

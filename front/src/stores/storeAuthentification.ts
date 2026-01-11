@@ -12,9 +12,7 @@ export const useStoreAuthentification = defineStore('auth', {
   }),
 
   getters: {
-    estAdmin: (state) => {
-      return state.utilisateurConnecte?.roles?.includes('ROLE_ADMIN') ?? false
-    }
+    estAdmin: (state) => state.utilisateurConnecte?.roles?.includes('ROLE_ADMIN') ?? false,
   },
 
   actions: {
