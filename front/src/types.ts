@@ -1,8 +1,9 @@
 export interface User {
-    id: number;
-    login: string;
-    email: string;
-    roles: string[]
+  id: number;
+  login: string;
+  email: string;
+  roles: string[];
+  favoriteMusic?: Music[];
 }
 
 export interface UpdateUserPayload {
@@ -15,21 +16,14 @@ export interface LoginResult {
   success: boolean
   error?: string
 }
-export interface Artist {
-  id?: number;
-  name: string;
-  "@id"?: string;
-  "@type"?: string;
-}
 
 export interface Music {
   id: number;
   title: string;
-  artists: Artist[];
+  artists: { id: number; name: string }[];
   genre: string[];
-  picture?: string;
   link?: string;
+  picture?: string;
   popularity?: number;
-  isValidated: boolean
 }
 

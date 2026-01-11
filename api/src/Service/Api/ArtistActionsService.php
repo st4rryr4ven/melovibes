@@ -124,23 +124,43 @@ final class ArtistActionsService
         ]);
     }
 
-    /**
-     * @param string $spotifyArtistId
-     * @param Request $request
-     * @param SpotifyCatalogService $catalog
-     * @return JsonResponse
-     */
-    public function importSpotifyArtist(string $spotifyArtistId, Request $request, SpotifyCatalogService $catalog): JsonResponse
-    {
-        $market = (string) $request->query->get('market', 'FR');
-        $artist = $catalog->importArtistById($spotifyArtistId, $market, true, true);
+   /**
+    * @param string $spotifyArtistId
+    * @param Request $request
+    * @param SpotifyCatalogService $catalog
+    * @param ArtistRepository $artistRepository
+    * @return JsonResponse
+    */
+   public function importSpotifyArtist(
+       string $spotifyArtistId,
+       Request $request,
+       SpotifyCatalogService $catalog,
+       ArtistRepository $artistRepository
+   ): JsonResponse {
+       $spotifyArtistId = trim($spotifyArtistId);
+       if ($spotifyArtistId === '') {
+           return new JsonResponse(['message' => 'Spotify ID is missing'], 400);
+       }
 
-        return new JsonResponse([
-            'artistId' => $artist->getId(),
-            'spotifyId' => $artist->getSpotifyId(),
-            'name' => $artist->getName(),
-        ], 201);
-    }
+       $existing = $artistRepository->findOneBySpotifyId($spotifyArtistId);
+       if ($existing !== null) {
+           return new JsonResponse([
+               'artistId' => $existing->getId(),
+               'spotifyId' => $existing->getSpotifyId(),
+               'name' => $existing->getName(),
+           ], 200);
+       }
+
+       $market = (string) $request->query->get('market', 'FR');
+       $artist = $catalog->importArtistById($spotifyArtistId, $market, true, true);
+
+       return new JsonResponse([
+           'artistId' => $artist->getId(),
+           'spotifyId' => $artist->getSpotifyId(),
+           'name' => $artist->getName(),
+       ], 201);
+   }
+
 
     /**
      * @param int $artistId
@@ -149,7 +169,7 @@ final class ArtistActionsService
      * @param MusicRepository $musicRepository
      * @return JsonResponse
      */
-    public function musics(int $artistId, Request $request, ArtistRepository $artistRepository, MusicRepository $musicRepository): JsonResponse
+    public function music(int $artistId, Request $request, ArtistRepository $artistRepository, MusicRepository $musicRepository): JsonResponse
     {
         $artist = $artistRepository->find($artistId);
         if ($artist === null) {

@@ -76,3 +76,17 @@ button:hover {
 .delete-button:hover {
   background-color: #c82333;
 }
+
+.music-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.music-page h2 {
+  color: black;
+  font-weight: 700;
+  font-size: 2rem;
+  letter-spacing: 0.5px;
+}
+

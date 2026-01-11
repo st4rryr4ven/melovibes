@@ -1,45 +1,53 @@
-div.content-box{
-  width:100%;
-  margin:10px auto;
-  display:flex;
-  flex-direction:column;
+div.content-box {
+  width: 100%;
+  margin: 10px auto;
+  display: flex;
+  flex-direction: column;
 }
-.top{
+
+.top {
+  color: black;
   box-shadow: 0 0 0.3rem #999;
   border-radius: 15px 15px 0 0;
   background-color: rgb(225, 240, 255);
   border-bottom: black 2px solid;
-  padding:8px;
-  font-size: 8pt;
+  padding: 12px 16px;
+  font-size: 1.5em;
+  font-weight: bold;
 }
 
-.top .clickable{
-  font-size:16px;
+.top .clickable {
+  font-size: 16px;
   font-weight: 600;
-  color:black;
+  color: black;
   text-decoration: none;
 }
-.top .clickable:hover{
-  color:aliceblue;
+
+.top .clickable:hover {
+  color: aliceblue;
 }
-.content{
-  margin:0px;
-  padding:20px;
+
+.content {
+  margin: 0px;
+  padding: 20px;
   flex-grow: 1;
   background-color: rgb(225, 240, 255);
   box-shadow: 0 0 0.3rem #999;
   font: 1.2em "Fira Sans", sans-serif;
 }
-.content.clickable:hover{
+
+.content.clickable:hover {
   box-shadow: 0 0 0.3rem #000;
   cursor: pointer;
 }
+
 .group label {
   color: #000;
   font-weight: bold;
   margin-bottom: 5px;
   display: block;
 }
+
 .group input {
   padding: 8px;
   border: 1px solid #000;
@@ -47,9 +55,25 @@ div.content-box{
   background-color: #fff;
   color: #000;
 }
+
+.group a {
+  color: rgb(20, 101, 66);
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.group a:hover {
+  text-decoration: underline;
+}
+
+.group {
+  margin-bottom: 15px;
+}
+
+
 button {
   padding: 10px;
-  background-color: rgb(20,101,66);
+  background-color: rgb(20, 101, 66);
   color: white;
   font-weight: bold;
   border: none;
@@ -58,5 +82,97 @@ button {
 }
 
 button:hover {
-  background-color: rgb(7,48,30);
+  background-color: rgb(7, 48, 30);
+}
+
+button.icon-btn {
+  float: right;
+  border: none !important;
+  background: transparent !important;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+}
+
+button.icon-btn:hover {
+  color: #e63946;
+}
+
+.favorite-btn {
+  composes: icon-btn;
+}
+
+.admin-actions {
+  float: right;
+  display: flex;
+  gap: 8px;
+}
+
+.content {
+  color: black;
+  margin-bottom: 10px;
+}
+
+.delete-button {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.delete-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+.content {
+  color: black;
+  margin-bottom: 10px;
+}
+
+.group a {
+  color: rgb(20, 101, 66);
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.group a:hover {
+  text-decoration: underline;
+}
+
+.group {
+  margin-bottom: 15px;
+}
+
+.favorite-btn {
+  float: right;
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.content {
+  color: black;
+  margin-bottom: 10px;
+}
+
+.group a {
+  color: rgb(20, 101, 66);
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.group a:hover {
+  text-decoration: underline;
+}
+
+.group {
+  margin-bottom: 15px;
 }

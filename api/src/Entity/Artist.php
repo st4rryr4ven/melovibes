@@ -7,13 +7,14 @@ use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Post;
 use App\Api\Action\ArtistImportSpotifyArtistAction;
-use App\Api\Action\ArtistMusicsAction;
+use App\Api\Action\ArtistMusicAction;
 use App\Api\Action\ArtistSearchAction;
 use App\Api\Action\ArtistTopTracksAction;
 use App\Repository\ArtistRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 
 #[ORM\Entity(repositoryClass: ArtistRepository::class)]
@@ -45,9 +46,9 @@ use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
             validate: false,
         ),
         new Get(
-            uriTemplate: '/artist/{id}/musics',
-            requirements: ['id' => '\\d+'],
-            controller: ArtistMusicsAction::class,
+            uriTemplate: '/artist/{artistId}/music',
+            requirements: ['artistId' => '\\d+'],
+            controller: ArtistMusicAction::class,
             output: false,
             read: false,
             deserialize: false,
@@ -67,6 +68,7 @@ class Artist
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['artist:read', 'music:read'])]
     private ?int $id = null;
 
     /**
@@ -76,17 +78,19 @@ class Artist
     private ?string $spotifyId = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['artist:read'])]
     private ?string $name = null;
 
     /**
+     * All the music of the artist
      * @var Collection<int, Music>
      */
     #[ORM\ManyToMany(targetEntity: Music::class, mappedBy: 'artists')]
-    private Collection $musics;
+    private Collection $music;
 
     public function __construct()
     {
-        $this->musics = new ArrayCollection();
+        $this->music = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -121,15 +125,15 @@ class Artist
     /**
      * @return Collection<int, Music>
      */
-    public function getMusics(): Collection
+    public function getMusic(): Collection
     {
-        return $this->musics;
+        return $this->music;
     }
 
     public function addMusic(Music $music): static
     {
-        if (!$this->musics->contains($music)) {
-            $this->musics->add($music);
+        if (!$this->music->contains($music)) {
+            $this->music->add($music);
             $music->addArtist($this);
         }
 
@@ -138,7 +142,7 @@ class Artist
 
     public function removeMusic(Music $music): static
     {
-        if ($this->musics->removeElement($music)) {
+        if ($this->music->removeElement($music)) {
             $music->removeArtist($this);
         }
 

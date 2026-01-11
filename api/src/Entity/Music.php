@@ -2,25 +2,27 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Metadata\ApiFilter;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Post;
+use ApiPlatform\Metadata\Patch;
+use ApiPlatform\Metadata\Delete;
+use ApiPlatform\Doctrine\Orm\Filter\BooleanFilter;
 use App\Api\Action\AlbumTracksAction;
 use App\Api\Action\MusicImportSpotifyTrackAction;
 use App\Api\Action\MusicNewReleasesAction;
 use App\Api\Action\MusicSearchAction;
 use App\Repository\MusicRepository;
+use App\State\MusicProcessor;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
-use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
-use ApiPlatform\Doctrine\Orm\Filter\BooleanFilter;
-use ApiPlatform\Metadata\ApiFilter;
-use ApiPlatform\Metadata\Patch;
-use ApiPlatform\Metadata\Delete;
 
 #[ORM\Entity(repositoryClass: MusicRepository::class)]
 #[ORM\Table(name: 'music')]
@@ -29,19 +31,15 @@ use ApiPlatform\Metadata\Delete;
 #[ApiFilter(BooleanFilter::class, properties: ['isValidated'])]
 #[ApiResource(
     operations: [
-        new Get(
-            requirements: ['id' => '\\d+'],
-        ),
-        new GetCollection(
-            security: "is_granted('ROLE_ADMIN')"
-        ),
+        new Get(requirements: ['id' => '\d+']),
+        new GetCollection(security: "is_granted('ROLE_ADMIN')"),
         new GetCollection(
             uriTemplate: '/music/search',
             controller: MusicSearchAction::class,
             paginationEnabled: false,
             output: false,
             read: false,
-            deserialize: false,
+            deserialize: false
         ),
         new GetCollection(
             uriTemplate: '/music/new-releases',
@@ -49,7 +47,7 @@ use ApiPlatform\Metadata\Delete;
             paginationEnabled: false,
             output: false,
             read: false,
-            deserialize: false,
+            deserialize: false
         ),
         new GetCollection(
             uriTemplate: '/albums/spotify/{spotifyAlbumId}/tracks',
@@ -57,7 +55,7 @@ use ApiPlatform\Metadata\Delete;
             paginationEnabled: false,
             output: false,
             read: false,
-            deserialize: false,
+            deserialize: false
         ),
         new Post(
             uriTemplate: '/music/import/spotify/{spotifyTrackId}',
@@ -65,25 +63,30 @@ use ApiPlatform\Metadata\Delete;
             output: false,
             read: false,
             deserialize: false,
-            validate: false,
+            validate: false
+        ),
+        new Post(
+            denormalizationContext: ['groups' => ['serialization:music:create']],
+            security: "is_granted('ROLE_USER')",
+            validationContext: ['groups' => ['validation:music:create']],
+            processor: MusicProcessor::class
         ),
         new Patch(
-            inputFormats: [
-                'json' => ['application/merge-patch+json'],
-            ],
-            denormalizationContext: ['groups' => ['music:update']],
-            security: "is_granted('ROLE_ADMIN')"
+            inputFormats: ['json' => ['application/merge-patch+json']],
+            denormalizationContext: ['groups' => ['serialization:music:update']],
+            security: "is_granted('ROLE_ADMIN')",
+            validationContext: ['groups' => ['validation:music:update']]
         ),
         new Delete(security: "is_granted('ROLE_ADMIN')")
-
-
     ],
+    normalizationContext: ['groups' => ['music:read']]
 )]
 class Music
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['music:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 64, unique: true, nullable: true)]
@@ -97,39 +100,49 @@ class Music
 
     #[ORM\Column(length: 255)]
     #[Assert\NotNull]
-    #[Assert\NotNull(message: "La musique doit avoir un titre", groups: ['validation.music:create', 'validation.music:update'])]
+    #[Assert\NotBlank(message: 'La musique doit avoir un titre.', groups: ['validation:music:create', 'validation:music:update'])]
+    #[Groups(['music:read', 'serialization:music:create', 'serialization:music:update'])]
     private ?string $title = null;
 
     /**
      * @var Collection<int, Artist>
      */
-    #[ORM\ManyToMany(targetEntity: Artist::class, inversedBy: 'musics')]
-    #[Assert\NotNull]
-    #[Assert\NotNull(message: "La musique doit avoir au moins un artiste", groups: ['validation.music:create', 'validation.music:update'])]
+    #[ORM\ManyToMany(targetEntity: Artist::class, inversedBy: 'music')]
+    #[Assert\NotNull(groups: ['validation:music:create', 'validation:music:update'])]
+    #[Assert\Count(min: 1, minMessage: 'Une musique doit avoir au moins un artiste.', groups: ['validation:music:create', 'validation:music:update'])]
+    #[Groups(['music:read', 'serialization:music:create', 'serialization:music:update'])]
+    #[ApiProperty(readableLink: false)]
     private Collection $artists;
 
     #[ORM\Column(nullable: true)]
+    #[Assert\Count(min: 1, minMessage: 'Une musique doit avoir au moins un genre.', groups: ['validation:music:create', 'validation:music:update'])]
+    #[Groups(['music:read', 'serialization:music:create', 'serialization:music:update'])]
     private ?array $genre = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['music:read', 'serialization:music:create', 'serialization:music:update'])]
     private ?string $picture = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Assert\Url(groups: ['validation:music:create', 'validation:music:update'])]
+    #[Groups(['music:read', 'serialization:music:create', 'serialization:music:update'])]
     private ?string $link = null;
 
     #[ORM\Column]
-    #[Groups(['music:update', 'music:read'])]
-    private ?bool $isValidated = null;
+    #[Groups(['music:update', 'music:read', 'music:admin:read'])]
+    private ?bool $isValidated = false;
 
     #[ORM\Column(nullable: true)]
     private ?array $requestJSON = null;
 
     #[ORM\Column]
+    #[Groups(['music:read', 'serialization:music:create'])]
     private ?int $popularity = null;
 
     public function __construct()
     {
         $this->artists = new ArrayCollection();
+        $this->isValidated = false;
     }
 
     public function getId(): ?int
@@ -145,7 +158,6 @@ class Music
     public function setSpotifyId(?string $spotifyId): static
     {
         $this->spotifyId = $spotifyId;
-
         return $this;
     }
 
@@ -157,7 +169,6 @@ class Music
     public function setImportSource(?string $importSource): static
     {
         $this->importSource = $importSource;
-
         return $this;
     }
 
@@ -169,7 +180,6 @@ class Music
     public function setImportedAt(?\DateTimeImmutable $importedAt): static
     {
         $this->importedAt = $importedAt;
-
         return $this;
     }
 
@@ -181,13 +191,9 @@ class Music
     public function setTitle(string $title): static
     {
         $this->title = $title;
-
         return $this;
     }
 
-    /**
-     * @return Collection<int, Artist>
-     */
     public function getArtists(): Collection
     {
         return $this->artists;
@@ -195,17 +201,13 @@ class Music
 
     public function addArtist(Artist $artist): static
     {
-        if (!$this->artists->contains($artist)) {
-            $this->artists->add($artist);
-        }
-
+        if (!$this->artists->contains($artist)) $this->artists->add($artist);
         return $this;
     }
 
     public function removeArtist(Artist $artist): static
     {
         $this->artists->removeElement($artist);
-
         return $this;
     }
 
@@ -217,7 +219,6 @@ class Music
     public function setGenre(?array $genre): static
     {
         $this->genre = $genre;
-
         return $this;
     }
 
@@ -229,7 +230,6 @@ class Music
     public function setPicture(?string $picture): static
     {
         $this->picture = $picture;
-
         return $this;
     }
 
@@ -241,7 +241,6 @@ class Music
     public function setLink(?string $link): static
     {
         $this->link = $link;
-
         return $this;
     }
 
@@ -253,7 +252,6 @@ class Music
     public function setIsValidated(bool $isValidated): static
     {
         $this->isValidated = $isValidated;
-
         return $this;
     }
 
@@ -265,7 +263,6 @@ class Music
     public function setRequestJSON(?array $requestJSON): static
     {
         $this->requestJSON = $requestJSON;
-
         return $this;
     }
 
@@ -277,7 +274,6 @@ class Music
     public function setPopularity(int $popularity): static
     {
         $this->popularity = $popularity;
-
         return $this;
     }
 }

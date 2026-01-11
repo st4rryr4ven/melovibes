@@ -2,12 +2,12 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
-use ApiPlatform\Metadata\Put;
 use ApiPlatform\Metadata\Delete;
 use App\Repository\UserRepository;
 use App\State\UserProcessor;
@@ -17,7 +17,6 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
-use Symfony\Component\Security\Core\Validator\Constraints\UserPassword;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Serializer\Annotation\Groups;
 
@@ -50,7 +49,14 @@ use Symfony\Component\Serializer\Annotation\Groups;
             validationContext: ['groups' => ['Default', 'validation:user:update']],
             processor: UserProcessor::class
         ),
-
+        new Patch(
+            uriTemplate: '/users/{id}/favorites',
+            inputFormats: [
+                'json' => ['application/merge-patch+json'],
+            ],
+            denormalizationContext: ['groups' => ['serialization:user:update:favorites']],
+            security: "is_granted('ROLE_USER') and object == user"
+        ),
         new Delete(
             security: "(is_granted('ROLE_USER') and object == user) or is_granted('ROLE_ADMIN')"
         ),
@@ -117,9 +123,16 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(targetEntity: Review::class, mappedBy: 'author')]
     private Collection $reviews;
 
+
+    #[ORM\ManyToMany(targetEntity: Music::class)]
+    #[Groups(['user:read'])]
+    #[ApiProperty(readableLink: false)]
+    private Collection $favoriteMusic;
+
     public function __construct()
     {
         $this->reviews = new ArrayCollection();
+        $this->favoriteMusic = new ArrayCollection();
     }
 
     /**
@@ -267,5 +280,26 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-}
+    /**
+     * @return Collection<int, Music>
+     */
+    public function getFavoriteMusic(): Collection
+    {
+        return $this->favoriteMusic;
+    }
 
+    public function addFavoriteMusic(Music $music): self
+    {
+        if (!$this->favoriteMusic->contains($music)) {
+            $this->favoriteMusic->add($music);
+        }
+        return $this;
+    }
+
+    public function removeFavoriteMusic(Music $music): self
+    {
+        $this->favoriteMusic->removeElement($music);
+        return $this;
+    }
+
+}

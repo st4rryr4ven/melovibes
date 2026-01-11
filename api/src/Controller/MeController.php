@@ -21,7 +21,8 @@ final class MeController extends AbstractController
             'id' => $user->getId(),
             'login' => $user->getLogin(),
             'email' => $user->getEmail(),
-            'roles'=>$user->getRoles(),
+            'roles' => $user->getRoles(),
+            'favoriteMusic' => $user->getFavoriteMusic(),
         ]);
     }
 }

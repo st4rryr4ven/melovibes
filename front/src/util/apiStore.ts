@@ -1,128 +1,182 @@
-import type {User} from '@/types/user.ts'
-import {storeAuthentification} from "@/stores/storeAuthentification.ts";
+import type {Music, User} from '@/types'
+import {useStoreAuthentification} from '@/stores/storeAuthentification'
 
-export const API_URL = import.meta.env.VITE_API_URL;
+export const API_URL = import.meta.env.VITE_API_URL
 export const AVATAR_BASE_URL =
-  "https://webinfo.iutmontp.univ-montp2.fr/~mezencey/my-avatar/public/avatar/";
+  "https://webinfo.iutmontp.univ-montp2.fr/~mezencey/my-avatar/public/avatar/"
 
 async function sha256(message: string): Promise<string> {
-  const msgBuffer = new TextEncoder().encode(message);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  const msgBuffer = new TextEncoder().encode(message)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
 export async function getProfilePictureUrl(email: string): Promise<string> {
-  const hash = await sha256(email);
+  const hash = await sha256(email)
   if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-    return `/avatar-proxy/${hash}`;
+    return `/avatar-proxy/${hash}`
   }
-  return AVATAR_BASE_URL + hash;
+  return AVATAR_BASE_URL + hash
 }
 
 export function getProfilePictureUrlSync(): string {
-  return AVATAR_BASE_URL + 'placeholder';
+  return AVATAR_BASE_URL + 'placeholder'
 }
 
 export const apiStore = {
   apiUrl: API_URL,
 
   async login(login: string, password: string): Promise<User> {
-    const res = await fetch(this.apiUrl + 'auth', {
+    const res = await fetch(`${this.apiUrl}auth`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       credentials: 'include',
-      body: JSON.stringify({login, password})
-    });
+      body: JSON.stringify({login, password}),
+    })
     if (!res.ok) {
-      const error = await res.json().catch(() => ({}));
-      throw new Error(error.message || 'Login failed');
+      const error = await res.json().catch(() => ({}))
+      throw new Error(error.message || 'Login failed')
     }
-    return await (await res.json() as Promise<User>);
+    return await res.json() as User
   },
 
-  async logout(): Promise<any> {
-    const res = await fetch(this.apiUrl + 'token/invalidate', {
+  async logout(): Promise<void> {
+    const res = await fetch(`${this.apiUrl}token/invalidate`, {
       method: 'POST',
-      credentials: 'include'
-    });
-    if (!res.ok) {
-      throw new Error('Logout failed');
-    }
-    return res;
+      credentials: 'include',
+    })
+    if (!res.ok) throw new Error('Logout failed')
   },
 
-  async register(user: { login: string; password: string; email: string }): Promise<any> {
-    const res = await fetch(this.apiUrl + 'users/register', {
+  async register(user: { login: string; password: string; email: string }): Promise<void> {
+    const res = await fetch(`${this.apiUrl}users/register`, {
       method: 'POST',
       headers: {'Content-Type': 'application/ld+json'},
       body: JSON.stringify({
         login: user.login,
         plainPassword: user.password,
-        email: user.email
-      })
-    });
-    if (!res.ok) {
-      throw new Error('Registration failed');
-    }
-    return res;
+        email: user.email,
+      }),
+    })
+    if (!res.ok) throw new Error('Registration failed')
   },
 
-  async refresh(): Promise<any> {
-    const res = await fetch(this.apiUrl + 'token/refresh', {
+  async refresh(): Promise<void> {
+    const res = await fetch(`${this.apiUrl}token/refresh`, {
       method: 'POST',
-      credentials: 'include'
-    });
-    if (!res.ok) {
-      throw new Error('Refresh failed');
-    }
-    return res;
+      credentials: 'include',
+    })
+    if (!res.ok) throw new Error('Refresh failed')
   },
 
-  async updateUser(id: number, data: any): Promise<any> {
-    const res = await fetch(this.apiUrl + 'users/' + id, {
+  async updateUser(id: number, data: any): Promise<void> {
+    const res = await fetch(`${this.apiUrl}users/${id}`, {
       method: 'PATCH',
       headers: {'Content-Type': 'application/merge-patch+json'},
       credentials: 'include',
-      body: JSON.stringify(data)
-    });
+      body: JSON.stringify(data),
+    })
     if (!res.ok) {
-      const error = await res.json().catch(() => null);
-      if (res.status === 401) throw new Error('Authentification échouée. Veuillez vous reconnecter.');
-      throw new Error(error?.message || `Update failed with status ${res.status}`);
+      const error = await res.json().catch(() => null)
+      if (res.status === 401) throw new Error('Authentification échouée. Veuillez vous reconnecter.')
+      throw new Error(error?.message || `Update failed with status ${res.status}`)
     }
-    storeAuthentification.init();
-    return res;
+
+    const authStore = useStoreAuthentification()
+    await authStore.init()
   },
 
-  async deleteUser(id: number): Promise<any> {
-    const res = await fetch(this.apiUrl + 'users/' + id, {
+  async deleteUser(id: number): Promise<void> {
+    const res = await fetch(`${this.apiUrl}users/${id}`, {
       method: 'DELETE',
       headers: {'Content-Type': 'application/json'},
-      credentials: 'include'
-    });
+      credentials: 'include',
+    })
     if (!res.ok) {
-      const error = await res.json().catch(() => null);
-      if (res.status === 401) throw new Error('Authentification échouée. Veuillez vous reconnecter.');
-      throw new Error(error?.message || 'Delete failed');
+      const error = await res.json().catch(() => null)
+      if (res.status === 401) throw new Error('Authentification échouée. Veuillez vous reconnecter.')
+      throw new Error(error?.message || 'Delete failed')
     }
-    return res;
   },
 
   async me(): Promise<User> {
-    const res = await fetch(this.apiUrl + 'me', {
-      method: 'GET',
-      credentials: 'include'
-    });
-    if (!res.ok) throw new Error('Not authenticated');
-    return await (await res.json() as Promise<User>);
+    const res = await fetch(`${this.apiUrl}me`, {method: 'GET', credentials: 'include'})
+    if (!res.ok) throw new Error('Not authenticated')
+    return await res.json() as User
   },
 
+  async getFavorites(userId: number) {
+    const res = await fetch(`${this.apiUrl}users/${userId}/favorites`, {
+      method: 'GET',
+      credentials: 'include',
+    })
+    if (!res.ok) throw new Error('Failed to fetch favorites')
+    return await res.json()
+  },
 
+  async toggleFavorite(userId: number, musicId: number): Promise<{ action: string }> {
+    const res = await fetch(`${API_URL}users/${userId}/favorites`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/merge-patch+json'},
+      credentials: 'include',
+      body: JSON.stringify({musicId}),
+    })
+    if (!res.ok) throw new Error('Failed to toggle favorite')
+    return await res.json()
+  },
+
+  async getMusic(musicId: number) {
+    const res = await fetch(`${this.apiUrl}music/${musicId}`, {
+      method: 'GET',
+      credentials: 'include'
+    })
+    if (!res.ok) throw new Error('Failed to fetch music')
+    return await res.json()
+  },
+
+  async getAllMusic(): Promise<Music[]> {
+    const res = await fetch(`${this.apiUrl}music`, {
+      method: 'GET',
+      credentials: 'include'
+    })
+
+    if (!res.ok) throw new Error('Failed to fetch music')
+
+    const data = await res.json()
+    return data.member ?? []
+  },
+
+  async createMusic(music: Partial<Music>) {
+    const res = await fetch(`${this.apiUrl}music`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      credentials: 'include',
+      body: JSON.stringify(music),
+    })
+    if (!res.ok) {
+      const error = await res.json().catch(() => null)
+      if (res.status === 401) throw new Error('Authentification échouée. Veuillez vous reconnecter.')
+      throw new Error(error?.message || 'Failed to create music')
+    }
+    return await res.json() as Music
+  },
+
+  async deleteMusic(musicId: number): Promise<void> {
+    const res = await fetch(`${this.apiUrl}music/${musicId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    })
+    if (!res.ok) {
+      const error = await res.json().catch(() => null)
+      if (res.status === 401) throw new Error('Non autorisé')
+      throw new Error(error?.message || 'Failed to delete music')
+    }
+  },
   async getAll(resource: string): Promise<User[]> {
     const res = await fetch(this.apiUrl + resource, {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {'Content-Type': 'application/json'},
       credentials: 'include'
     })
 
@@ -136,11 +190,30 @@ export const apiStore = {
     const data = await res.json()
     return data.member ?? data['hydra:member'] ?? []
   },
+  async getArtistMusics(artistId: number) {
+    const res = await fetch(`${this.apiUrl}artist/${artistId}/music`, {
+      method: 'GET',
+      credentials: 'include'
+    })
+    if (!res.ok) throw new Error('Failed to fetch artist music')
+    return await res.json() as Music[]
+  },
+  async importMusicFromSpotify(spotifyTrackId: string) {
+    const res = await fetch(`${this.apiUrl}music/import/spotify/${spotifyTrackId}`, {
+      method: 'POST',
+      credentials: 'include',
+    })
+    if (!res.ok) {
+      const error = await res.json().catch(() => null)
+      throw new Error(error?.message || 'Failed to import music')
+    }
+    return await res.json() as Music
+  },
 
   async getOne(resource: string, id: number): Promise<any> {
     const res = await fetch(`${this.apiUrl}${resource}/${id}`, {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {'Content-Type': 'application/json'},
       credentials: 'include',
     });
 
@@ -151,8 +224,7 @@ export const apiStore = {
       throw new Error(`GET ${resource}/${id} échoué`);
     }
 
-    const data = await res.json();
-    return data;
+    return await res.json();
   },
 
   async patch(resource: string, payload: object): Promise<any> {
@@ -186,9 +258,6 @@ export const apiStore = {
       throw new Error(`DELETE ${resource} failed`);
     }
   }
-
-
-
 
 
 };
