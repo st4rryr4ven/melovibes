@@ -3,6 +3,7 @@ export interface User {
   login: string;
   email: string;
   roles: string[];
+  favoriteMusic?: Music[];
 }
 
 export interface UpdateUserPayload {

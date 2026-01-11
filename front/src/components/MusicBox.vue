@@ -16,15 +16,13 @@ const authStore = useStoreAuthentification();
 const loading = ref(false);
 
 async function initFavorite() {
-  if (authStore.utilisateurConnecte) {
-    const userId = authStore.utilisateurConnecte.id;
-    try {
-      const favorites = await apiStore.getFavorites(userId);
-      isFavorite.value = favorites.some((fav: any) => fav.id === props.music.id);
-    } catch (err) {
-      console.error('Failed to fetch favorites:', err);
-    }
+  if (!authStore.utilisateurConnecte) {
+    isFavorite.value = false
+    return
   }
+
+  const user = await apiStore.me()
+  isFavorite.value = user.favoriteMusic?.some((m: any) => m.id === props.music.id)
 }
 
 initFavorite();
@@ -37,18 +35,16 @@ watchEffect(() => {
 
 async function toggleFavorite() {
   if (!authStore.utilisateurConnecte) {
-    alert('Vous devez être connecté pour gérer vos favoris.');
-    return;
+    alert('Vous devez être connecté pour gérer vos favoris.')
+    return
   }
 
-  const userId = authStore.utilisateurConnecte.id;
-
   try {
-    const result = await apiStore.toggleFavorite(userId, props.music.id);
-    isFavorite.value = result.action === 'added';
+    await apiStore.toggleFavorite(authStore.utilisateurConnecte.id, props.music.id)
+    await initFavorite()
   } catch (err: any) {
-    console.error('Toggle favorite error:', err);
-    alert(err.message || 'Erreur lors de la gestion des favoris.');
+    console.error(err)
+    alert(err.message || 'Erreur lors de la gestion des favoris.')
   }
 }
 

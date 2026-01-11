@@ -117,7 +117,7 @@ export const apiStore = {
 
   async toggleFavorite(userId: number, musicId: number): Promise<{ action: string }> {
     const res = await fetch(`${API_URL}users/${userId}/favorites`, {
-      method: 'PATCH',
+      method: 'POST',
       headers: {'Content-Type': 'application/merge-patch+json'},
       credentials: 'include',
       body: JSON.stringify({musicId}),
@@ -213,7 +213,7 @@ export const apiStore = {
   async getOne(resource: string, id: number): Promise<any> {
     const res = await fetch(`${this.apiUrl}${resource}/${id}`, {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {'Content-Type': 'application/json'},
       credentials: 'include',
     });
 
@@ -258,9 +258,6 @@ export const apiStore = {
       throw new Error(`DELETE ${resource} failed`);
     }
   }
-
-
-
 
 
 };
