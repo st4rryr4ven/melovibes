@@ -49,14 +49,14 @@ use Symfony\Component\Serializer\Annotation\Groups;
             validationContext: ['groups' => ['Default', 'validation:user:update']],
             processor: UserProcessor::class
         ),
-//        new Patch(
-//            uriTemplate: '/users/{id}/favorites',
-//            inputFormats: [
-//                'json' => ['application/merge-patch+json'],
-//            ],
-//            denormalizationContext: ['groups' => ['serialization:user:update:favorites']],
-//            security: "is_granted('ROLE_USER') and object == user"
-//        ),
+        new Patch(
+            uriTemplate: '/users/{id}/favorites',
+            inputFormats: [
+                'json' => ['application/merge-patch+json'],
+            ],
+            denormalizationContext: ['groups' => ['serialization:user:update:favorites']],
+            security: "is_granted('ROLE_USER') and object == user"
+        ),
         new Delete(
             security: "(is_granted('ROLE_USER') and object == user) or is_granted('ROLE_ADMIN')"
         ),

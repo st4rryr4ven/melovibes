@@ -18,13 +18,13 @@ const router = createRouter({
     {path: '/melovibes', name: 'melovibes', component: Melovibes},
     {path: '/register', name: 'register', component: Register},
     {path: '/login', name: 'login', component: Login},
-    {path: '/users', name: 'allUsers', component: AllUsers, meta:{requiresAuth: true, requiresAdmin : true}},
     {
-      path: '/profile',
-      name: 'profile',
-      component: Edit,
-      meta: {requiresAuth: true},
+      path: '/users',
+      name: 'allUsers',
+      component: AllUsers,
+      meta: {requiresAuth: true, requiresAdmin: true}
     },
+    {path: '/profile', name: 'profile', component: Edit, meta: {requiresAuth: true}},
     {path: '/music', name: 'music', component: AllMusic},
     {
       path: '/music/create',
@@ -44,9 +44,7 @@ const router = createRouter({
       name: 'unvalidatedMusics',
       component: UnvalidatedMusics,
       meta: {requiresAuth: true, requiresAdmin: true},
-
-    }
-
+    },
   ]
 })
 

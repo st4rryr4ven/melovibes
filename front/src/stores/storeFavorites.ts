@@ -1,6 +1,5 @@
-
-import { defineStore } from 'pinia'
-import { apiStore } from '@/util/apiStore'
+import {defineStore} from 'pinia'
+import {apiStore} from '@/util/apiStore'
 
 export const storeFavorites = defineStore('favorites', {
   state: () => ({
@@ -9,8 +8,7 @@ export const storeFavorites = defineStore('favorites', {
   actions: {
     async fetchFavorites(userId: number) {
       try {
-        const response = await apiStore.getFavorites(userId)
-        this.music = response
+        this.music = await apiStore.getFavorites(userId)
       } catch (err) {
         console.error('Error fetching favorites:', err)
       }
