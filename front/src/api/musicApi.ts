@@ -1,5 +1,5 @@
-import {apiJson} from '@/api/httpClient'
-import type {ImportedMusic, MusicSearchResponse} from '@/types'
+import type {ImportedMusic, Music} from '@/types'
+import {apiStore} from "@/util/apiStore.ts";
 
 export interface MusicSearchParams {
   q: string
@@ -8,24 +8,32 @@ export interface MusicSearchParams {
   market?: string
 }
 
+export interface CreateMusicParams {
+  title: string
+  artistId: number
+  spotifyTrackId?: string | null
+}
+
 /**
  * Search music in your database
  */
-export async function searchMusic(params: MusicSearchParams): Promise<MusicSearchResponse> {
+export async function searchMusic(params: MusicSearchParams): Promise<{ member: Music[] }> {
   const usp = new URLSearchParams()
   usp.set('q', params.q)
   usp.set('limit', String(params.limit ?? 20))
   usp.set('offset', String(params.offset ?? 0))
   usp.set('market', params.market ?? 'FR')
 
-  return apiJson<MusicSearchResponse>(`music/search?${usp.toString()}`)
+  return apiStore.getAll(`music/search?${usp.toString()}`)
 }
 
 /**
  * Import a track from Spotify using its ID or full URL
  */
-export async function importSpotifyTrack(spotifyTrackUrlOrId: string, market: string = 'FR'): Promise<ImportedMusic> {
-  // Extract Spotify track ID from URL if needed
+export async function importSpotifyTrack(
+  spotifyTrackUrlOrId: string,
+  market: string = 'FR'
+): Promise<ImportedMusic> {
   let trackId = spotifyTrackUrlOrId
   if (spotifyTrackUrlOrId.includes('spotify.com')) {
     const match = spotifyTrackUrlOrId.match(/track\/([a-zA-Z0-9]+)(\?si=.*)?/)
@@ -36,8 +44,12 @@ export async function importSpotifyTrack(spotifyTrackUrlOrId: string, market: st
   const usp = new URLSearchParams()
   usp.set('market', market)
 
-  return apiJson<ImportedMusic>(
-    `music/import/spotify/${encodeURIComponent(trackId)}?${usp.toString()}`,
-    {method: 'POST'}
-  )
+  return apiStore.importMusicFromSpotify(trackId)
+}
+
+/**
+ * Create a new music in the database
+ */
+export async function createMusic(music: CreateMusicParams): Promise<Music> {
+  return apiStore.createMusic(music)
 }
