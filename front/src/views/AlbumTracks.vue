@@ -1,83 +1,34 @@
 <script setup lang="ts">
-import {computed, onMounted, ref} from 'vue'
-import {useRoute, useRouter} from 'vue-router'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import MusicList from '@/components/MusicList.vue'
-import {getSpotifyAlbumTracks} from '@/api/albumApi'
-import {importSpotifyTrack} from '@/api/musicApi'
-import type {AlbumTracksResponse, MusicUiItem} from '@/types'
+import { albumApi } from '@/api/albumApi'
+import { musicApi } from '@/api/musicApi'
+import type { AlbumTrackItem, AlbumTracksResponse } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
 
-const albumId = String(route.params.albumId ?? '')
+const albumId = computed(() => String(route.params.albumId ?? ''))
 
 const loading = ref(false)
 const error = ref<string | null>(null)
 const data = ref<AlbumTracksResponse | null>(null)
 
-const busyKey = ref<string | null>(null)
+const busySpotifyId = ref<string | null>(null)
 
 const album = computed(() => data.value?.album ?? null)
-
-const tracks = computed<MusicUiItem[]>(() => {
-  const d = data.value
-  if (!d) return []
-
-  return d.tracks.map((t) => ({
-    key: `album-${albumId}-${t.spotify.id}`,
-    source: 'album',
-    musicId: t.local.musicId,
-    spotifyTrackId: t.spotify.id,
-    title: t.spotify.name,
-    artistsLabel: t.spotify.artists.map((a) => a.name).join(', ') || 'Artiste inconnu',
-    picture: t.local.isImported ? (d.album.picture ?? t.spotify.albumPicture) : (d.album.picture ?? t.spotify.albumPicture),
-    link: t.spotify.external_urls?.spotify ?? null,
-    isImported: t.local.isImported
-  }))
-})
+const tracks = computed<AlbumTrackItem[]>(() => data.value?.tracks ?? [])
 
 function goToMusicDetail(id: number) {
-  router.push({name: 'musicDetail', params: {id}})
+  router.push({ name: 'musicDetail', params: { id } })
 }
 
-async function onSelectTrack(item: MusicUiItem) {
-  if (busyKey.value) return
-
-  if (typeof item.musicId === 'number' && !Number.isNaN(item.musicId)) {
-    goToMusicDetail(item.musicId)
-    return
-  }
-
-  if (!item.spotifyTrackId) return
-
-  busyKey.value = item.key
-  error.value = null
-
-  try {
-    const imported = await importSpotifyTrack(item.spotifyTrackId, 'FR')
-    const d = data.value
-    if (d) {
-      d.tracks = d.tracks.map((t) =>
-        t.spotify.id !== item.spotifyTrackId
-          ? t
-          : {
-            ...t,
-            local: {isImported: true, musicId: imported.musicId}
-          }
-      )
-      data.value = {...d}
-    }
-    goToMusicDetail(imported.musicId)
-  } catch (e: any) {
-    error.value = e?.message ?? "Erreur lors de l'import"
-  } finally {
-    busyKey.value = null
-  }
-}
-
-onMounted(async () => {
-  if (!albumId) {
+async function loadAlbumTracks(): Promise<void> {
+  const id = albumId.value
+  if (!id) {
     error.value = 'Album invalide'
+    data.value = null
     return
   }
 
@@ -85,19 +36,61 @@ onMounted(async () => {
   error.value = null
 
   try {
-    data.value = await getSpotifyAlbumTracks(albumId, 'FR')
+    data.value = await albumApi.getSpotifyAlbumTracks(id, 'FR')
   } catch (e: any) {
     error.value = e?.message ?? "Erreur lors du chargement de l'album"
+    data.value = null
   } finally {
     loading.value = false
   }
-})
+}
+
+async function onSelectAlbumTrack(item: AlbumTrackItem) {
+  if (busySpotifyId.value) return
+
+  if (typeof item.local.musicId === 'number' && !Number.isNaN(item.local.musicId)) {
+    goToMusicDetail(item.local.musicId)
+    return
+  }
+
+  const spotifyId = item.spotify.id
+  if (!spotifyId) return
+
+  busySpotifyId.value = spotifyId
+  error.value = null
+
+  try {
+    const imported = await musicApi.importFromSpotify(spotifyId)
+
+    const d = data.value
+    if (d) {
+      d.tracks = d.tracks.map((t) =>
+        t.spotify.id !== spotifyId
+          ? t
+          : {
+            ...t,
+            local: { isImported: true, musicId: imported.id }
+          }
+      )
+      data.value = { ...d }
+    }
+
+    goToMusicDetail(imported.id)
+  } catch (e: any) {
+    error.value = e?.message ?? "Erreur lors de l'import"
+  } finally {
+    busySpotifyId.value = null
+  }
+}
+
+onMounted(loadAlbumTracks)
+watch(albumId, loadAlbumTracks)
 </script>
 
 <template>
   <div class="page">
     <div class="header" v-if="album">
-      <img v-if="album.picture" class="cover" :src="album.picture" :alt="album.name"/>
+      <img v-if="album.picture" class="cover" :src="album.picture" :alt="album.name" />
       <div class="info">
         <h2 class="title">{{ album.name }}</h2>
         <div class="subtitle">{{ album.artists.map((a) => a.name).join(', ') }}</div>
@@ -111,7 +104,13 @@ onMounted(async () => {
     <div v-if="loading" class="muted">Chargement...</div>
     <div v-if="error" class="error">{{ error }}</div>
 
-    <MusicList v-if="tracks.length" :items="tracks" :busy-key="busyKey" @select="onSelectTrack"/>
+    <MusicList
+      v-if="tracks.length"
+      mode="album"
+      :items="tracks"
+      :busy-spotify-id="busySpotifyId"
+      @select-album="onSelectAlbumTrack"
+    />
 
     <div v-if="!loading && !error && tracks.length === 0" class="muted">Aucune musique.</div>
   </div>
@@ -134,7 +133,6 @@ onMounted(async () => {
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 16px;
-  color: black;
 }
 
 .cover {

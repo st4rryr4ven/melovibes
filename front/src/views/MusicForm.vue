@@ -1,32 +1,32 @@
 <script setup lang="ts">
-import {ref, reactive, watch} from 'vue'
-import {searchArtists, createArtist, importSpotifyArtist} from '@/api/artistApi'
-import {importSpotifyTrack, createMusic} from '@/api/musicApi'
-import {apiJson} from '@/api/httpClient'
-import {API_URL} from '@/util/apiStore'
-import type {Artist} from '@/types/artist'
-import type {ImportedMusic} from '@/types/music'
-import type {Music} from '@/types'
+import { reactive, ref, watch } from 'vue'
+import { artistApi } from '@/api/artistApi'
+import { musicApi } from '@/api/musicApi'
+import { API_URL } from '@/api/httpClient'
+import type { Artist, MusicSearchResponse } from '@/types'
 
 const form = reactive({
   title: '',
   spotifyTrackId: '',
-  selectedArtists: [] as Artist[],
+  selectedArtists: [] as Artist[]
 })
 
 const artistQuery = ref('')
-const artistResults = ref<any[]>([])
+const artistResults = ref<Artist[]>([])
 const artistLoading = ref(false)
 const importing = ref(false)
 
 watch(artistQuery, async (q) => {
-  if (!q) {
+  const query = q.trim()
+  if (!query) {
     artistResults.value = []
     return
   }
+
   artistLoading.value = true
   try {
-    artistResults.value = (await searchArtists({q, limit: 5})).items
+    const res = await artistApi.search({ q: query, limit: 5, offset: 0 })
+    artistResults.value = res.items ?? []
   } catch {
     artistResults.value = []
   } finally {
@@ -35,42 +35,24 @@ watch(artistQuery, async (q) => {
 })
 
 function highlightQuery(name: string) {
-  if (!artistQuery.value) return name
-  const query = artistQuery.value.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')
-  const regex = new RegExp(`(${query})`, 'gi')
+  const q = artistQuery.value.trim()
+  if (!q) return name
+  const escaped = q.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')
+  const regex = new RegExp(`(${escaped})`, 'gi')
   return name.replace(regex, `<mark>$1</mark>`)
 }
 
-function selectArtist(artist: any) {
-  let selectedArtist: Artist | null = null
+function selectArtist(artist: Artist) {
+  const alreadySelected = form.selectedArtists.some((a) => {
+    if (a.id > 0 && artist.id > 0) return a.id === artist.id
+    if (a.spotifyId && artist.spotifyId) return a.spotifyId === artist.spotifyId
+    return a.name.toLowerCase() === artist.name.toLowerCase()
+  })
 
-  if (artist?.spotify) {
-    selectedArtist = {
-      id: artist.local?.artistId || null,
-      spotifyId: artist.spotify.id,
-      name: artist.spotify.name,
-    }
-  }
-  else if (artist?.local) {
-    selectedArtist = {
-      id: artist.local.artistId,
-      spotifyId: artist.local.spotifyId,
-      name: artist.local.name,
-    }
-  }
+  if (!alreadySelected) form.selectedArtists.push(artist)
 
-  if (selectedArtist) {
-    const alreadySelected = form.selectedArtists.some((a: Artist) =>
-      (a.spotifyId && selectedArtist!.spotifyId && a.spotifyId === selectedArtist!.spotifyId) ||
-      (a.id && selectedArtist!.id && a.id === selectedArtist!.id)
-    )
-
-    if (!alreadySelected) {
-      form.selectedArtists.push(selectedArtist)
-    }
-    artistQuery.value = ''
-    artistResults.value = []
-  }
+  artistQuery.value = ''
+  artistResults.value = []
 }
 
 function removeArtist(index: number) {
@@ -78,145 +60,137 @@ function removeArtist(index: number) {
 }
 
 async function addNewArtist(name: string) {
-  if (!name) return
-  const newArtist = await createArtist({name})
+  const n = name.trim()
+  if (!n) return
 
-  const alreadySelected = form.selectedArtists.some((a: Artist) =>
-    a.id === newArtist.id || (a.name === newArtist.name && !a.id)
-  )
+  try {
+    const created = await artistApi.create({ name: n })
 
-  if (!alreadySelected) {
-    form.selectedArtists.push(newArtist)
+    const alreadySelected = form.selectedArtists.some((a) => a.id === created.id || a.name.toLowerCase() === created.name.toLowerCase())
+    if (!alreadySelected) form.selectedArtists.push(created)
+
+    artistQuery.value = ''
+    artistResults.value = []
+  } catch (err: any) {
+    alert(err?.message ?? "Erreur lors de la création de l'artiste")
   }
-  artistQuery.value = ''
-  artistResults.value = []
 }
 
 async function onImportSpotify() {
-  if (!form.spotifyTrackId) return
+  const idOrUrl = form.spotifyTrackId.trim()
+  if (!idOrUrl) return
+
   importing.value = true
   try {
-    const imported: ImportedMusic = await importSpotifyTrack(form.spotifyTrackId)
+    const imported = await musicApi.importFromSpotify(idOrUrl)
     alert(`La musique "${imported.title}" a été importée avec succès !`)
   } catch (err: any) {
-    alert(err.message || 'Échec de l’importation depuis Spotify')
+    alert(err?.message ?? "Échec de l’importation depuis Spotify")
   } finally {
     importing.value = false
   }
 }
 
+function apiBasePath(): string {
+  try {
+    const url = new URL(API_URL)
+    const p = url.pathname.endsWith('/') ? url.pathname : `${url.pathname}/`
+    return p
+  } catch {
+    return '/api/'
+  }
+}
+
 async function saveMusic() {
-  if (!form.title) {
+  const title = form.title.trim()
+  if (!title) {
     alert('Veuillez entrer un titre.')
+    return
+  }
+
+  if (form.selectedArtists.length === 0) {
+    alert('Veuillez sélectionner au moins un artiste.')
     return
   }
 
   importing.value = true
   try {
-    if (form.selectedArtists.length === 0) {
-      alert('Veuillez sélectionner au moins un artiste.')
-      return
-    }
-
     const dbArtistIds: number[] = []
 
-    for (const artist of form.selectedArtists) {
-      let dbArtistId: number | null = null
-
-      if (artist.id) {
-        dbArtistId = artist.id
-      }
-      else if (artist.spotifyId) {
-        try {
-          const imported = await importSpotifyArtist(artist.spotifyId)
-          dbArtistId = imported.id
-          artist.id = imported.id
-        } catch (err: any) {
-          alert(err.message || `Erreur lors de l'importation de l'artiste "${artist.name}" depuis Spotify`)
-          return
-        }
-      } else {
-        alert(`Erreur: l'artiste "${artist.name}" n'a pas d'identifiant valide.`)
-        return
+    for (let i = 0; i < form.selectedArtists.length; i++) {
+      const artist = form.selectedArtists[i]
+      if(!artist) continue;
+      if (artist.id > 0) {
+        dbArtistIds.push(artist.id)
+        continue
       }
 
-      if (dbArtistId !== null && dbArtistId !== undefined) {
-        dbArtistIds.push(dbArtistId)
+      if (artist.spotifyId) {
+        const imported = await artistApi.importFromSpotify(artist.spotifyId)
+        form.selectedArtists[i] = imported
+        dbArtistIds.push(imported.id)
+        continue
       }
+
+      const created = await artistApi.create({ name: artist.name })
+      form.selectedArtists[i] = created
+      dbArtistIds.push(created.id)
     }
 
-    let importedTrack = null
+    let searchResults: MusicSearchResponse | null = null
     try {
-      const searchResults = await apiJson<{
-        items: Array<{
-          source: 'local' | 'spotify'
-          local?: {
-            musicId: number
-            title: string
-            artists: Array<{ id: number }>
-          }
-          spotify?: {
-            id: string
-            name: string
-            artists: Array<{ id: string; name: string }>
-          }
-        }>
-      }>(`music/search?q=${encodeURIComponent(form.title)}&limit=20`)
+      searchResults = await musicApi.search({ q: title, limit: 20, offset: 0, market: 'FR' })
+    } catch {
+      searchResults = null
+    }
 
-      const localMatch = searchResults.items.find(item => {
-        if (item.source !== 'local' || !item.local) return false
-        const titleMatch = item.local.title.toLowerCase() === form.title.toLowerCase()
-        const artistMatch = item.local.artists?.some((a: { id: number }) => dbArtistIds.includes(a.id)) ?? false
+    if (searchResults) {
+      const localMatch = searchResults.items.find((item) => {
+        if (item.source !== 'local') return false
+        const m = item.local
+        if (!m) return false
+        const titleMatch = m.title.toLowerCase() === title.toLowerCase()
+        const artistMatch = (m.artists ?? []).some((a) => dbArtistIds.includes(a.id))
         return titleMatch && artistMatch
       })
 
-      if (localMatch?.local) {
-        alert(`La musique "${form.title}" existe déjà dans la base de données.`)
+      if (localMatch) {
+        alert(`La musique "${title}" existe déjà dans la base de données.`)
         resetForm()
         return
       }
 
-      const spotifyArtistIds = form.selectedArtists
-        .map((a: Artist) => a.spotifyId)
-        .filter((id: string | null | undefined): id is string => id !== null && id !== undefined)
-
-      if (spotifyArtistIds.length > 0) {
-        const spotifyMatch = searchResults.items.find(item => {
-          if (item.source !== 'spotify' || !item.spotify) return false
-          const titleMatch = item.spotify.name.toLowerCase() === form.title.toLowerCase()
-          const artistMatch = item.spotify.artists?.some(a => spotifyArtistIds.includes(a.id)) ?? false
-          return titleMatch && artistMatch
+      const selectedArtistNames = new Set(form.selectedArtists.map((a) => a.name.toLowerCase()))
+      const spotifyMatch = searchResults.items.find((item) => {
+        if (item.source !== 'spotify' || !item.spotify) return false
+        const titleMatch = item.spotify.name.toLowerCase() === title.toLowerCase()
+        const artistMatch = (item.spotify.artists ?? []).some((a: any) => {
+          const n = String(a?.name ?? '').toLowerCase()
+          return n && selectedArtistNames.has(n)
         })
+        return titleMatch && artistMatch
+      })
 
-        if (spotifyMatch?.spotify?.id) {
-          importedTrack = await importSpotifyTrack(spotifyMatch.spotify.id)
-        }
+      if (spotifyMatch?.spotify?.id) {
+        const imported = await musicApi.importFromSpotify(spotifyMatch.spotify.id)
+        alert(`La musique "${imported.title}" a été importée depuis Spotify !`)
+        resetForm()
+        return
       }
-    } catch {
-      importedTrack = null
     }
 
-    if (importedTrack) {
-      alert(`La musique "${importedTrack.title}" a été importée depuis Spotify !`)
-      resetForm()
-      return
-    }
+    const basePath = apiBasePath()
+    const artistIris = dbArtistIds.map((id) => `${basePath}artists/${id}`.replace(/([^:])\/\/+/g, '$1/'))
 
-    const basePath = API_URL.replace(/^https?:\/\/[^\/]+/, '')
-    const artistIris = dbArtistIds.map(id =>
-      `${basePath}artists/${id}`.replace(/([^:])\/\/+/g, '$1/')
-    )
-
-    await createMusic({
-      title: form.title,
-      artists: artistIris,
-      spotifyTrackId: importedTrack?.id ?? null,
+    await musicApi.create({
+      title,
+      artists: artistIris
     })
-    alert(`Musique "${form.title}" créée avec succès !`)
-    resetForm()
 
+    alert(`Musique "${title}" créée avec succès !`)
+    resetForm()
   } catch (err: any) {
-    alert(err.message || 'Erreur lors de la création de la musique')
+    alert(err?.message ?? 'Erreur lors de la création de la musique')
   } finally {
     importing.value = false
   }
@@ -229,7 +203,6 @@ function resetForm() {
   artistQuery.value = ''
   artistResults.value = []
 }
-
 </script>
 
 <template>
@@ -240,22 +213,18 @@ function resetForm() {
       <div class="form-group">
         <label>ID ou URL de la musique Spotify</label>
         <div class="input-group">
-          <input
-            v-model="form.spotifyTrackId"
-            type="text"
-            placeholder="ID ou URL de la musique Spotify"
-          />
+          <input v-model="form.spotifyTrackId" type="text" placeholder="ID ou URL de la musique Spotify" />
           <button type="button" @click="onImportSpotify" :disabled="importing">
             {{ importing ? 'Importation...' : 'Importer depuis Spotify' }}
           </button>
         </div>
       </div>
 
-      <hr/>
+      <hr />
 
       <div class="form-group">
         <label class="title-label">Titre</label>
-        <input v-model="form.title" type="text" placeholder="Titre de la musique"/>
+        <input v-model="form.title" type="text" placeholder="Titre de la musique" />
       </div>
 
       <div class="form-group artist-field">
@@ -268,40 +237,27 @@ function resetForm() {
             class="selected-artist"
           >
             <span class="artist-name">{{ artist.name }}</span>
-            <button
-              type="button"
-              @click="removeArtist(index)"
-              class="remove-artist"
-              title="Retirer cet artiste"
-            >
+            <button type="button" @click="removeArtist(index)" class="remove-artist" title="Retirer cet artiste">
               ×
             </button>
           </div>
         </div>
 
-        <input v-model="artistQuery" type="text" placeholder="Rechercher un artiste..."/>
+        <input v-model="artistQuery" type="text" placeholder="Rechercher un artiste..." />
         <div v-if="artistLoading" class="status">Recherche en cours...</div>
 
         <ul v-if="artistResults.length" class="artist-results">
-          <li v-for="artist in artistResults"
-              :key="artist.spotify?.id || artist.local?.artistId || artist.local?.name"
-              @click="selectArtist(artist)">
-            <img :src="artist.spotify?.images?.[2]?.url || ''" alt="" class="artist-avatar"/>
-            <span class="artist-name" v-html="highlightQuery(artist.spotify?.name || artist.local?.name || '')"></span>
-            <span v-if="artist.spotify?.popularity" class="artist-popularity">⭐ {{ artist.spotify.popularity }}</span>
+          <li v-for="artist in artistResults" :key="artist.id || artist.spotifyId || artist.name" @click="selectArtist(artist)">
+            <span class="artist-name" v-html="highlightQuery(artist.name)"></span>
           </li>
         </ul>
 
-        <button
-          v-if="artistResults.length === 0 && artistQuery"
-          type="button"
-          @click="addNewArtist(artistQuery)"
-        >
+        <button v-if="artistResults.length === 0 && artistQuery.trim()" type="button" @click="addNewArtist(artistQuery)">
           Créer l'artiste "{{ artistQuery }}"
         </button>
       </div>
 
-      <hr/>
+      <hr />
 
       <div class="form-group">
         <button type="submit" class="submit-btn">Enregistrer la musique</button>
@@ -452,21 +408,8 @@ button:disabled {
   background-color: #e2e8f0;
 }
 
-.artist-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  margin-right: 8px;
-}
-
 .artist-name {
   flex: 1;
-}
-
-.artist-popularity {
-  font-size: 12px;
-  color: #555;
-  margin-left: 8px;
 }
 
 .artist-field mark {

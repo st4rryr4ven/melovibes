@@ -37,6 +37,10 @@ export class UserApi {
     return apiCollection<User>('users')
   }
 
+  async get(id: number): Promise<User> {
+    return apiJson<User>(`users/${id}`)
+  }
+
   async update(id: number, data: Record<string, unknown>): Promise<User> {
     return apiJson<User>(`users/${id}`, {
       method: 'PATCH',

@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import AlbumCard from '@/components/AlbumCard.vue'
-import type { AlbumUiItem } from '@/types'
+import type { NewReleaseAlbumItem } from '@/types'
 
 const props = withDefaults(
   defineProps<{
-    items: AlbumUiItem[]
+    items: NewReleaseAlbumItem[]
     busyAlbumId?: string | null
   }>(),
   {
@@ -13,7 +13,7 @@ const props = withDefaults(
 )
 
 const emit = defineEmits<{
-  (e: 'select', item: AlbumUiItem): void
+  (e: 'select', item: NewReleaseAlbumItem): void
 }>()
 </script>
 
@@ -21,7 +21,7 @@ const emit = defineEmits<{
   <div class="list" role="list">
     <AlbumCard
       v-for="item in props.items"
-      :key="item.key"
+      :key="item.albumId"
       :item="item"
       :busy="props.busyAlbumId === item.albumId"
       @select="() => emit('select', item)"

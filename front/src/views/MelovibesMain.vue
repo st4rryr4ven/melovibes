@@ -5,9 +5,9 @@ import MusicSearchBar from '@/components/MusicSearchBar.vue'
 import MusicList from '@/components/MusicList.vue'
 import AlbumList from '@/components/AlbumList.vue'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
-import { searchMusic, importSpotifyTrack } from '@/api/musicApi'
-import { getAlbumNewReleases } from '@/api/albumApi'
-import type { AlbumUiItem, MusicSearchItem, MusicUiItem, SpotifyTrack } from '@/types'
+import { musicApi } from '@/api/musicApi'
+import { albumApi } from '@/api/albumApi'
+import type { MusicSearchItem, NewReleaseAlbumItem } from '@/types'
 
 const router = useRouter()
 
@@ -17,66 +17,19 @@ const isSearchOpen = computed(() => query.value.trim().length > 0)
 
 const albumsLoading = ref(false)
 const albumsError = ref<string | null>(null)
-const albums = ref<AlbumUiItem[]>([])
+const albums = ref<NewReleaseAlbumItem[]>([])
 
 const searchLoading = ref(false)
 const searchError = ref<string | null>(null)
-const searchItems = ref<MusicUiItem[]>([])
-const busyTrackKey = ref<string | null>(null)
-
-function spotifyPicture(track: SpotifyTrack): string | null {
-  return track.album?.images?.[0]?.url ?? null
-}
-
-function spotifyArtistsLabel(track: SpotifyTrack): string {
-  const names = (track.artists ?? []).map((a: { name: never }) => a.name).filter(Boolean)
-  return names.join(', ') || 'Artiste inconnu'
-}
-
-function mapSearchItem(item: MusicSearchItem): MusicUiItem {
-  if (item.source === 'local') {
-    return {
-      key: `local-${item.local.musicId}`,
-      source: 'search-local',
-      musicId: item.local.musicId,
-      spotifyTrackId: item.local.spotifyId,
-      title: item.local.title,
-      artistsLabel: item.local.artists.map((a: { name: never }) => a.name).join(', ') || 'Artiste inconnu',
-      picture: item.local.picture,
-      link: item.local.link,
-      popularity: item.local.popularity,
-      isImported: true
-    }
-  }
-
-  return {
-    key: `spotify-${item.spotify.id}`,
-    source: 'search-spotify',
-    musicId: item.local.musicId,
-    spotifyTrackId: item.spotify.id,
-    title: item.spotify.name,
-    artistsLabel: spotifyArtistsLabel(item.spotify),
-    picture: spotifyPicture(item.spotify),
-    link: item.spotify.external_urls?.spotify ?? null,
-    isImported: item.local.isImported
-  }
-}
+const searchItems = ref<MusicSearchItem[]>([])
+const busySpotifyId = ref<string | null>(null)
 
 async function loadAlbums() {
   albumsLoading.value = true
   albumsError.value = null
   try {
-    const res = await getAlbumNewReleases({ limit: 20, country: 'FR' })
-    albums.value = res.items.map((a) => ({
-      key: `album-${a.albumId}`,
-      albumId: a.albumId,
-      name: a.name,
-      artistsLabel: a.artists.map((x) => x.name).join(', ') || 'Artiste inconnu',
-      picture: a.picture,
-      releaseDate: a.releaseDate ?? null,
-      totalTracks: a.totalTracks ?? null,
-      link: a.link
-    }))
+    const res = await albumApi.getNewReleases({ limit: 20, country: 'FR' })
+    albums.value = res.items
   } catch (e: any) {
     albumsError.value = e?.message ?? 'Erreur lors du chargement'
     albums.value = []
@@ -91,9 +44,9 @@ async function loadSearch(q: string) {
   searchLoading.value = true
   searchError.value = null
   try {
-    const res = await searchMusic({ q, limit: 20, market: 'FR' })
+    const res = await musicApi.search({ q, limit: 20, market: 'FR' })
     if (searchId !== lastSearchId) return
-    searchItems.value = res.items.map(mapSearchItem)
+    searchItems.value = res.items
   } catch (e: any) {
     if (searchId !== lastSearchId) return
     searchError.value = e?.message ?? 'Erreur lors de la recherche'
@@ -109,7 +62,7 @@ function closeSearch() {
   searchLoading.value = false
   searchError.value = null
   searchItems.value = []
-  busyTrackKey.value = null
+  busySpotifyId.value = null
 }
 
 function onKeydown(e: KeyboardEvent) {
@@ -120,39 +73,42 @@ function goToMusicDetail(id: number) {
   router.push({ name: 'musicDetail', params: { id } })
 }
 
-async function onSelectTrack(item: MusicUiItem) {
-  if (busyTrackKey.value) return
+async function onSelectSearchTrack(item: MusicSearchItem) {
+  if (busySpotifyId.value) return
 
-  if (typeof item.musicId === 'number' && !Number.isNaN(item.musicId)) {
-    goToMusicDetail(item.musicId)
+  if (item.source === 'local') {
+    goToMusicDetail(item.local.id)
     return
   }
 
-  if (!item.spotifyTrackId) return
-
-  busyTrackKey.value = item.key
+  const spotifyId = item.spotify.id
+  busySpotifyId.value = spotifyId
   searchError.value = null
 
   try {
-    const imported = await importSpotifyTrack(item.spotifyTrackId, 'FR')
-    searchItems.value = searchItems.value.map((it: { key: never }) =>
-      it.key !== item.key
-        ? it
-        : {
-          ...it,
-          musicId: imported.musicId,
-          isImported: true
+    const imported = await musicApi.importFromSpotify(spotifyId)
+
+    searchItems.value = searchItems.value.map((it) => {
+      if (it.source !== 'spotify') return it
+      if (it.spotify.id !== spotifyId) return it
+      return {
+        ...it,
+        local: {
+          isImported: true,
+          musicId: imported.id
         }
-    )
-    goToMusicDetail(imported.musicId)
+      }
+    })
+
+    goToMusicDetail(imported.id)
   } catch (e: any) {
     searchError.value = e?.message ?? "Erreur lors de l'import"
   } finally {
-    busyTrackKey.value = null
+    busySpotifyId.value = null
   }
 }
 
-function onSelectAlbum(item: AlbumUiItem) {
+function onSelectAlbum(item: NewReleaseAlbumItem) {
   router.push({ name: 'albumTracks', params: { albumId: item.albumId } })
 }
 
@@ -165,7 +121,7 @@ watch(
       searchLoading.value = false
       searchError.value = null
       searchItems.value = []
-      busyTrackKey.value = null
+      busySpotifyId.value = null
       return
     }
     await loadSearch(trimmed)
@@ -195,6 +151,8 @@ onBeforeUnmount(() => {
       <div class="title">
         <h2>New Releases</h2>
       </div>
+
+      <div v-if="albumsError" class="error">{{ albumsError }}</div>
     </div>
 
     <AlbumList :items="albums" @select="onSelectAlbum" />
@@ -209,7 +167,13 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="overlay__content">
-          <MusicList :items="searchItems" :busy-key="busyTrackKey" @select="onSelectTrack" />
+          <div v-if="searchError" class="error">{{ searchError }}</div>
+          <MusicList
+            mode="search"
+            :items="searchItems"
+            :busy-spotify-id="busySpotifyId"
+            @select-search="onSelectSearchTrack"
+          />
         </div>
       </div>
     </div>
@@ -232,22 +196,12 @@ onBeforeUnmount(() => {
   margin-bottom: 10px;
 }
 
-.hint {
-  font-size: 12px;
-  opacity: 0.7;
-}
-
 .error {
   padding: 10px 12px;
   border: 1px solid #ef4444;
   border-radius: 12px;
   background: white;
   margin-bottom: 12px;
-}
-
-.empty {
-  margin-top: 12px;
-  opacity: 0.7;
 }
 
 .overlay {

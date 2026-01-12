@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import {onMounted, ref, watch} from 'vue'
-import {apiStore} from '@/util/apiStore'
-import type {Music} from "@/types";
-import MusicBox from "@/components/MusicBox.vue";
+import { onMounted, ref, watch } from 'vue'
+import { musicApi } from '@/api/musicApi'
+import type { Music } from '@/types'
+import MusicBox from '@/components/MusicBox.vue'
 
 const props = defineProps<{ id: number }>()
 const loading = ref(false)
@@ -19,7 +19,7 @@ async function loadMusic() {
   loading.value = true
   error.value = null
   try {
-    music.value = (await apiStore.getMusic(props.id)) as Music
+    music.value = await musicApi.get(props.id)
   } catch (e: any) {
     error.value = e?.message ?? 'Erreur lors du chargement'
     music.value = null
@@ -27,6 +27,7 @@ async function loadMusic() {
     loading.value = false
   }
 }
+
 onMounted(loadMusic)
 
 watch(
@@ -39,15 +40,13 @@ watch(
 
 <template>
   <div class="page">
-    <div class="header" v-if="music">
+    <div v-if="music" class="header">
       <button type="button" class="back" @click="$router.back()">← Retour</button>
-
-      <MusicBox :music="music"></MusicBox>
+      <MusicBox :music="music" />
     </div>
 
     <div v-if="loading && !music" class="muted">Chargement...</div>
     <div v-if="error" class="error">{{ error }}</div>
-
     <div v-if="!loading && !error && !music" class="muted">Musique introuvable.</div>
   </div>
 </template>

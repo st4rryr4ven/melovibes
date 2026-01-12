@@ -1,118 +1,94 @@
 <script setup lang="ts">
-import {computed, onMounted, ref, watchEffect} from 'vue';
-import type {Artist, Music} from '@/types';
-import {useStoreAuthentification} from '@/stores/storeAuthentification';
-import {apiStore} from '@/util/apiStore';
-import router from '@/router';
-import ReviewModal from '@/components/ReviewModal.vue';
+import { computed, ref, watch } from 'vue'
+import type { Music } from '@/types'
+import { useStoreAuthentification } from '@/stores/storeAuthentification'
+import { userApi } from '@/api/userApi'
+import { musicApi } from '@/api/musicApi'
 
 const showReviewModal = ref(false);
 const props = defineProps<{ music: Music }>();
 const emit = defineEmits<{
-  (e: 'deleted', id: number): void;
-  (e: 'validated', id: number): void;
-}>();
+  (e: 'deleted', id: number): void
+  (e: 'validated', id: number): void
+}>()
 
-const isFavorite = ref(false);
-const authStore = useStoreAuthentification();
-const loading = ref(false);
+const authStore = useStoreAuthentification()
+const isFavorite = ref(false)
+const loading = ref(false)
 
+const isAdmin = computed(() => authStore.utilisateurConnecte?.roles?.includes('ROLE_ADMIN') ?? false)
 
-async function initFavorite() {
-  if (!authStore.utilisateurConnecte) {
+const artistNames = computed(() => (props.music.artists ?? []).map(a => a.name).filter(Boolean).join(', '))
+
+async function loadFavorite(): Promise<void> {
+  const userId = authStore.utilisateurConnecte?.id
+  if (!userId) {
     isFavorite.value = false
     return
   }
 
-  const user = await apiStore.me()
-  if(!user.favoriteMusic) return
-  isFavorite.value = user.favoriteMusic.some((m: any) => m.id === props.music.id)
+  try {
+    const favorites = await userApi.getFavorites(userId)
+    isFavorite.value = favorites.some(m => m.id === props.music.id)
+  } catch {
+    isFavorite.value = false
+  }
 }
 
-initFavorite();
+watch(
+  () => [authStore.utilisateurConnecte?.id, props.music.id],
+  async () => {
+    await loadFavorite()
+  },
+  { immediate: true }
+)
 
-watchEffect(() => {
-  if (!authStore.utilisateurConnecte) {
-    isFavorite.value = false;
-  }
-});
-
-async function toggleFavorite() {
-  if (!authStore.utilisateurConnecte) {
+async function toggleFavorite(): Promise<void> {
+  const userId = authStore.utilisateurConnecte?.id
+  if (!userId) {
     alert('Vous devez être connecté pour gérer vos favoris.')
     return
   }
 
   try {
-    await apiStore.toggleFavorite(authStore.utilisateurConnecte.id, props.music.id)
-    await initFavorite()
+    await userApi.toggleFavorite(userId, props.music.id)
+    await loadFavorite()
   } catch (err: any) {
     console.error(err)
-    alert(err.message || 'Erreur lors de la gestion des favoris.')
+    alert(err?.message || 'Erreur lors de la gestion des favoris.')
   }
 }
 
-const isAdmin = computed(() => {
-  const user = authStore.utilisateurConnecte;
-  return user?.roles?.includes('ROLE_ADMIN') ?? false;
-});
-
-function editMusic() {
-  router.push({name: 'music-edit', params: {id: props.music.id}});
-}
-
-async function deleteMusic() {
-  if (!confirm(`Supprimer cette musique ?`)) return;
+async function deleteMusic(): Promise<void> {
+  if (!confirm('Supprimer cette musique ?')) return
 
   try {
-    loading.value = true;
-    await apiStore.delete(`music/${props.music.id}`);
-    alert('Musique supprimée avec succès !');
-    emit('deleted', props.music.id);
+    loading.value = true
+    await musicApi.delete(props.music.id)
+    alert('Musique supprimée avec succès !')
+    emit('deleted', props.music.id)
   } catch (err: any) {
-    console.error(err);
-    alert(err.message || 'Erreur lors de la suppression de la musique.');
+    console.error(err)
+    alert(err?.message || 'Erreur lors de la suppression de la musique.')
   } finally {
-    loading.value = false;
+    loading.value = false
   }
 }
 
-async function validateMusic() {
-  if (!confirm(`Valider la musique ${props.music.title} ?`)) return;
+async function validateMusic(): Promise<void> {
+  if (!confirm(`Valider la musique ${props.music.title} ?`)) return
 
   try {
-    loading.value = true;
-    await apiStore.patch(`music/${props.music.id}`, {isValidated: true});
-    emit('validated', props.music.id);
-    alert('Musique validée avec succès !');
+    loading.value = true
+    await musicApi.patch(props.music.id, { isValidated: true })
+    emit('validated', props.music.id)
+    alert('Musique validée avec succès !')
   } catch (err: any) {
-    console.error(err);
-    alert(err.message || 'Erreur lors de la validation de la musique.');
+    console.error(err)
+    alert(err?.message || 'Erreur lors de la validation de la musique.')
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-}
-
-async function resolveArtists(artists: Artist[]) {
-  const baseUrl = import.meta.env.VITE_API_URL.replace(/\/$/, '');
-  return Promise.all(
-    artists.map(async iri => {
-      const cleanIri = iri.startsWith('/api/') ? iri.replace('/api/', '/') : iri;
-      const res = await fetch(`${baseUrl}${cleanIri}`);
-      if (!res.ok) throw new Error('Artist fetch failed');
-      const data = await res.json();
-      return data.name;
-    })
-  );
-}
-
-const artistNames = ref<string[]>([]);
-onMounted(async () => {
-  artistNames.value = await resolveArtists(props.music.artists);
-});
-
-function goToEdit() {
-  router.push(`/music/${props.music.id}/edit`)
 }
 </script>
 
@@ -125,12 +101,7 @@ function goToEdit() {
         <h2 class="title">{{ music.title }}</h2>
 
         <div class="actions">
-          <button
-            v-if="authStore.estConnecte"
-            type="button"
-            class="icon-btn"
-            @click="toggleFavorite"
-          >
+          <button v-if="authStore.estConnecte" type="button" class="icon-btn" @click="toggleFavorite">
             {{ isFavorite ? '💖' : '🤍' }}
           </button>
 
@@ -158,6 +129,7 @@ function goToEdit() {
         </div>
       </div>
 
+      <div class="subtitle" v-if="artistNames">{{ artistNames }}</div>
       <ReviewModal
         v-if="showReviewModal"
         :music-id="music.id"
@@ -292,7 +264,6 @@ function goToEdit() {
   font-size: 14px;
 }
 
-
 @media (max-width: 640px) {
   .main {
     grid-template-columns: 1fr;
@@ -303,9 +274,5 @@ function goToEdit() {
     height: auto;
     max-height: 280px;
   }
-}
-
-.main {
-  color: black;
 }
 </style>

@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import type { AlbumUiItem } from '@/types'
+import { computed } from 'vue'
+import type { NewReleaseAlbumItem } from '@/types'
 
 const props = withDefaults(
   defineProps<{
-    item: AlbumUiItem
+    item: NewReleaseAlbumItem
     busy?: boolean
   }>(),
   {
@@ -14,6 +15,8 @@ const props = withDefaults(
 const emit = defineEmits<{
   (e: 'select'): void
 }>()
+
+const artistsLabel = computed(() => props.item.artists.map((a) => a.name).filter(Boolean).join(', ') || 'Artiste inconnu')
 </script>
 
 <template>
@@ -24,7 +27,7 @@ const emit = defineEmits<{
 
     <div class="card__content">
       <div class="card__title">{{ props.item.name }}</div>
-      <div class="card__subtitle">{{ props.item.artistsLabel }}</div>
+      <div class="card__subtitle">{{ artistsLabel }}</div>
 
       <div class="card__meta">
         <span class="badge">Album</span>

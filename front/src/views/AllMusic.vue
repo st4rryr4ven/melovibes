@@ -1,83 +1,65 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue';
-import MusicBox from '@/components/MusicBox.vue';
-import type { Music } from '@/types';
-import { apiStore } from '@/util/apiStore';
-import { useStoreAuthentification } from '@/stores/storeAuthentification';
+import { computed, onMounted, ref, watch } from 'vue'
+import MusicBox from '@/components/MusicBox.vue'
+import type { Music } from '@/types'
+import { musicApi } from '@/api/musicApi'
+import { useStoreAuthentification } from '@/stores/storeAuthentification'
 
-const authStore = useStoreAuthentification();
+const authStore = useStoreAuthentification()
 
-const music = ref<Music[]>([]);
-const onlyNotValidated = ref(false);
-const search = ref('');
+const musics = ref<Music[]>([])
+const onlyNotValidated = ref(false)
+const search = ref('')
+const loading = ref(false)
+const error = ref<string | null>(null)
 
 const filteredMusics = computed(() => {
-  const q = search.value.toLowerCase().trim();
-  if (!q) return music.value;
+  const q = search.value.toLowerCase().trim()
+  if (!q) return musics.value
 
-  return music.value.filter(m =>
-    m.title.toLowerCase().includes(q) ||
-    m.artistNames?.some((n: string) =>
-      n.toLowerCase().includes(q)
-    )
-  );
-});
+  return musics.value.filter(m => {
+    const titleMatch = m.title.toLowerCase().includes(q)
+    const artistMatch = (m.artists ?? []).some(a => a.name.toLowerCase().includes(q))
+    return titleMatch || artistMatch
+  })
+})
 
+async function loadMusic(): Promise<void> {
+  loading.value = true
+  error.value = null
 
+  try {
+    const filters: Record<string, unknown> = {}
 
-async function loadMusic() {
-  const filters: Record<string, any> = {};
+    if (authStore.estAdmin && onlyNotValidated.value) {
+      filters.isValidated = false
+    }
 
-  if (authStore.estAdmin && onlyNotValidated.value) {
-    filters.isValidated = false;
+    musics.value = await musicApi.list(filters)
+  } catch (e: any) {
+    error.value = e?.message ?? 'Erreur lors du chargement'
+    musics.value = []
+  } finally {
+    loading.value = false
   }
-
-  const data = await apiStore.getAllMusic(filters);
-
-  const enriched = await Promise.all(
-    data.map(async (m: any) => {
-      const artistNames = await Promise.all(
-        m.artists.map(async (iri: string) => {
-          const res = await fetch(
-            import.meta.env.VITE_API_URL.replace(/\/$/, '') +
-            iri.replace('/api', '')
-          );
-          const artist = await res.json();
-          return artist.name;
-        })
-      );
-
-      return {
-        ...m,
-        artistNames
-      };
-    })
-  );
-
-  music.value = enriched;
 }
 
+onMounted(loadMusic)
 
-onMounted(loadMusic);
-
-watch(onlyNotValidated, loadMusic);
+watch(onlyNotValidated, loadMusic)
 
 function handleDeleted(id: number) {
-  music.value = music.value.filter(m => m.id !== id);
+  musics.value = musics.value.filter(m => m.id !== id)
 }
 
 function handleValidated() {
-  loadMusic();
+  loadMusic()
 }
 </script>
 
-
 <template>
   <div class="music-page">
-    <button
-      v-if="authStore.estConnecte"
-      @click="$router.push({ name: 'music-create' })"
-    >
+    <button v-if="authStore.estConnecte" @click="$router.push({ name: 'music-create' })">
       + Créer une musique
     </button>
 
@@ -91,30 +73,42 @@ function handleValidated() {
     <h2>Liste de toutes les musiques</h2>
 
     <label v-if="authStore.estAdmin" class="filter">
-      <input
-        type="checkbox"
-        v-model="onlyNotValidated"
-      />
+      <input type="checkbox" v-model="onlyNotValidated" />
       Afficher uniquement les musiques non validées
     </label>
 
-    <MusicBox
-      v-for="music in filteredMusics"
-      :key="music.id"
-      :music="music"
-      @deleted="handleDeleted"
-      @validated="handleValidated"
-    />
+    <div v-if="loading" class="muted">Chargement...</div>
+    <div v-else-if="error" class="error">{{ error }}</div>
+
+    <template v-else>
+      <MusicBox
+        v-for="music in filteredMusics"
+        :key="music.id"
+        :music="music"
+        @deleted="handleDeleted"
+        @validated="handleValidated"
+      />
+    </template>
   </div>
 </template>
 
-
 <style scoped>
 @import "@/components/css/layout.css";
+
 .filter {
   display: block;
   margin: 1rem 0;
   font-weight: 500;
 }
 
+.error {
+  padding: 10px 12px;
+  border: 1px solid #ef4444;
+  border-radius: 12px;
+  background: white;
+}
+
+.muted {
+  opacity: 0.75;
+}
 </style>

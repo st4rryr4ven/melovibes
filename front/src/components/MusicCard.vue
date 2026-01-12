@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import type { MusicUiItem } from '@/types'
+import { computed } from 'vue'
+import type { AlbumTrackItem, MusicSearchItem } from '@/types'
 
 const props = withDefaults(
   defineProps<{
-    item: MusicUiItem
+    item: AlbumTrackItem | MusicSearchItem
     busy?: boolean
   }>(),
   {
@@ -15,18 +16,39 @@ const emit = defineEmits<{
   (e: 'select'): void
 }>()
 
+const title = computed(() => {
+  if ('source' in props.item) {
+    return props.item.source === 'local' ? props.item.local.title : props.item.spotify.name
+  }
+  return props.item.spotify.name
+})
+
+const artistsLabel = computed(() => {
+  if ('source' in props.item) {
+    const artists = props.item.source === 'local' ? props.item.local.artists : (props.item.spotify.artists ?? [])
+    return artists.map((a) => a.name).filter(Boolean).join(', ') || 'Artiste inconnu'
+  }
+  return props.item.spotify.artists.map((a) => a.name).filter(Boolean).join(', ') || 'Artiste inconnu'
+})
+
+const picture = computed(() => {
+  if ('source' in props.item) {
+    if (props.item.source === 'local') return props.item.local.picture ?? null
+    return props.item.spotify.album?.images?.[0]?.url ?? null
+  }
+  return props.item.spotify.albumPicture ?? null
+})
 </script>
 
 <template>
   <button type="button" class="card" :disabled="props.busy" @click="emit('select')">
-    <div class="card__media" v-if="props.item.picture">
-      <img class="card__img" :src="props.item.picture" :alt="props.item.title" />
+    <div class="card__media" v-if="picture">
+      <img class="card__img" :src="picture" :alt="title" />
     </div>
 
     <div class="card__content">
-      <div class="card__title">{{ props.item.title }}</div>
-      <div class="card__subtitle">{{ props.item.artistsLabel }}</div>
-
+      <div class="card__title">{{ title }}</div>
+      <div class="card__subtitle">{{ artistsLabel }}</div>
     </div>
 
     <div class="card__chevron">›</div>
