@@ -113,8 +113,13 @@ onMounted(async () => {
 
 <template>
   <div class="main">
-    <img v-if="music.picture" class="cover" :src="music.picture" :alt="music.title" />
-
+    <img
+      v-if="music.picture"
+      class="cover"
+      :src="music.picture"
+      :alt="music.title"
+    />
+=
     <div class="info">
       <div class="title-row">
         <h2 class="title">{{ music.title }}</h2>
@@ -129,8 +134,25 @@ onMounted(async () => {
             {{ isFavorite ? '💖' : '🤍' }}
           </button>
 
+          <button
+            v-if="authStore.estConnecte"
+            type="button"
+            class="icon-btn"
+            @click="showReviewModal = true"
+          >
+            💬
+          </button>
+
           <template v-if="isAdmin">
-            <button type="button" class="icon-btn" :disabled="loading" @click="deleteMusic">🗑️</button>
+            <button
+              type="button"
+              class="icon-btn"
+              :disabled="loading"
+              @click="deleteMusic"
+            >
+              🗑️
+            </button>
+
             <button
               v-if="!music.isValidated"
               type="button"
@@ -142,28 +164,26 @@ onMounted(async () => {
             </button>
           </template>
         </div>
-  <div class="content-box music-box">
-    <div class="top">
-      {{ props.music.title }}
-      <button v-if="authStore.estConnecte" @click="toggleFavorite" class="icon-btn">
-        {{ isFavorite ? '💖' : '🤍' }}
-      </button>
-      <button v-if="authStore.estConnecte" class="icon-btn" @click="showReviewModal = true">
-        💬
-      </button>
-
-      <ReviewModal v-if="showReviewModal" :music-id="props.music.id" @close="showReviewModal = false" @submitted="showReviewModal = false"/>
-
-      <div v-if="isAdmin" class="admin-actions">
-        <button @click="editMusic" class="icon-btn">✏️</button>
-        <button @click="deleteMusic" class="icon-btn" :disabled="loading">🗑️</button>
-        <button  @click="validateMusic" class="icon-btn" :disabled="loading">✅</button>
       </div>
 
-      <div class="subtitle" v-if="artistNames.length">{{ artistNames.join(', ') }}</div>
+      <ReviewModal
+        v-if="showReviewModal"
+        :music-id="music.id"
+        @close="showReviewModal = false"
+        @submitted="showReviewModal = false"
+      />
+
+      <div class="subtitle" v-if="artistNames.length">
+        {{ artistNames.join(', ') }}
+      </div>
 
       <div class="meta">
-        <span class="badge" v-if="typeof music.popularity === 'number'">Popularité: {{ music.popularity }}</span>
+        <span
+          class="badge"
+          v-if="typeof music.popularity === 'number'"
+        >
+          Popularité : {{ music.popularity }}
+        </span>
       </div>
 
       <div class="details">
@@ -175,13 +195,20 @@ onMounted(async () => {
         <div class="row" v-if="music.link">
           <div class="label">Lien</div>
           <div class="value">
-            <a :href="music.link" target="_blank" rel="noreferrer">Écouter</a>
+            <a
+              :href="music.link"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Écouter
+            </a>
           </div>
         </div>
       </div>
     </div>
   </div>
 </template>
+
 
 <style scoped>
 @import "@/components/css/content-box.css";
