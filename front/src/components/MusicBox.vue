@@ -21,7 +21,7 @@ async function initFavorite() {
   }
 
   const user = await apiStore.me()
-  if(!user.favoriteMusic) return
+  if (!user.favoriteMusic) return
   isFavorite.value = user.favoriteMusic.some((m: any) => m.id === props.music.id)
 }
 
@@ -52,6 +52,7 @@ const isAdmin = computed(() => {
   const user = authStore.utilisateurConnecte;
   return user?.roles?.includes('ROLE_ADMIN') ?? false;
 });
+
 async function deleteMusic() {
   if (!confirm(`Supprimer cette musique ?`)) return;
 
@@ -105,7 +106,7 @@ onMounted(async () => {
 
 <template>
   <div class="main">
-    <img v-if="music.picture" class="cover" :src="music.picture" :alt="music.title" />
+    <img v-if="music.picture" class="cover" :src="music.picture" :alt="music.title"/>
 
     <div class="info">
       <div class="title-row">
@@ -122,7 +123,8 @@ onMounted(async () => {
           </button>
 
           <template v-if="isAdmin">
-            <button type="button" class="icon-btn" :disabled="loading" @click="deleteMusic">🗑️</button>
+            <button type="button" class="icon-btn" :disabled="loading" @click="deleteMusic">🗑️
+            </button>
             <button
               v-if="!music.isValidated"
               type="button"
@@ -139,7 +141,8 @@ onMounted(async () => {
       <div class="subtitle" v-if="artistNames.length">{{ artistNames.join(', ') }}</div>
 
       <div class="meta">
-        <span class="badge" v-if="typeof music.popularity === 'number'">Popularité: {{ music.popularity }}</span>
+        <span class="badge"
+              v-if="typeof music.popularity === 'number'">Popularité: {{ music.popularity }}</span>
       </div>
 
       <div class="details">
@@ -272,5 +275,9 @@ onMounted(async () => {
     height: auto;
     max-height: 280px;
   }
+}
+
+.main {
+  color: black;
 }
 </style>
