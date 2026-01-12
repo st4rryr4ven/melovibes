@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import {computed, onMounted, ref} from 'vue'
+import {useRoute, useRouter} from 'vue-router'
 import MusicList from '@/components/MusicList.vue'
-import { getSpotifyAlbumTracks } from '@/api/albumApi'
-import { importSpotifyTrack } from '@/api/musicApi'
-import type { AlbumTracksResponse, MusicUiItem } from '@/types'
+import {getSpotifyAlbumTracks} from '@/api/albumApi'
+import {importSpotifyTrack} from '@/api/musicApi'
+import type {AlbumTracksResponse, MusicUiItem} from '@/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -37,7 +37,7 @@ const tracks = computed<MusicUiItem[]>(() => {
 })
 
 function goToMusicDetail(id: number) {
-  router.push({ name: 'musicDetail', params: { id } })
+  router.push({name: 'musicDetail', params: {id}})
 }
 
 async function onSelectTrack(item: MusicUiItem) {
@@ -62,10 +62,10 @@ async function onSelectTrack(item: MusicUiItem) {
           ? t
           : {
             ...t,
-            local: { isImported: true, musicId: imported.musicId }
+            local: {isImported: true, musicId: imported.musicId}
           }
       )
-      data.value = { ...d }
+      data.value = {...d}
     }
     goToMusicDetail(imported.musicId)
   } catch (e: any) {
@@ -97,7 +97,7 @@ onMounted(async () => {
 <template>
   <div class="page">
     <div class="header" v-if="album">
-      <img v-if="album.picture" class="cover" :src="album.picture" :alt="album.name" />
+      <img v-if="album.picture" class="cover" :src="album.picture" :alt="album.name"/>
       <div class="info">
         <h2 class="title">{{ album.name }}</h2>
         <div class="subtitle">{{ album.artists.map((a) => a.name).join(', ') }}</div>
@@ -111,7 +111,7 @@ onMounted(async () => {
     <div v-if="loading" class="muted">Chargement...</div>
     <div v-if="error" class="error">{{ error }}</div>
 
-    <MusicList v-if="tracks.length" :items="tracks" :busy-key="busyKey" @select="onSelectTrack" />
+    <MusicList v-if="tracks.length" :items="tracks" :busy-key="busyKey" @select="onSelectTrack"/>
 
     <div v-if="!loading && !error && tracks.length === 0" class="muted">Aucune musique.</div>
   </div>
@@ -134,6 +134,7 @@ onMounted(async () => {
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 16px;
+  color: black;
 }
 
 .cover {
