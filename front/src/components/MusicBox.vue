@@ -3,8 +3,10 @@ import {computed, onMounted, ref, watchEffect} from 'vue';
 import type {Artist, Music} from '@/types';
 import {useStoreAuthentification} from '@/stores/storeAuthentification';
 import {apiStore} from '@/util/apiStore';
-import router from "@/router";
+import router from '@/router';
+import ReviewModal from '@/components/ReviewModal.vue';
 
+const showReviewModal = ref(false);
 const props = defineProps<{ music: Music }>();
 const emit = defineEmits<{
   (e: 'deleted', id: number): void;
@@ -23,7 +25,7 @@ async function initFavorite() {
   }
 
   const user = await apiStore.me()
-  if (!user.favoriteMusic) return
+  if(!user.favoriteMusic) return
   isFavorite.value = user.favoriteMusic.some((m: any) => m.id === props.music.id)
 }
 
@@ -54,6 +56,10 @@ const isAdmin = computed(() => {
   const user = authStore.utilisateurConnecte;
   return user?.roles?.includes('ROLE_ADMIN') ?? false;
 });
+
+function editMusic() {
+  router.push({name: 'music-edit', params: {id: props.music.id}});
+}
 
 async function deleteMusic() {
   if (!confirm(`Supprimer cette musique ?`)) return;
@@ -112,8 +118,7 @@ function goToEdit() {
 
 <template>
   <div class="main">
-    <img v-if="music.picture" class="cover" :src="music.picture"
-         :alt="music.title"/>
+    <img v-if="music.picture" class="cover" :src="music.picture" :alt="music.title" />
 
     <div class="info">
       <div class="title-row">
@@ -129,10 +134,17 @@ function goToEdit() {
             {{ isFavorite ? '💖' : '🤍' }}
           </button>
 
+          <button
+            v-if="authStore.estConnecte"
+            type="button"
+            class="icon-btn"
+            @click="showReviewModal = true"
+          >
+            💬
+          </button>
+
           <template v-if="isAdmin">
-            <button class="icon-btn" @click="goToEdit">✏️</button>
-            <button type="button" class="icon-btn" :disabled="loading" @click="deleteMusic">🗑️
-            </button>
+            <button type="button" class="icon-btn" :disabled="loading" @click="deleteMusic">🗑️</button>
             <button
               v-if="!music.isValidated"
               type="button"
@@ -146,11 +158,19 @@ function goToEdit() {
         </div>
       </div>
 
-      <div class="subtitle" v-if="artistNames.length">{{ artistNames.join(', ') }}</div>
+      <ReviewModal
+        v-if="showReviewModal"
+        :music-id="music.id"
+        @close="showReviewModal = false"
+        @submitted="showReviewModal = false"
+      />
+
+      <div class="subtitle" v-if="artistNames.length">
+        {{ artistNames.join(', ') }}
+      </div>
 
       <div class="meta">
-        <span class="badge"
-              v-if="typeof music.popularity === 'number'">Popularité: {{ music.popularity }}</span>
+        <span class="badge" v-if="typeof music.popularity === 'number'">Popularité: {{ music.popularity }}</span>
       </div>
 
       <div class="details">

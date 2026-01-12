@@ -143,10 +143,18 @@ class Music
     #[Groups(['music:read', 'serialization:music:create'])]
     private ?int $popularity = null;
 
+    /**
+     * @var Collection<int, Review>
+     */
+    #[ORM\OneToMany(targetEntity: Review::class, mappedBy: 'music')]
+    #[Groups(['music:read'])]
+    private Collection $reviews;
+
     public function __construct()
     {
         $this->artists = new ArrayCollection();
         $this->isValidated = false;
+        $this->reviews = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -278,6 +286,36 @@ class Music
     public function setPopularity(int $popularity): static
     {
         $this->popularity = $popularity;
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Review>
+     */
+    public function getReviews(): Collection
+    {
+        return $this->reviews;
+    }
+
+    public function addReview(Review $review): static
+    {
+        if (!$this->reviews->contains($review)) {
+            $this->reviews->add($review);
+            $review->setMusic($this);
+        }
+
+        return $this;
+    }
+
+    public function removeReview(Review $review): static
+    {
+        if ($this->reviews->removeElement($review)) {
+            // set the owning side to null (unless already changed)
+            if ($review->getMusic() === $this) {
+                $review->setMusic(null);
+            }
+        }
+
         return $this;
     }
 }

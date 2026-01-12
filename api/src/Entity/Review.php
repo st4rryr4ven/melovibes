@@ -2,12 +2,40 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Delete;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\Patch;
+use ApiPlatform\Metadata\Post;
 use App\Repository\ReviewRepository;
+use App\State\ReviewProcessor;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: ReviewRepository::class)]
+#[ApiResource(
+    operations: [
+        new Get(requirements: ['id' => '\d+']),
+        new Post(
+            denormalizationContext: ['groups' => ['review:write']],
+            security: "is_granted('ROLE_USER')",
+            validationContext: ['groups' => ['validation:review:create']],
+            processor: ReviewProcessor::class
+        ),
+        new Patch(
+            inputFormats: ['json' => ['application/merge-patch+json']],
+            denormalizationContext: ['groups' => ['serialization:review:update']],
+            security: "is_granted('ROLE_ADMIN') or object.getAuthor() == user",
+            validationContext: ['groups' => ['validation:review:update']]
+        ),
+        new Delete(
+            security: "is_granted('ROLE_ADMIN') or object.getAuthor() == user"
+        )
+    ],
+    normalizationContext: ['groups' => ['review:read']]
+)]
 class Review
 {
     #[ORM\Id]
@@ -20,6 +48,7 @@ class Review
      */
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
+    #[Groups(['review:read', 'review:write'])]
     private ?Music $music = null;
 
     /**
@@ -27,30 +56,34 @@ class Review
      */
     #[ORM\ManyToOne(inversedBy: 'reviews')]
     #[ORM\JoinColumn(nullable: false)]
+    #[Groups(['review:read'])]
     private ?User $author = null;
 
     /**
      * Comment of the review
      */
-    #[ORM\Column(type: Types::TEXT)]
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[Groups(['review:read', 'review:write'])]
     private ?string $comment = null;
 
     /**
      * Rating of the music, from 0 to 5 stars
      */
-    #[ORM\Column]
+    #[ORM\Column(nullable: false)]
     #[Assert\NotNull]
     #[Assert\Range(
         notInRangeMessage: 'La note doit être comprise entre {{ min }} et {{ max }}.',
         min: 0,
         max: 5
     )]
+    #[Groups(['review:read', 'review:write'])]
     private ?int $rating = null;
 
     /**
      * When the review was posted
      */
     #[ORM\Column]
+    #[Groups(['review:read'])]
     private ?\DateTimeImmutable $createdAt = null;
 
     public function getId(): ?int
