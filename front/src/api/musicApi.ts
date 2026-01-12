@@ -1,5 +1,6 @@
-import type {ImportedMusic, Music} from '@/types'
+import type {ImportedMusic, Music, MusicSearchResponse} from '@/types'
 import {apiStore} from "@/util/apiStore.ts";
+import {apiJson} from "@/api/httpClient.ts";
 
 export interface MusicSearchParams {
   q: string
@@ -24,7 +25,7 @@ export async function searchMusic(params: MusicSearchParams): Promise<{ member: 
   usp.set('offset', String(params.offset ?? 0))
   usp.set('market', params.market ?? 'FR')
 
-  return apiStore.getAll(`music/search?${usp.toString()}`)
+  return apiJson<MusicSearchResponse>(`music/search?${usp.toString()}`)
 }
 
 /**

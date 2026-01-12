@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {computed, onMounted, ref, watchEffect} from 'vue';
-import type {Music} from '@/types';
+import type {Artist, Music} from '@/types';
 import {useStoreAuthentification} from '@/stores/storeAuthentification';
 import {apiStore} from '@/util/apiStore';
 import router from '@/router';
@@ -24,7 +24,8 @@ async function initFavorite() {
   }
 
   const user = await apiStore.me()
-  isFavorite.value = user.favoriteMusic?.some((m: any) => m.id === props.music.id)
+  if(!user.favoriteMusic) return
+  isFavorite.value = user.favoriteMusic.some((m: any) => m.id === props.music.id)
 }
 
 initFavorite();
@@ -91,7 +92,7 @@ async function validateMusic() {
   }
 }
 
-async function resolveArtists(artists: string[]) {
+async function resolveArtists(artists: Artist[]) {
   const baseUrl = import.meta.env.VITE_API_URL.replace(/\/$/, '');
   return Promise.all(
     artists.map(async iri => {
@@ -111,6 +112,36 @@ onMounted(async () => {
 </script>
 
 <template>
+  <div class="main">
+    <img v-if="music.picture" class="cover" :src="music.picture" :alt="music.title" />
+
+    <div class="info">
+      <div class="title-row">
+        <h2 class="title">{{ music.title }}</h2>
+
+        <div class="actions">
+          <button
+            v-if="authStore.estConnecte"
+            type="button"
+            class="icon-btn"
+            @click="toggleFavorite"
+          >
+            {{ isFavorite ? '💖' : '🤍' }}
+          </button>
+
+          <template v-if="isAdmin">
+            <button type="button" class="icon-btn" :disabled="loading" @click="deleteMusic">🗑️</button>
+            <button
+              v-if="!music.isValidated"
+              type="button"
+              class="icon-btn"
+              :disabled="loading"
+              @click="validateMusic"
+            >
+              ✅
+            </button>
+          </template>
+        </div>
   <div class="content-box music-box">
     <div class="top">
       {{ props.music.title }}
@@ -128,22 +159,25 @@ onMounted(async () => {
         <button @click="deleteMusic" class="icon-btn" :disabled="loading">🗑️</button>
         <button  @click="validateMusic" class="icon-btn" :disabled="loading">✅</button>
       </div>
-    </div>
 
-    <div class="content">
-      <div class="group" v-if="artistNames.length">
-        <label>Artistes</label>
-        <div>{{ artistNames.join(', ') }}</div>
+      <div class="subtitle" v-if="artistNames.length">{{ artistNames.join(', ') }}</div>
+
+      <div class="meta">
+        <span class="badge" v-if="typeof music.popularity === 'number'">Popularité: {{ music.popularity }}</span>
       </div>
 
-      <div class="group" v-if="props.music.genre?.length">
-        <label>Genre</label>
-        <div>{{ props.music.genre.join(', ') }}</div>
-      </div>
+      <div class="details">
+        <div class="row" v-if="music.genre?.length">
+          <div class="label">Genres</div>
+          <div class="value">{{ music.genre.join(', ') }}</div>
+        </div>
 
-      <div class="group" v-if="props.music.link">
-        <label>Lien</label>
-        <a :href="props.music.link" target="_blank">Écouter</a>
+        <div class="row" v-if="music.link">
+          <div class="label">Lien</div>
+          <div class="value">
+            <a :href="music.link" target="_blank" rel="noreferrer">Écouter</a>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -156,4 +190,111 @@ onMounted(async () => {
   margin-left: 5px;
 }
 
+.main {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 14px;
+  align-items: start;
+  margin-top: 12px;
+}
+
+.cover {
+  width: 120px;
+  height: 120px;
+  border-radius: 16px;
+  object-fit: cover;
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.title-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.title {
+  margin: 0;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.subtitle {
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.icon-btn {
+  border: 1px solid #e2e8f0;
+  background: white;
+  border-radius: 12px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.icon-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  font-size: 12px;
+  padding: 2px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  opacity: 0.95;
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 6px;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.label {
+  font-weight: 800;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.value {
+  font-size: 14px;
+}
+
+
+@media (max-width: 640px) {
+  .main {
+    grid-template-columns: 1fr;
+  }
+
+  .cover {
+    width: 100%;
+    height: auto;
+    max-height: 280px;
+  }
+}
 </style>
