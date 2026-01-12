@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import type { Music } from '@/types'
 import { useStoreAuthentification } from '@/stores/storeAuthentification'
 import { userApi } from '@/api/userApi'
@@ -13,8 +14,15 @@ const emit = defineEmits<{
 }>()
 
 const authStore = useStoreAuthentification()
+const router = useRouter()
 const isFavorite = ref(false)
 const loading = ref(false)
+
+function errorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error && err.message) return err.message
+  if (typeof err === 'string' && err) return err
+  return fallback
+}
 
 const isAdmin = computed(() => authStore.utilisateurConnecte?.roles?.includes('ROLE_ADMIN') ?? false)
 
@@ -53,9 +61,9 @@ async function toggleFavorite(): Promise<void> {
   try {
     await userApi.toggleFavorite(userId, props.music.id)
     await loadFavorite()
-  } catch (err: any) {
+  } catch (err) {
     console.error(err)
-    alert(err?.message || 'Erreur lors de la gestion des favoris.')
+    alert(errorMessage(err, 'Erreur lors de la gestion des favoris.'))
   }
 }
 
@@ -67,9 +75,9 @@ async function deleteMusic(): Promise<void> {
     await musicApi.delete(props.music.id)
     alert('Musique supprimée avec succès !')
     emit('deleted', props.music.id)
-  } catch (err: any) {
+  } catch (err) {
     console.error(err)
-    alert(err?.message || 'Erreur lors de la suppression de la musique.')
+    alert(errorMessage(err, 'Erreur lors de la suppression de la musique.'))
   } finally {
     loading.value = false
   }
@@ -83,12 +91,16 @@ async function validateMusic(): Promise<void> {
     await musicApi.patch(props.music.id, { isValidated: true })
     emit('validated', props.music.id)
     alert('Musique validée avec succès !')
-  } catch (err: any) {
+  } catch (err) {
     console.error(err)
-    alert(err?.message || 'Erreur lors de la validation de la musique.')
+    alert(errorMessage(err, 'Erreur lors de la validation de la musique.'))
   } finally {
     loading.value = false
   }
+}
+
+function editMusic(): void {
+  router.push({ name: 'music-edit', params: { id: props.music.id } })
 }
 </script>
 
@@ -115,6 +127,7 @@ async function validateMusic(): Promise<void> {
           </button>
 
           <template v-if="isAdmin">
+            <button type="button" class="icon-btn" :disabled="loading" @click="editMusic">✏️</button>
             <button type="button" class="icon-btn" :disabled="loading" @click="deleteMusic">🗑️</button>
             <button
               v-if="!music.isValidated"

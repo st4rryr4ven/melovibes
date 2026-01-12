@@ -1,9 +1,21 @@
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { artistApi } from '@/api/artistApi'
 import { musicApi } from '@/api/musicApi'
 import { API_URL } from '@/api/httpClient'
 import type { Artist, MusicSearchResponse } from '@/types'
+
+const props = defineProps<{ id?: number }>()
+const router = useRouter()
+
+const isEdit = computed(() => !Number.isNaN(props.id))
+
+function errorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error && err.message) return err.message
+  if (typeof err === 'string' && err) return err
+  return fallback
+}
 
 const form = reactive({
   title: '',
@@ -15,6 +27,25 @@ const artistQuery = ref('')
 const artistResults = ref<Artist[]>([])
 const artistLoading = ref(false)
 const importing = ref(false)
+const loadingExisting = ref(false)
+
+async function loadExistingMusic(): Promise<void> {
+  if (!isEdit.value || !props.id) return
+
+  loadingExisting.value = true
+  try {
+    const m = await musicApi.get(props.id)
+    form.title = m.title ?? ''
+    form.selectedArtists = [...(m.artists ?? [])]
+    form.spotifyTrackId = ''
+    artistQuery.value = ''
+    artistResults.value = []
+  } catch (err) {
+    alert(errorMessage(err, 'Erreur lors du chargement de la musique'))
+  } finally {
+    loadingExisting.value = false
+  }
+}
 
 watch(artistQuery, async (q) => {
   const query = q.trim()
@@ -71,8 +102,8 @@ async function addNewArtist(name: string) {
 
     artistQuery.value = ''
     artistResults.value = []
-  } catch (err: any) {
-    alert(err?.message ?? "Erreur lors de la création de l'artiste")
+  } catch (err) {
+    alert(errorMessage(err, "Erreur lors de la création de l'artiste"))
   }
 }
 
@@ -84,8 +115,8 @@ async function onImportSpotify() {
   try {
     const imported = await musicApi.importFromSpotify(idOrUrl)
     alert(`La musique "${imported.title}" a été importée avec succès !`)
-  } catch (err: any) {
-    alert(err?.message ?? "Échec de l’importation depuis Spotify")
+  } catch (err) {
+    alert(errorMessage(err, "Échec de l’importation depuis Spotify"))
   } finally {
     importing.value = false
   }
@@ -119,7 +150,7 @@ async function saveMusic() {
 
     for (let i = 0; i < form.selectedArtists.length; i++) {
       const artist = form.selectedArtists[i]
-      if(!artist) continue;
+      if (!artist) continue
       if (artist.id > 0) {
         dbArtistIds.push(artist.id)
         continue
@@ -135,6 +166,16 @@ async function saveMusic() {
       const created = await artistApi.create({ name: artist.name })
       form.selectedArtists[i] = created
       dbArtistIds.push(created.id)
+    }
+
+    const basePath = apiBasePath()
+    const artistIris = dbArtistIds.map((id) => `${basePath}artists/${id}`.replace(/([^:])\/\/+/g, '$1/'))
+
+    if (isEdit.value && props.id) {
+      const updated = await musicApi.patch(props.id, { title, artists: artistIris })
+      alert(`Musique "${updated.title}" mise à jour !`)
+      await router.push({ name: 'musicDetail', params: { id: updated.id } })
+      return
     }
 
     let searchResults: MusicSearchResponse | null = null
@@ -164,8 +205,9 @@ async function saveMusic() {
       const spotifyMatch = searchResults.items.find((item) => {
         if (item.source !== 'spotify' || !item.spotify) return false
         const titleMatch = item.spotify.name.toLowerCase() === title.toLowerCase()
-        const artistMatch = (item.spotify.artists ?? []).some((a: any) => {
-          const n = String(a?.name ?? '').toLowerCase()
+        const artistMatch = (item.spotify.artists ?? []).some((a) => {
+          const raw = (a as { name?: unknown } | null | undefined)?.name
+          const n = typeof raw === 'string' ? raw.toLowerCase() : ''
           return n && selectedArtistNames.has(n)
         })
         return titleMatch && artistMatch
@@ -179,9 +221,6 @@ async function saveMusic() {
       }
     }
 
-    const basePath = apiBasePath()
-    const artistIris = dbArtistIds.map((id) => `${basePath}artists/${id}`.replace(/([^:])\/\/+/g, '$1/'))
-
     await musicApi.create({
       title,
       artists: artistIris
@@ -189,8 +228,8 @@ async function saveMusic() {
 
     alert(`Musique "${title}" créée avec succès !`)
     resetForm()
-  } catch (err: any) {
-    alert(err?.message ?? 'Erreur lors de la création de la musique')
+  } catch (err) {
+    alert(errorMessage(err, 'Erreur lors de la création de la musique'))
   } finally {
     importing.value = false
   }
@@ -203,24 +242,31 @@ function resetForm() {
   artistQuery.value = ''
   artistResults.value = []
 }
+
+onMounted(loadExistingMusic)
+watch(() => props.id, loadExistingMusic)
 </script>
 
 <template>
   <div class="content-box music-form">
     <form @submit.prevent="saveMusic">
-      <h2 class="form-title">Créer une musique</h2>
+      <h2 class="form-title">{{ isEdit ? 'Éditer une musique' : 'Créer une musique' }}</h2>
 
-      <div class="form-group">
-        <label>ID ou URL de la musique Spotify</label>
-        <div class="input-group">
-          <input v-model="form.spotifyTrackId" type="text" placeholder="ID ou URL de la musique Spotify" />
-          <button type="button" @click="onImportSpotify" :disabled="importing">
-            {{ importing ? 'Importation...' : 'Importer depuis Spotify' }}
-          </button>
+      <div v-if="loadingExisting" class="status">Chargement...</div>
+
+      <template v-if="!isEdit">
+        <div class="form-group">
+          <label>ID ou URL de la musique Spotify</label>
+          <div class="input-group">
+            <input v-model="form.spotifyTrackId" type="text" placeholder="ID ou URL de la musique Spotify" />
+            <button type="button" @click="onImportSpotify" :disabled="importing">
+              {{ importing ? 'Importation...' : 'Importer depuis Spotify' }}
+            </button>
+          </div>
         </div>
-      </div>
 
-      <hr />
+        <hr />
+      </template>
 
       <div class="form-group">
         <label class="title-label">Titre</label>

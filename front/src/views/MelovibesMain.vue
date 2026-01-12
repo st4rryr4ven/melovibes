@@ -24,14 +24,20 @@ const searchError = ref<string | null>(null)
 const searchItems = ref<MusicSearchItem[]>([])
 const busySpotifyId = ref<string | null>(null)
 
+function errorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error && err.message) return err.message
+  if (typeof err === 'string' && err) return err
+  return fallback
+}
+
 async function loadAlbums() {
   albumsLoading.value = true
   albumsError.value = null
   try {
     const res = await albumApi.getNewReleases({ limit: 20, country: 'FR' })
     albums.value = res.items
-  } catch (e: any) {
-    albumsError.value = e?.message ?? 'Erreur lors du chargement'
+  } catch (e) {
+    albumsError.value = errorMessage(e, 'Erreur lors du chargement')
     albums.value = []
   } finally {
     albumsLoading.value = false
@@ -47,9 +53,9 @@ async function loadSearch(q: string) {
     const res = await musicApi.search({ q, limit: 20, market: 'FR' })
     if (searchId !== lastSearchId) return
     searchItems.value = res.items
-  } catch (e: any) {
+  } catch (e) {
     if (searchId !== lastSearchId) return
-    searchError.value = e?.message ?? 'Erreur lors de la recherche'
+    searchError.value = errorMessage(e, 'Erreur lors de la recherche')
     searchItems.value = []
   } finally {
     if (searchId === lastSearchId) searchLoading.value = false
@@ -81,6 +87,11 @@ async function onSelectSearchTrack(item: MusicSearchItem) {
     return
   }
 
+  if (item.local?.isImported && typeof item.local.musicId === 'number') {
+    goToMusicDetail(item.local.musicId)
+    return
+  }
+
   const spotifyId = item.spotify.id
   busySpotifyId.value = spotifyId
   searchError.value = null
@@ -101,8 +112,8 @@ async function onSelectSearchTrack(item: MusicSearchItem) {
     })
 
     goToMusicDetail(imported.id)
-  } catch (e: any) {
-    searchError.value = e?.message ?? "Erreur lors de l'import"
+  } catch (e) {
+    searchError.value = errorMessage(e, "Erreur lors de l'import")
   } finally {
     busySpotifyId.value = null
   }

@@ -39,6 +39,13 @@ const router = createRouter({
 
     { path: '/music', name: 'music', component: AllMusic },
     { path: '/music/create', name: 'music-create', component: MusicCreate, meta: { requiresAuth: true } },
+    {
+      path: '/music/:id/edit',
+      name: 'music-edit',
+      component: MusicCreate,
+      props: (route) => ({ id: Number(route.params.id) }),
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
     { path: '/music/:id', name: 'musicDetail', component: MusicDetail, props: (route) => ({ id: Number(route.params.id) }) },
 
     { path: '/album/:albumId', name: 'albumTracks', component: AlbumTracks }

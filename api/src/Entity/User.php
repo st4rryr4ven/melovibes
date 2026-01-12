@@ -4,11 +4,11 @@ namespace App\Entity;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
-use ApiPlatform\Metadata\Delete;
 use App\Repository\UserRepository;
 use App\State\UserProcessor;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -17,8 +17,8 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
-use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: 'user')]
@@ -28,12 +28,8 @@ use Symfony\Component\Serializer\Annotation\Groups;
 #[UniqueEntity(fields: ['email'], message: "Cet e-mail est déjà utilisé.")]
 #[ApiResource(
     operations: [
-        new GetCollection(
-            security: "is_granted('ROLE_ADMIN')"
-        ),
-        new Get(
-            security: "(is_granted('ROLE_USER') and object == user) or is_granted('ROLE_ADMIN')"
-        ),
+        new GetCollection(security: "is_granted('ROLE_ADMIN')"),
+        new Get(security: "(is_granted('ROLE_USER') and object == user) or is_granted('ROLE_ADMIN')"),
         new Post(
             uriTemplate: '/users/register',
             denormalizationContext: ['groups' => ['serialization:user:create']],
@@ -57,11 +53,9 @@ use Symfony\Component\Serializer\Annotation\Groups;
             denormalizationContext: ['groups' => ['serialization:user:update:favorites']],
             security: "is_granted('ROLE_USER') and object == user"
         ),
-        new Delete(
-            security: "(is_granted('ROLE_USER') and object == user) or is_granted('ROLE_ADMIN')"
-        ),
+        new Delete(security: "(is_granted('ROLE_USER') and object == user) or is_granted('ROLE_ADMIN')"),
     ],
-    normalizationContext: ['groups' => ['user:read']],
+    normalizationContext: ['groups' => ['user:read', 'music:lite']],
 )]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
@@ -123,10 +117,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(targetEntity: Review::class, mappedBy: 'author')]
     private Collection $reviews;
 
-
     #[ORM\ManyToMany(targetEntity: Music::class)]
     #[Groups(['user:read'])]
-    #[ApiProperty(readableLink: false)]
+    #[ApiProperty(readableLink: true)]
     private Collection $favoriteMusic;
 
     public function __construct()
@@ -135,17 +128,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->favoriteMusic = new ArrayCollection();
     }
 
-    /**
-     * Security methods
-     */
     public function getUserIdentifier(): string
     {
         return $this->login;
     }
 
-    /**
-     * Returns user roles
-     */
     public function getRoles(): array
     {
         return array_unique(array_merge($this->roles, ['ROLE_USER']));
@@ -157,9 +144,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->currentPlainPassword = null;
     }
 
-    /**
-     * Getters
-     */
     public function getId(): ?int
     {
         return $this->id;
@@ -170,9 +154,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->login;
     }
 
-    /**
-     * Returns hashed password
-     */
     public function getPassword(): string
     {
         return $this->password;
@@ -188,9 +169,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->plainPassword;
     }
 
-    /**
-     * Setters
-     */
     public function setLogin(string $login): self
     {
         $this->login = $login;
@@ -203,20 +181,15 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    /**
-     * Set hashed password
-     */
     public function setPassword(string $password): self
     {
         $this->password = $password;
-
         return $this;
     }
 
     public function setRoles(array $roles): self
     {
         $this->roles = $roles;
-
         return $this;
     }
 
@@ -228,7 +201,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function addRole(string $role): self
     {
-        if (!in_array($role, $this->roles)) {
+        if (!in_array($role, $this->roles, true)) {
             $this->roles[] = $role;
         }
         return $this;
@@ -236,7 +209,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function removeRole(string $role): self
     {
-        $this->roles = array_filter($this->roles, fn($r) => $r !== $role);
+        $this->roles = array_values(array_filter($this->roles, fn ($r) => $r !== $role));
         return $this;
     }
 
@@ -301,5 +274,4 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->favoriteMusic->removeElement($music);
         return $this;
     }
-
 }

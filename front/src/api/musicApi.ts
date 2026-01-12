@@ -1,4 +1,4 @@
-import type { Music, MusicSearchResponse } from '@/types'
+import type { ImportedMusic, Music, MusicSearchResponse } from '@/types'
 import { apiCollection, apiJson, apiVoid } from '@/api/httpClient'
 
 export interface MusicSearchParams {
@@ -41,17 +41,21 @@ export class MusicApi {
     })
   }
 
-  async importFromSpotify(trackId: string): Promise<Music> {
+  async importFromSpotify(trackId: string): Promise<ImportedMusic> {
     if (trackId.includes('spotify.com')) {
       const match = trackId.match(/track\/([a-zA-Z0-9]+)(\?si=.*)?/)
-      if (!match) throw new Error('Invalid Spotify track URL')
-      // @ts-ignore
+      if (!match?.[1]) throw new Error('Invalid Spotify track URL')
       trackId = match[1]
     }
 
-    return apiJson<Music>(`music/import/spotify/${encodeURIComponent(trackId)}`, {
+    const res = await apiJson<{ musicId: number; title: string }>(`music/import/spotify/${encodeURIComponent(trackId)}`, {
       method: 'POST'
     })
+
+    return {
+      id: res.musicId,
+      title: res.title
+    }
   }
 
   async search(params: MusicSearchParams): Promise<MusicSearchResponse> {

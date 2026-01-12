@@ -12,6 +12,11 @@ export interface Music {
   spotifyId?: string | null
 }
 
+export interface ImportedMusic {
+  id: number
+  title: string
+}
+
 export interface SpotifyTrack {
   id: string
   name: string
