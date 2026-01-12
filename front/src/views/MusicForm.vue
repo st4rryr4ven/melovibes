@@ -19,7 +19,6 @@ const artistResults = ref<any[]>([])
 const artistLoading = ref(false)
 const importing = ref(false)
 
-// Watch artist search query
 watch(artistQuery, async (q) => {
   if (!q) {
     artistResults.value = []
@@ -35,7 +34,6 @@ watch(artistQuery, async (q) => {
   }
 })
 
-// Highlight matches in search results
 function highlightQuery(name: string) {
   if (!artistQuery.value) return name
   const query = artistQuery.value.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')
@@ -43,11 +41,9 @@ function highlightQuery(name: string) {
   return name.replace(regex, `<mark>$1</mark>`)
 }
 
-// Select an artist from search results
 function selectArtist(artist: any) {
   let selectedArtist: Artist | null = null
 
-  // Handle Spotify artist
   if (artist?.spotify) {
     selectedArtist = {
       id: artist.local?.artistId || null,
@@ -55,7 +51,6 @@ function selectArtist(artist: any) {
       name: artist.spotify.name,
     }
   }
-  // Handle local artist
   else if (artist?.local) {
     selectedArtist = {
       id: artist.local.artistId,
@@ -65,7 +60,6 @@ function selectArtist(artist: any) {
   }
 
   if (selectedArtist) {
-    // Check if artist is already selected (by spotifyId or id)
     const alreadySelected = form.selectedArtists.some((a: Artist) =>
       (a.spotifyId && selectedArtist!.spotifyId && a.spotifyId === selectedArtist!.spotifyId) ||
       (a.id && selectedArtist!.id && a.id === selectedArtist!.id)
@@ -75,21 +69,18 @@ function selectArtist(artist: any) {
       form.selectedArtists.push(selectedArtist)
     }
     artistQuery.value = ''
-    artistResults.value = [] // hide dropdown
+    artistResults.value = []
   }
 }
 
-// Remove an artist from selection
 function removeArtist(index: number) {
   form.selectedArtists.splice(index, 1)
 }
 
-// Create a new artist manually
 async function addNewArtist(name: string) {
   if (!name) return
   const newArtist = await createArtist({name})
 
-  // Check if artist is already selected
   const alreadySelected = form.selectedArtists.some((a: Artist) =>
     a.id === newArtist.id || (a.name === newArtist.name && !a.id)
   )
@@ -101,7 +92,6 @@ async function addNewArtist(name: string) {
   artistResults.value = []
 }
 
-// Import Spotify track (button)
 async function onImportSpotify() {
   if (!form.spotifyTrackId) return
   importing.value = true
@@ -115,7 +105,6 @@ async function onImportSpotify() {
   }
 }
 
-// Save music logic
 async function saveMusic() {
   if (!form.title) {
     alert('Veuillez entrer un titre.')
@@ -124,7 +113,6 @@ async function saveMusic() {
 
   importing.value = true
   try {
-    // 1️⃣ Handle artists - ensure all have DB IDs
     if (form.selectedArtists.length === 0) {
       alert('Veuillez sélectionner au moins un artiste.')
       return
@@ -135,16 +123,14 @@ async function saveMusic() {
     for (const artist of form.selectedArtists) {
       let dbArtistId: number | null = null
 
-      // If artist already has a DB ID (from local search), use it
       if (artist.id) {
         dbArtistId = artist.id
       }
-      // If artist has Spotify ID but no DB ID, import from Spotify
       else if (artist.spotifyId) {
         try {
           const imported = await importSpotifyArtist(artist.spotifyId)
           dbArtistId = imported.id
-          artist.id = imported.id // imported.id is always a number
+          artist.id = imported.id
         } catch (err: any) {
           alert(err.message || `Erreur lors de l'importation de l'artiste "${artist.name}" depuis Spotify`)
           return
@@ -154,13 +140,11 @@ async function saveMusic() {
         return
       }
 
-      // dbArtistId should always be a number at this point
       if (dbArtistId !== null && dbArtistId !== undefined) {
         dbArtistIds.push(dbArtistId)
       }
     }
 
-    // 2️⃣ Check if music exists locally and search Spotify for matching track
     let importedTrack = null
     try {
       const searchResults = await apiJson<{
@@ -179,7 +163,6 @@ async function saveMusic() {
         }>
       }>(`music/search?q=${encodeURIComponent(form.title)}&limit=20`)
 
-      // First check if it exists locally (match title and at least one artist)
       const localMatch = searchResults.items.find(item => {
         if (item.source !== 'local' || !item.local) return false
         const titleMatch = item.local.title.toLowerCase() === form.title.toLowerCase()
@@ -193,7 +176,6 @@ async function saveMusic() {
         return
       }
 
-      // Then check Spotify results for a matching track (match title and at least one artist)
       const spotifyArtistIds = form.selectedArtists
         .map((a: Artist) => a.spotifyId)
         .filter((id: string | null | undefined): id is string => id !== null && id !== undefined)
@@ -207,12 +189,10 @@ async function saveMusic() {
         })
 
         if (spotifyMatch?.spotify?.id) {
-          // Import the matching track
           importedTrack = await importSpotifyTrack(spotifyMatch.spotify.id)
         }
       }
     } catch {
-      // If search or import fails, continue to manual creation
       importedTrack = null
     }
 
@@ -222,12 +202,9 @@ async function saveMusic() {
       return
     }
 
-    // 4️⃣ Music not found anywhere → create manually
-    // API Platform expects IRI references (e.g., /api/artists/1)
-    // Construct the IRI path from API_URL
-    const basePath = API_URL.replace(/^https?:\/\/[^\/]+/, '') // Get path part (e.g., /api/)
+    const basePath = API_URL.replace(/^https?:\/\/[^\/]+/, '')
     const artistIris = dbArtistIds.map(id =>
-      `${basePath}artists/${id}`.replace(/([^:])\/\/+/g, '$1/') // Normalize slashes
+      `${basePath}artists/${id}`.replace(/([^:])\/\/+/g, '$1/')
     )
 
     await createMusic({
@@ -284,7 +261,6 @@ function resetForm() {
       <div class="form-group artist-field">
         <label>Artistes</label>
 
-        <!-- Selected artists -->
         <div v-if="form.selectedArtists.length > 0" class="selected-artists">
           <div
             v-for="(artist, index) in form.selectedArtists"
