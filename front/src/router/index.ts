@@ -5,12 +5,13 @@ import Melovibes from '@/views/MelovibesMain.vue'
 import AllUsers from '@/views/AllUsers.vue'
 import SingleUser from '@/views/SingleUser.vue'
 import AllMusic from '@/views/AllMusic.vue'
-import MusicCreate from '@/views/MusicForm.vue'
 import MusicDetail from '@/views/MusicDetail.vue'
 import AlbumTracks from '@/views/AlbumTracks.vue'
 import Login from '@/views/Login.vue'
 import Register from '@/views/Register.vue'
 import Profile from '@/views/Profile.vue'
+import MusicEdit from "@/views/MusicEdit.vue";
+import MusicCreate from "@/views/MusicCreate.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -42,11 +43,16 @@ const router = createRouter({
     {
       path: '/music/:id/edit',
       name: 'music-edit',
-      component: MusicCreate,
+      component: MusicEdit,
       props: (route) => ({ id: Number(route.params.id) }),
       meta: { requiresAuth: true, requiresAdmin: true }
     },
-    { path: '/music/:id', name: 'musicDetail', component: MusicDetail, props: (route) => ({ id: Number(route.params.id) }) },
+    {
+      path: '/music/:id',
+      name: 'musicDetail',
+      component: MusicDetail,
+      props: (route) => ({ id: Number(route.params.id) })
+    },
 
     { path: '/album/:albumId', name: 'albumTracks', component: AlbumTracks }
   ]

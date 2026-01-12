@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
-import { artistApi } from '@/api/artistApi'
-import { musicApi } from '@/api/musicApi'
-import { API_URL } from '@/api/httpClient'
-import type { Artist, MusicSearchResponse } from '@/types'
+import {computed, onMounted, reactive, ref, watch} from 'vue'
+import {useRouter} from 'vue-router'
+import {artistApi} from '@/api/artistApi.ts'
+import {musicApi} from '@/api/musicApi.ts'
+import {API_URL} from '@/api/httpClient.ts'
+import type {Artist, MusicSearchResponse} from '@/types.ts'
 
 const props = defineProps<{ id?: number }>()
 const router = useRouter()
 
-const isEdit = computed(() => !Number.isNaN(props.id))
+const isEdit = computed(() => Number.isFinite(props.id) && props.id)
 
 function errorMessage(err: unknown, fallback: string): string {
   if (err instanceof Error && err.message) return err.message
@@ -57,6 +57,7 @@ watch(artistQuery, async (q) => {
   artistLoading.value = true
   try {
     const res = await artistApi.search({ q: query, limit: 5, offset: 0 })
+    console.log(res)
     artistResults.value = res.items ?? []
   } catch {
     artistResults.value = []
@@ -125,8 +126,7 @@ async function onImportSpotify() {
 function apiBasePath(): string {
   try {
     const url = new URL(API_URL)
-    const p = url.pathname.endsWith('/') ? url.pathname : `${url.pathname}/`
-    return p
+    return url.pathname.endsWith('/') ? url.pathname : `${url.pathname}/`
   } catch {
     return '/api/'
   }
@@ -244,7 +244,17 @@ function resetForm() {
 }
 
 onMounted(loadExistingMusic)
-watch(() => props.id, loadExistingMusic)
+watch(
+  () => props.id,
+  async (newId) => {
+    if (Number.isFinite(newId) && newId) {
+      await loadExistingMusic()
+      return
+    }
+    resetForm()
+  },
+  { immediate: true }
+)
 </script>
 
 <template>
