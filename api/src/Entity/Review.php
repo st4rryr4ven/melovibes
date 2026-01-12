@@ -7,22 +7,32 @@ use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
+use App\Controller\ReviewCreateController;
 use App\Repository\ReviewRepository;
-use App\State\ReviewProcessor;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: ReviewRepository::class)]
+#[ORM\Table(
+    name: "review",
+    uniqueConstraints: [
+        new ORM\UniqueConstraint(name: "unique_review_per_user_per_music", columns: ["author_id", "music_id"])
+    ]
+)]
+#[UniqueEntity(
+    fields: ['author', 'music'],
+    message: 'Vous avez déjà posté un avis pour cette musique.'
+)]
 #[ApiResource(
     operations: [
         new Get(requirements: ['id' => '\d+']),
         new Post(
+            controller: ReviewCreateController::class,
             denormalizationContext: ['groups' => ['review:write']],
-            security: "is_granted('ROLE_USER')",
-            validationContext: ['groups' => ['validation:review:create']],
-            processor: ReviewProcessor::class
+            validationContext: ['groups' => ['review:write']]
         ),
         new Patch(
             inputFormats: ['json' => ['application/merge-patch+json']],
