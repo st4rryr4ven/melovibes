@@ -1,6 +1,5 @@
-import type {ImportedMusic, Music, MusicSearchResponse} from '@/types'
-import {apiStore} from "@/util/apiStore.ts";
-import {apiJson} from "@/api/httpClient.ts";
+import type { Music, MusicSearchResponse } from '@/types'
+import { apiCollection, apiJson, apiVoid } from '@/api/httpClient'
 
 export interface MusicSearchParams {
   q: string
@@ -9,48 +8,60 @@ export interface MusicSearchParams {
   market?: string
 }
 
-export interface CreateMusicParams {
-  title: string
-  artistId: number
-  spotifyTrackId?: string | null
-}
-
-/**
- * Search music in your database
- */
-export async function searchMusic(params: MusicSearchParams): Promise<{ member: Music[] }> {
-  const usp = new URLSearchParams()
-  usp.set('q', params.q)
-  usp.set('limit', String(params.limit ?? 20))
-  usp.set('offset', String(params.offset ?? 0))
-  usp.set('market', params.market ?? 'FR')
-
-  return apiJson<MusicSearchResponse>(`music/search?${usp.toString()}`)
-}
-
-/**
- * Import a track from Spotify using its ID or full URL
- */
-export async function importSpotifyTrack(
-  spotifyTrackUrlOrId: string,
-  market: string = 'FR'
-): Promise<ImportedMusic> {
-  let trackId = spotifyTrackUrlOrId
-  if (spotifyTrackUrlOrId.includes('spotify.com')) {
-    const match = spotifyTrackUrlOrId.match(/track\/([a-zA-Z0-9]+)(\?si=.*)?/)
-    if (!match) throw new Error('Invalid Spotify track URL')
-    trackId = match[1]
+export class MusicApi {
+  async get(id: number): Promise<Music> {
+    return apiJson<Music>(`music/${id}`)
   }
 
-  const usp = new URLSearchParams()
-  usp.set('market', market)
+  async list(filters: Record<string, unknown> = {}): Promise<Music[]> {
+    const usp = new URLSearchParams()
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) usp.append(key, String(value))
+    })
+    const q = usp.toString()
+    return apiCollection<Music>(`music${q ? `?${q}` : ''}`)
+  }
 
-  return apiStore.importMusicFromSpotify(trackId)
+  async create(payload: Record<string, unknown>): Promise<Music> {
+    return apiJson<Music>('music', {
+      method: 'POST',
+      json: payload
+    })
+  }
+
+  async delete(id: number): Promise<void> {
+    await apiVoid(`music/${id}`, { method: 'DELETE' })
+  }
+
+  async patch(id: number, data: Record<string, unknown>): Promise<Music> {
+    return apiJson<Music>(`music/${id}`, {
+      method: 'PATCH',
+      contentType: 'application/merge-patch+json',
+      json: data
+    })
+  }
+
+  async importFromSpotify(trackId: string): Promise<Music> {
+    if (trackId.includes('spotify.com')) {
+      const match = trackId.match(/track\/([a-zA-Z0-9]+)(\?si=.*)?/)
+      if (!match) throw new Error('Invalid Spotify track URL')
+      // @ts-ignore
+      trackId = match[1]
+    }
+
+    return apiJson<Music>(`music/import/spotify/${encodeURIComponent(trackId)}`, {
+      method: 'POST'
+    })
+  }
+
+  async search(params: MusicSearchParams): Promise<MusicSearchResponse> {
+    const usp = new URLSearchParams()
+    usp.set('q', params.q)
+    usp.set('limit', String(params.limit ?? 20))
+    usp.set('offset', String(params.offset ?? 0))
+    usp.set('market', params.market ?? 'FR')
+    return apiJson<MusicSearchResponse>(`music/search?${usp.toString()}`)
+  }
 }
 
-/**
- * Create a new music in the database
- */
-export async function createMusic(music: CreateMusicParams): Promise<Music> {
-  return apiStore.createMusic(music)
-}
+export const musicApi = new MusicApi()

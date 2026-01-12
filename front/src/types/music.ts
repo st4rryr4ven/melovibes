@@ -1,4 +1,16 @@
-import type { ArtistLite, SpotifyArtist } from './artist'
+import type { Artist } from './artist'
+
+export interface Music {
+  id: number
+  title: string
+  artists: Artist[]
+  genre: string[]
+  link?: string | null
+  picture?: string | null
+  popularity?: number | null
+  isValidated: boolean
+  spotifyId?: string | null
+}
 
 export interface SpotifyTrack {
   id: string
@@ -11,25 +23,13 @@ export interface SpotifyTrack {
     name: string
     images?: { url: string; width?: number; height?: number }[]
   }
-  artists?: SpotifyArtist[]
-}
-
-export interface MusicLocalDetails {
-  musicId: number
-  spotifyId: string | null
-  title: string
-  link: string | null
-  picture: string | null
-  genre: string[] | null
-  popularity: number
-  isValidated: boolean
-  artists: ArtistLite[]
+  artists?: Artist[]
 }
 
 export type MusicSearchItem =
   | {
   source: 'local'
-  local: MusicLocalDetails
+  local: Music
   spotify: null
 }
   | {
@@ -55,30 +55,4 @@ export interface MusicSearchResponse {
       previous: string | null
     } | null
   }
-}
-
-export interface ImportedMusic {
-  musicId: number
-  spotifyId: string | null
-  title: string
-  link: string | null
-  picture: string | null
-  genre: string[] | null
-  popularity: number
-  artists: ArtistLite[]
-}
-
-export type MusicUiSource = 'search-local' | 'search-spotify' | 'album'
-
-export interface MusicUiItem {
-  key: string
-  source: MusicUiSource
-  musicId: number | null
-  spotifyTrackId: string | null
-  title: string
-  artistsLabel: string
-  picture: string | null
-  link: string | null
-  popularity?: number
-  isImported?: boolean
 }

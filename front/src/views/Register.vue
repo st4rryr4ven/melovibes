@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { apiStore } from '@/util/apiStore'
+import {userApi} from "@/api/userApi.ts";
 
 const router = useRouter()
 
@@ -22,26 +22,11 @@ async function register() {
   }
 
   try {
-    const response = await apiStore.register({
+    await userApi.register({
       login: newUser.value.login,
       email: newUser.value.email,
       password: newUser.value.password
     })
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => null)
-
-      if (errorData?.violations) {
-        errorMsg.value = errorData.violations[0].message
-      } else if (errorData?.message) {
-        errorMsg.value = errorData.message
-      } else {
-        errorMsg.value = 'Erreur lors de l\'inscription'
-      }
-
-      alert(errorMsg.value)
-      return
-    }
 
     alert('Utilisateur créé avec succès !')
     await router.push({name: 'login'})

@@ -73,8 +73,9 @@
 <script setup lang="ts">
 import {ref, onMounted, watch} from 'vue'
 import {useRouter} from 'vue-router'
-import {apiStore, getProfilePictureUrl} from '@/util/apiStore'
 import {useStoreAuthentification} from '@/stores/storeAuthentification'
+import {getProfilePictureUrl} from "@/util/avatar.ts";
+import {userApi} from "@/api/userApi.ts";
 
 const authStore = useStoreAuthentification();
 
@@ -119,14 +120,14 @@ async function update() {
   }
 
   try {
-    await apiStore.updateUser(authStore.utilisateurConnecte!.id, {
+    await userApi.update(authStore.utilisateurConnecte!.id, {
       login: login.value,
       email: email.value,
       plainPassword: plainPassword.value || undefined,
       currentPlainPassword: currentPlainPassword.value
     })
 
-    const refreshedUser = await apiStore.me()
+    const refreshedUser = await userApi.me()
     authStore.utilisateurConnecte = {...refreshedUser}
 
     await updateProfilePicture()
@@ -137,7 +138,7 @@ async function update() {
 
     if (err.message.includes('Authentification')) {
       alert("Session expirée. Veuillez vous reconnecter.")
-      router.push({name: 'login'})
+      await router.push({name: 'login'})
     } else if (err.message.includes('422')) {
       alert('Mot de passe incorrect.')
     } else {
@@ -156,7 +157,7 @@ function deleteAccount() {
     return
   }
 
-  apiStore.deleteUser(authStore.utilisateurConnecte!.id)
+  userApi.delete(authStore.utilisateurConnecte!.id)
     .then(() => {
       authStore.utilisateurConnecte = null
       authStore.estConnecte = false
