@@ -286,6 +286,7 @@ export const apiStore = {
       throw new Error(err || 'POST failed');
     }
 
+    alert(res)
     return res.json();
   }
 

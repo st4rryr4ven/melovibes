@@ -21,6 +21,7 @@ class ReviewProcessor implements ProcessorInterface
 
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): mixed
     {
+
         if ($data instanceof Review && $operation->getName() === 'post') {
             $userFromSecurity = $this->security->getUser();
 
