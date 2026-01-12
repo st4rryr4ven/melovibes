@@ -3,6 +3,7 @@ import {computed, onMounted, ref, watchEffect} from 'vue';
 import type {Artist, Music} from '@/types';
 import {useStoreAuthentification} from '@/stores/storeAuthentification';
 import {apiStore} from '@/util/apiStore';
+import router from "@/router";
 
 const props = defineProps<{ music: Music }>();
 const emit = defineEmits<{
@@ -13,6 +14,7 @@ const emit = defineEmits<{
 const isFavorite = ref(false);
 const authStore = useStoreAuthentification();
 const loading = ref(false);
+
 
 async function initFavorite() {
   if (!authStore.utilisateurConnecte) {
@@ -102,11 +104,16 @@ const artistNames = ref<string[]>([]);
 onMounted(async () => {
   artistNames.value = await resolveArtists(props.music.artists);
 });
+
+function goToEdit() {
+  router.push(`/music/${props.music.id}/edit`)
+}
 </script>
 
 <template>
   <div class="main">
-    <img v-if="music.picture" class="cover" :src="music.picture" :alt="music.title"/>
+    <img v-if="music.picture" class="cover" :src="music.picture"
+         :alt="music.title"/>
 
     <div class="info">
       <div class="title-row">
@@ -123,6 +130,7 @@ onMounted(async () => {
           </button>
 
           <template v-if="isAdmin">
+            <button class="icon-btn" @click="goToEdit">✏️</button>
             <button type="button" class="icon-btn" :disabled="loading" @click="deleteMusic">🗑️
             </button>
             <button
