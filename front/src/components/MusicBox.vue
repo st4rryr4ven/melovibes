@@ -119,7 +119,6 @@ onMounted(async () => {
       :src="music.picture"
       :alt="music.title"
     />
-=
     <div class="info">
       <div class="title-row">
         <h2 class="title">{{ music.title }}</h2>
