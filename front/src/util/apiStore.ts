@@ -285,8 +285,6 @@ export const apiStore = {
       const err = await res.text();
       throw new Error(err || 'POST failed');
     }
-
-    alert(res)
     return res.json();
   }
 
