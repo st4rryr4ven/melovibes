@@ -74,7 +74,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 30)]
     #[Assert\NotBlank(groups: ['validation:user:create'])]
     #[Assert\Length(min: 4, max: 30, groups: ['validation:user:create'])]
-    #[Groups(['user:read', 'serialization:user:create'])]
+    #[Groups(['user:read', 'serialization:user:create', 'music:read'])]
     private ?string $login = null;
 
     /**

@@ -6,6 +6,8 @@ import { musicApi } from '@/api/musicApi'
 import { userApi } from '@/api/userApi'
 import { useStoreAuthentification } from '@/stores/storeAuthentification'
 import { useFlashStore } from '@/stores/flashStore'
+import ReviewModal from '@/components/ReviewModal.vue'
+import ReviewList from '@/components/ReviewList.vue'
 
 const props = defineProps<{ id: number }>()
 
@@ -21,10 +23,21 @@ const isFavorite = ref(false)
 const favoriteLoading = ref(false)
 const adminLoading = ref(false)
 
+const showReviewModal = ref(false)
+
 const isAdmin = computed(() => authStore.estAdmin)
 const artistNames = computed(() => (music.value?.artists ?? []).map((a) => a.name).filter(Boolean).join(', '))
 const hasCover = computed(() => !!music.value?.picture)
 const genres = computed(() => (music.value?.genre ?? []).filter(Boolean))
+
+const reviews = computed(() => (music.value?.reviews ?? []).filter(Boolean))
+const reviewCount = computed(() => reviews.value.length)
+const averageRating = computed(() => {
+  const list = reviews.value
+  if (!list.length) return null
+  const sum = list.reduce((acc, r) => acc + (typeof r.rating === 'number' ? r.rating : 0), 0)
+  return Math.round((sum / list.length) * 10) / 10
+})
 
 function errorMessage(err: unknown, fallback: string): string {
   if (err instanceof Error && err.message) return err.message
@@ -121,6 +134,21 @@ async function toggleFavorite(): Promise<void> {
   }
 }
 
+function openReviewModal(): void {
+  const m = music.value
+  if (!m) return
+  if (!authStore.estConnecte) {
+    flash.warning('Connexion requise.')
+    return
+  }
+  showReviewModal.value = true
+}
+
+async function handleReviewSubmitted(_review: unknown): Promise<void> {
+  showReviewModal.value = false
+  await loadMusic()
+}
+
 function goBack(): void {
   router.back()
 }
@@ -215,13 +243,7 @@ async function deleteMusic(): Promise<void> {
               <span>{{ isFavorite ? 'Favori' : 'Ajouter aux favoris' }}</span>
             </button>
 
-            <a
-              v-if="music.link"
-              class="btn btn--primary"
-              :href="music.link"
-              target="_blank"
-              rel="noreferrer"
-            >
+            <a v-if="music.link" class="btn btn--primary" :href="music.link" target="_blank" rel="noreferrer">
               Écouter
             </a>
           </div>
@@ -241,9 +263,7 @@ async function deleteMusic(): Promise<void> {
           <section v-if="isAdmin" class="admin panel">
             <div class="admin__title">Administration</div>
             <div class="admin__actions">
-              <button class="btn btn--ghost" type="button" :disabled="adminLoading" @click="goEdit">
-                Éditer
-              </button>
+              <button class="btn btn--ghost" type="button" :disabled="adminLoading" @click="goEdit">Éditer</button>
               <button
                 v-if="!music.isValidated"
                 class="btn"
@@ -279,6 +299,32 @@ async function deleteMusic(): Promise<void> {
           </section>
         </div>
       </section>
+
+      <section class="reviews card">
+        <header class="reviews__head">
+          <div class="reviews__left">
+            <div class="reviews__title">Avis</div>
+            <div class="reviews__meta muted">
+              <span>{{ reviewCount }} avis</span>
+              <span v-if="averageRating !== null"> • Moyenne {{ averageRating }}/5</span>
+            </div>
+          </div>
+
+          <button v-if="authStore.estConnecte" class="btn btn--primary" type="button" @click="openReviewModal">Donner un avis</button>
+          <RouterLink v-else :to="{name: 'login'}">Connecte-vous pour donner votre avis</RouterLink>
+        </header>
+
+        <div class="reviews__body">
+          <ReviewList :reviews="reviews" />
+        </div>
+      </section>
+
+      <ReviewModal
+        v-if="showReviewModal"
+        :music-id="music.id"
+        @close="showReviewModal = false"
+        @submitted="handleReviewSubmitted"
+      />
     </div>
 
     <div v-else class="state panel">
@@ -471,6 +517,35 @@ async function deleteMusic(): Promise<void> {
   gap: 10px;
 }
 
+.reviews {
+  overflow: hidden;
+}
+
+.reviews__head {
+  padding: 14px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--c-border);
+  background: radial-gradient(900px 260px at 0% 0%, rgba(29, 185, 84, 0.12), transparent 55%),
+  rgba(255, 255, 255, 0.02);
+}
+
+.reviews__title {
+  font-weight: 950;
+  letter-spacing: 0.2px;
+}
+
+.reviews__meta {
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+.reviews__body {
+  padding: 14px;
+}
+
 .chip {
   display: inline-flex;
   align-items: center;
@@ -555,12 +630,7 @@ async function deleteMusic(): Promise<void> {
   height: 320px;
   border-radius: var(--radius-lg);
   border: 1px solid var(--c-border);
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.04),
-    rgba(255, 255, 255, 0.08),
-    rgba(255, 255, 255, 0.04)
-  );
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
   background-size: 200% 100%;
   animation: shimmer 1.2s ease-in-out infinite;
 }

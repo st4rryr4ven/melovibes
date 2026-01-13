@@ -1,7 +1,9 @@
 import type { Artist } from './artist'
+import type { Review } from './review'
 
 export interface Music {
-  musicId: number
+  id: number
+  musicId?: number
   title: string
   artists: Artist[]
   genre: string[]
@@ -10,6 +12,7 @@ export interface Music {
   popularity?: number | null
   isValidated: boolean
   spotifyId?: string | null
+  reviews?: Review[]
 }
 
 export interface ImportedMusic {

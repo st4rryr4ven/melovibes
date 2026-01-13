@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Get;
@@ -9,6 +10,7 @@ use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use App\Controller\ReviewCreateController;
 use App\Repository\ReviewRepository;
+use DateTimeImmutable;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
@@ -51,6 +53,7 @@ class Review
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['music:read'])]
     private ?int $id = null;
 
     /**
@@ -66,14 +69,15 @@ class Review
      */
     #[ORM\ManyToOne(inversedBy: 'reviews')]
     #[ORM\JoinColumn(nullable: false)]
-    #[Groups(['review:read'])]
+    #[Groups(['review:read', 'music:read'])]
+    #[ApiProperty(readableLink: true)]
     private ?User $author = null;
 
     /**
      * Comment of the review
      */
     #[ORM\Column(type: Types::TEXT, nullable: true)]
-    #[Groups(['review:read', 'review:write'])]
+    #[Groups(['review:read', 'review:write', 'music:read'])]
     private ?string $comment = null;
 
     /**
@@ -86,15 +90,15 @@ class Review
         min: 0,
         max: 5
     )]
-    #[Groups(['review:read', 'review:write'])]
+    #[Groups(['review:read', 'review:write', 'music:read'])]
     private ?int $rating = null;
 
     /**
      * When the review was posted
      */
     #[ORM\Column]
-    #[Groups(['review:read'])]
-    private ?\DateTimeImmutable $createdAt = null;
+    #[Groups(['review:read', 'music:read'])]
+    private ?DateTimeImmutable $createdAt;
 
     public function getId(): ?int
     {
@@ -149,12 +153,12 @@ class Review
         return $this;
     }
 
-    public function getCreatedAt(): ?\DateTimeImmutable
+    public function getCreatedAt(): ?DateTimeImmutable
     {
         return $this->createdAt;
     }
 
-    public function setCreatedAt(\DateTimeImmutable $createdAt): static
+    public function setCreatedAt(DateTimeImmutable $createdAt): static
     {
         $this->createdAt = $createdAt;
 
@@ -163,7 +167,7 @@ class Review
 
     public function __construct()
     {
-        $this->createdAt = new \DateTimeImmutable();
+        $this->createdAt = new DateTimeImmutable();
     }
 
 }

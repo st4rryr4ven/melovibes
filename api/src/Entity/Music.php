@@ -149,6 +149,7 @@ class Music
      */
     #[ORM\OneToMany(targetEntity: Review::class, mappedBy: 'music')]
     #[Groups(['music:read'])]
+    #[ApiProperty(readableLink: true)]
     private Collection $reviews;
 
     public function __construct()
