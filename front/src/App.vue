@@ -4,7 +4,7 @@
       <div class="topbar__inner container">
         <button class="brand" type="button" @click="router.push({ name: 'melovibes' })">
           <span class="brand__mark" aria-hidden="true">♪</span>
-          <span class="brand__name">Mélovibes</span>
+          <span class="brand__name">Melovibes</span>
         </button>
 
         <nav class="nav">

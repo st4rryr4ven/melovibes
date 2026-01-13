@@ -77,7 +77,7 @@ watch(status, async () => {
 })
 
 function handleDeleted(id: number) {
-  musics.value = musics.value.filter((m) => m.musicId !== id)
+  musics.value = musics.value.filter((m) => m.id !== id)
 }
 
 function handleValidated() {
