@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import MusicCard from '@/components/MusicCard.vue'
 import type { AlbumTrackItem, MusicSearchItem } from '@/types'
+import { useStoreAuthentification } from '@/stores/storeAuthentification'
 
 type Props =
   | {
@@ -22,6 +24,8 @@ const emit = defineEmits<{
   (e: 'selectSearch', item: MusicSearchItem): void
   (e: 'selectAlbum', item: AlbumTrackItem): void
 }>()
+
+const authStore = useStoreAuthentification()
 
 function keyOf(item: MusicSearchItem | AlbumTrackItem): string {
   if ('source' in item) {
@@ -49,12 +53,23 @@ function onSelect(item: MusicSearchItem | AlbumTrackItem): void {
   }
   emit('selectAlbum', item as AlbumTrackItem)
 }
+
+const visibleItems = computed(() => {
+  if (props.mode !== 'search') return props.items
+
+  if (authStore.estAdmin) return props.items
+
+  return (props.items as MusicSearchItem[]).filter((it) => {
+    if (it.source === 'local') return it.local.isValidated
+    return true;
+  })
+})
 </script>
 
 <template>
   <div class="list" role="list">
     <MusicCard
-      v-for="item in props.items"
+      v-for="item in visibleItems"
       :key="keyOf(item as any)"
       :item="item"
       :busy="isBusy(item as any)"

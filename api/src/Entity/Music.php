@@ -257,7 +257,7 @@ class Music
         return $this;
     }
 
-    public function isValidated(): ?bool
+    public function getIsValidated(): ?bool
     {
         return $this->isValidated;
     }

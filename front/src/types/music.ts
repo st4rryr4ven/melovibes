@@ -1,7 +1,7 @@
 import type { Artist } from './artist'
 
 export interface Music {
-  id: number
+  musicId: number
   title: string
   artists: Artist[]
   genre: string[]

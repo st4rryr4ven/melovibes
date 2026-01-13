@@ -18,7 +18,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="list" role="list">
+  <div class="grid" role="list">
     <AlbumCard
       v-for="item in props.items"
       :key="item.albumId"
@@ -30,10 +30,16 @@ const emit = defineEmits<{
 </template>
 
 <style scoped>
-.list {
+.grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   padding-bottom: 16px;
+}
+
+@media (max-width: 520px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 </style>

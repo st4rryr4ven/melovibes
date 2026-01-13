@@ -17,94 +17,183 @@ const emit = defineEmits<{
 }>()
 
 const artistsLabel = computed(() => props.item.artists.map((a) => a.name).filter(Boolean).join(', ') || 'Artiste inconnu')
+
+const metaLine = computed(() => {
+  const parts: string[] = []
+  if (props.item.releaseDate) parts.push(props.item.releaseDate)
+  if (typeof props.item.totalTracks === 'number') {
+    const n = props.item.totalTracks
+    parts.push(`${n} titre${n > 1 ? 's' : ''}`)
+  }
+  return parts.join(' • ')
+})
 </script>
 
 <template>
-  <button type="button" class="card" :disabled="props.busy" @click="emit('select')">
-    <div class="card__media">
-      <img class="card__img" :src="props.item.picture ?? ''" :alt="props.item.name" />
-    </div>
+  <button type="button" class="poster" :disabled="props.busy" @click="emit('select')" :aria-label="props.item.name">
+    <div class="poster__frame">
+      <img v-if="props.item.picture" class="poster__img" :src="props.item.picture" :alt="props.item.name" />
+      <div v-else class="poster__placeholder" aria-hidden="true">♪</div>
 
-    <div class="card__content">
-      <div class="card__title">{{ props.item.name }}</div>
-      <div class="card__subtitle">{{ artistsLabel }}</div>
+      <div class="poster__shade" aria-hidden="true" />
+      <div class="poster__glow" aria-hidden="true" />
 
-      <div class="card__meta">
-        <span class="badge">Album</span>
-        <span v-if="props.item.releaseDate" class="badge">{{ props.item.releaseDate }}</span>
-        <span v-if="props.item.totalTracks != null" class="badge">{{ props.item.totalTracks }} tracks</span>
+      <div class="poster__content">
+        <div class="poster__title" :title="props.item.name">{{ props.item.name }}</div>
+        <div class="poster__subtitle" :title="artistsLabel">{{ artistsLabel }}</div>
+        <div v-if="metaLine" class="poster__meta">{{ metaLine }}</div>
+      </div>
+
+      <div class="poster__busy" v-if="props.busy" aria-hidden="true">
+        <span class="spinner" />
       </div>
     </div>
-
-    <div class="card__chevron">›</div>
   </button>
 </template>
 
 <style scoped>
-.card {
+.poster {
   width: 100%;
-  display: grid;
-  grid-template-columns: 56px 1fr auto;
-  gap: 12px;
-  align-items: center;
+  border: none;
+  background: transparent;
+  padding: 0;
   text-align: left;
-  padding: 12px 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  background: white;
   cursor: pointer;
 }
 
-.card:hover {
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
-}
-
-.card:disabled {
+.poster:disabled {
   cursor: not-allowed;
-  opacity: 0.8;
+  opacity: 0.85;
 }
 
-.card__media {
-  width: 56px;
-  height: 56px;
+.poster__frame {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid var(--c-border);
+  background: #0b121a;
+  box-shadow: var(--shadow-1);
+  aspect-ratio: 2 / 3;
+  transform: translateY(0);
+  transition: transform 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease;
 }
 
-.card__img {
-  width: 56px;
-  height: 56px;
+.poster:hover .poster__frame {
+  transform: translateY(-2px);
+  border-color: rgba(29, 185, 84, 0.35);
+  box-shadow: 0 10px 36px rgba(0, 0, 0, 0.55);
+}
+
+.poster__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
-  border-radius: 12px;
+  transform: scale(1.02);
+  transition: transform 0.18s ease;
 }
 
-.card__title {
-  font-weight: 800;
-  line-height: 1.2;
+.poster:hover .poster__img {
+  transform: scale(1.06);
 }
 
-.card__subtitle {
+.poster__placeholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: 34px;
+  color: rgba(245, 248, 252, 0.78);
+  background: radial-gradient(140px 140px at 25% 20%, rgba(29, 185, 84, 0.22), transparent 60%),
+  radial-gradient(190px 190px at 90% 85%, rgba(17, 217, 138, 0.16), transparent 60%),
+  #0b121a;
+}
+
+.poster__shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.15) 35%, rgba(0, 0, 0, 0.88) 100%);
+}
+
+.poster__glow {
+  position: absolute;
+  inset: -2px;
+  background: radial-gradient(320px 220px at 20% 20%, rgba(29, 185, 84, 0.18), transparent 55%),
+  radial-gradient(280px 200px at 80% 85%, rgba(17, 217, 138, 0.14), transparent 55%);
+  opacity: 0.85;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+.poster__content {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 12px 12px 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.poster__title {
+  font-weight: 950;
+  letter-spacing: 0.2px;
+  line-height: 1.1;
+  color: rgba(245, 248, 252, 0.98);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.poster__subtitle {
   font-size: 13px;
-  opacity: 0.8;
-  margin-top: 4px;
+  color: rgba(245, 248, 252, 0.78);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.card__meta {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 8px;
-}
-
-.badge {
+.poster__meta {
   font-size: 12px;
-  padding: 2px 10px;
-  border: 1px solid #cbd5e1;
-  border-radius: 999px;
-  opacity: 0.9;
+  color: rgba(245, 248, 252, 0.62);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.card__chevron {
-  font-size: 22px;
-  opacity: 0.5;
-  padding-left: 6px;
+.poster__busy {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 2px solid rgba(245, 248, 252, 0.22);
+  border-top-color: rgba(29, 185, 84, 0.95);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

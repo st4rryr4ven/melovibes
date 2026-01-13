@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import {computed, onMounted, reactive, ref, watch} from 'vue'
-import {useRouter} from 'vue-router'
-import {artistApi} from '@/api/artistApi.ts'
-import {musicApi} from '@/api/musicApi.ts'
-import {API_URL} from '@/api/httpClient.ts'
-import type {Artist, MusicSearchResponse} from '@/types.ts'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { artistApi } from '@/api/artistApi'
+import { musicApi } from '@/api/musicApi'
+import { API_URL } from '@/api/httpClient'
+import type { Artist, MusicSearchResponse } from '@/types'
+import { useFlashStore } from '@/stores/flashStore'
 
 const props = defineProps<{ id?: number }>()
 const router = useRouter()
+const flash = useFlashStore()
 
-const isEdit = computed(() => Number.isFinite(props.id) && props.id)
+const isEdit = computed(() => Number.isFinite(props.id) && !!props.id)
 
 function errorMessage(err: unknown, fallback: string): string {
   if (err instanceof Error && err.message) return err.message
@@ -29,6 +31,23 @@ const artistLoading = ref(false)
 const importing = ref(false)
 const loadingExisting = ref(false)
 
+function apiBasePath(): string {
+  try {
+    const url = new URL(API_URL)
+    return url.pathname.endsWith('/') ? url.pathname : `${url.pathname}/`
+  } catch {
+    return '/api/'
+  }
+}
+
+function resetForm() {
+  form.title = ''
+  form.spotifyTrackId = ''
+  form.selectedArtists = []
+  artistQuery.value = ''
+  artistResults.value = []
+}
+
 async function loadExistingMusic(): Promise<void> {
   if (!isEdit.value || !props.id) return
 
@@ -41,7 +60,8 @@ async function loadExistingMusic(): Promise<void> {
     artistQuery.value = ''
     artistResults.value = []
   } catch (err) {
-    alert(errorMessage(err, 'Erreur lors du chargement de la musique'))
+    flash.error(errorMessage(err, 'Chargement impossible.'))
+    router.back()
   } finally {
     loadingExisting.value = false
   }
@@ -56,8 +76,7 @@ watch(artistQuery, async (q) => {
 
   artistLoading.value = true
   try {
-    const res = await artistApi.search({ q: query, limit: 5, offset: 0 })
-    console.log(res)
+    const res = await artistApi.search({ q: query, limit: 6, offset: 0 })
     artistResults.value = res.items ?? []
   } catch {
     artistResults.value = []
@@ -97,50 +116,44 @@ async function addNewArtist(name: string) {
 
   try {
     const created = await artistApi.create({ name: n })
-
-    const alreadySelected = form.selectedArtists.some((a) => a.id === created.id || a.name.toLowerCase() === created.name.toLowerCase())
+    const alreadySelected = form.selectedArtists.some(
+      (a) => a.id === created.id || a.name.toLowerCase() === created.name.toLowerCase()
+    )
     if (!alreadySelected) form.selectedArtists.push(created)
 
     artistQuery.value = ''
     artistResults.value = []
   } catch (err) {
-    alert(errorMessage(err, "Erreur lors de la création de l'artiste"))
+    flash.error(errorMessage(err, 'Création impossible.'))
   }
 }
 
 async function onImportSpotify() {
   const idOrUrl = form.spotifyTrackId.trim()
-  if (!idOrUrl) return
+  if (!idOrUrl || importing.value) return
 
   importing.value = true
   try {
     const imported = await musicApi.importFromSpotify(idOrUrl)
-    alert(`La musique "${imported.title}" a été importée avec succès !`)
+    flash.success('Musique ajoutée.')
+    await router.push({ name: 'musicDetail', params: { id: imported.id } })
   } catch (err) {
-    alert(errorMessage(err, "Échec de l’importation depuis Spotify"))
+    flash.error(errorMessage(err, 'Action impossible.'))
   } finally {
     importing.value = false
   }
 }
 
-function apiBasePath(): string {
-  try {
-    const url = new URL(API_URL)
-    return url.pathname.endsWith('/') ? url.pathname : `${url.pathname}/`
-  } catch {
-    return '/api/'
-  }
-}
-
 async function saveMusic() {
   const title = form.title.trim()
+
   if (!title) {
-    alert('Veuillez entrer un titre.')
+    flash.warning('Titre requis.')
     return
   }
 
   if (form.selectedArtists.length === 0) {
-    alert('Veuillez sélectionner au moins un artiste.')
+    flash.warning('Ajoute un artiste.')
     return
   }
 
@@ -151,6 +164,7 @@ async function saveMusic() {
     for (let i = 0; i < form.selectedArtists.length; i++) {
       const artist = form.selectedArtists[i]
       if (!artist) continue
+
       if (artist.id > 0) {
         dbArtistIds.push(artist.id)
         continue
@@ -173,7 +187,7 @@ async function saveMusic() {
 
     if (isEdit.value && props.id) {
       const updated = await musicApi.patch(props.id, { title, artists: artistIris })
-      alert(`Musique "${updated.title}" mise à jour !`)
+      flash.success('Enregistré.')
       await router.push({ name: 'musicDetail', params: { id: updated.id } })
       return
     }
@@ -190,13 +204,13 @@ async function saveMusic() {
         if (item.source !== 'local') return false
         const m = item.local
         if (!m) return false
-        const titleMatch = m.title.toLowerCase() === title.toLowerCase()
+        const titleMatch = (m.title ?? '').toLowerCase() === title.toLowerCase()
         const artistMatch = (m.artists ?? []).some((a) => dbArtistIds.includes(a.id))
         return titleMatch && artistMatch
       })
 
       if (localMatch) {
-        alert(`La musique "${title}" existe déjà dans la base de données.`)
+        flash.warning('Déjà existante.')
         resetForm()
         return
       }
@@ -215,32 +229,21 @@ async function saveMusic() {
 
       if (spotifyMatch?.spotify?.id) {
         const imported = await musicApi.importFromSpotify(spotifyMatch.spotify.id)
-        alert(`La musique "${imported.title}" a été importée depuis Spotify !`)
+        flash.success('Musique ajoutée.')
         resetForm()
+        await router.push({ name: 'musicDetail', params: { id: imported.id } })
         return
       }
     }
 
-    await musicApi.create({
-      title,
-      artists: artistIris
-    })
-
-    alert(`Musique "${title}" créée avec succès !`)
+    await musicApi.create({ title, artists: artistIris })
+    flash.success('Musique créée.')
     resetForm()
   } catch (err) {
-    alert(errorMessage(err, 'Erreur lors de la création de la musique'))
+    flash.error(errorMessage(err, 'Action impossible.'))
   } finally {
     importing.value = false
   }
-}
-
-function resetForm() {
-  form.title = ''
-  form.spotifyTrackId = ''
-  form.selectedArtists = []
-  artistQuery.value = ''
-  artistResults.value = []
 }
 
 onMounted(loadExistingMusic)
@@ -255,233 +258,289 @@ watch(
   },
   { immediate: true }
 )
+
+function goBack() {
+  router.back()
+}
 </script>
 
 <template>
-  <div class="content-box music-form">
-    <form @submit.prevent="saveMusic">
-      <h2 class="form-title">{{ isEdit ? 'Éditer une musique' : 'Créer une musique' }}</h2>
+  <div class="page container">
+    <section class="card wrap">
+      <header class="head">
+        <div class="head__title">{{ isEdit ? 'Édition' : 'Nouvelle musique' }}</div>
+        <div class="head__actions">
+          <button class="btn btn--ghost" type="button" @click="goBack">Retour</button>
+        </div>
+      </header>
 
-      <div v-if="loadingExisting" class="status">Chargement...</div>
+      <div class="divider" />
 
-      <template v-if="!isEdit">
-        <div class="form-group">
-          <label>ID ou URL de la musique Spotify</label>
-          <div class="input-group">
-            <input v-model="form.spotifyTrackId" type="text" placeholder="ID ou URL de la musique Spotify" />
-            <button type="button" @click="onImportSpotify" :disabled="importing">
-              {{ importing ? 'Importation...' : 'Importer depuis Spotify' }}
-            </button>
-          </div>
+      <form class="form" @submit.prevent="saveMusic">
+        <div v-if="loadingExisting" class="loading">
+          <div class="skeleton" />
+          <div class="skeleton" />
+          <div class="skeleton" />
         </div>
 
-        <hr />
-      </template>
+        <template v-else>
+          <div v-if="!isEdit" class="field">
+            <label class="label">Spotify</label>
+            <div class="row">
+              <input v-model="form.spotifyTrackId" class="input" type="text" placeholder="ID ou URL" />
+              <button class="btn btn--primary" type="button" :disabled="importing || !form.spotifyTrackId.trim()" @click="onImportSpotify">
+                {{ importing ? '…' : 'Importer' }}
+              </button>
+            </div>
+          </div>
 
-      <div class="form-group">
-        <label class="title-label">Titre</label>
-        <input v-model="form.title" type="text" placeholder="Titre de la musique" />
-      </div>
+          <div class="field">
+            <label class="label">Titre</label>
+            <input v-model="form.title" class="input" type="text" placeholder="Titre" />
+          </div>
 
-      <div class="form-group artist-field">
-        <label>Artistes</label>
+          <div class="field artistField">
+            <label class="label">Artistes</label>
 
-        <div v-if="form.selectedArtists.length > 0" class="selected-artists">
-          <div
-            v-for="(artist, index) in form.selectedArtists"
-            :key="artist.id || artist.spotifyId || artist.name"
-            class="selected-artist"
-          >
-            <span class="artist-name">{{ artist.name }}</span>
-            <button type="button" @click="removeArtist(index)" class="remove-artist" title="Retirer cet artiste">
-              ×
+            <div v-if="form.selectedArtists.length" class="chips">
+              <button
+                v-for="(artist, index) in form.selectedArtists"
+                :key="artist.id || artist.spotifyId || artist.name"
+                type="button"
+                class="chip"
+                @click="removeArtist(index)"
+                :title="artist.name"
+              >
+                <span class="chip__text">{{ artist.name }}</span>
+                <span class="chip__x" aria-hidden="true">×</span>
+              </button>
+            </div>
+
+            <div class="search">
+              <input v-model="artistQuery" class="input" type="text" placeholder="Rechercher…" />
+              <span v-if="artistLoading" class="spinner" aria-hidden="true" />
+            </div>
+
+            <div v-if="artistResults.length" class="results">
+              <button
+                v-for="artist in artistResults"
+                :key="artist.id || artist.spotifyId || artist.name"
+                class="result"
+                type="button"
+                @click="selectArtist(artist)"
+              >
+                <span class="result__name" v-html="highlightQuery(artist.name)"></span>
+              </button>
+            </div>
+
+            <button
+              v-else-if="artistQuery.trim()"
+              class="btn btn--ghost btn--sm"
+              type="button"
+              @click="addNewArtist(artistQuery)"
+            >
+              Créer « {{ artistQuery.trim() }} »
             </button>
           </div>
-        </div>
 
-        <input v-model="artistQuery" type="text" placeholder="Rechercher un artiste..." />
-        <div v-if="artistLoading" class="status">Recherche en cours...</div>
-
-        <ul v-if="artistResults.length" class="artist-results">
-          <li v-for="artist in artistResults" :key="artist.id || artist.spotifyId || artist.name" @click="selectArtist(artist)">
-            <span class="artist-name" v-html="highlightQuery(artist.name)"></span>
-          </li>
-        </ul>
-
-        <button v-if="artistResults.length === 0 && artistQuery.trim()" type="button" @click="addNewArtist(artistQuery)">
-          Créer l'artiste "{{ artistQuery }}"
-        </button>
-      </div>
-
-      <hr />
-
-      <div class="form-group">
-        <button type="submit" class="submit-btn">Enregistrer la musique</button>
-      </div>
-    </form>
+          <div class="actions">
+            <button class="btn btn--primary" type="submit" :disabled="importing">
+              {{ isEdit ? 'Enregistrer' : 'Créer' }}
+            </button>
+            <button class="btn btn--ghost" type="button" :disabled="importing" @click="goBack">Annuler</button>
+          </div>
+        </template>
+      </form>
+    </section>
   </div>
 </template>
 
 <style scoped>
-@import "@/components/css/content-box.css";
-
-.music-form {
-  max-width: 600px;
-  margin: 1rem auto;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+.page {
+  padding: 14px 0;
 }
 
-.form-title {
-  font-weight: bold;
-  color: #000;
-  margin-bottom: 1rem;
+.wrap {
+  padding: 0;
 }
 
-.form-group {
+.head {
+  padding: 14px;
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.head__title {
+  font-size: 16px;
+  font-weight: 950;
+  letter-spacing: 0.2px;
+}
+
+.form {
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  color: var(--c-text-soft);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 4px;
+}
+
+.artistField {
   position: relative;
 }
 
-.form-group label {
-  font-weight: bold;
-  color: #111;
-}
-
-.title-label {
-  font-weight: bold;
-  color: #000;
-}
-
-.input-group {
-  display: flex;
-  gap: 0.5rem;
-}
-
-input[type='text'] {
-  flex: 1;
-  padding: 10px 12px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  background: #fff;
-  color: #111;
-}
-
-input::placeholder {
-  color: #888;
-}
-
-button {
-  padding: 8px 12px;
-  background-color: #16a34a;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-button:hover:not(:disabled) {
-  background-color: #15803d;
-}
-
-button:disabled {
-  background-color: #94a3b8;
-  cursor: not-allowed;
-}
-
-.selected-artists {
+.chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
+  gap: 8px;
 }
 
-.selected-artist {
+.chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.375rem 0.75rem;
-  background-color: #e2e8f0;
-  border-radius: 6px;
-  font-size: 0.875rem;
-}
-
-.selected-artist .artist-name {
-  color: #111;
-  font-weight: 500;
-}
-
-.remove-artist {
-  background: none;
-  border: none;
-  color: #64748b;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--c-border);
+  background: var(--c-surface-3);
+  color: var(--c-text);
   cursor: pointer;
-  font-size: 1.25rem;
+  transition: background 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
+}
+
+.chip:hover {
+  background: #1a3227;
+  border-color: var(--c-border-2);
+  transform: translateY(-1px);
+}
+
+.chip__text {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 800;
+}
+
+.chip__x {
+  opacity: 0.8;
+  font-size: 16px;
   line-height: 1;
-  padding: 0;
-  width: 1.25rem;
-  height: 1.25rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: background 0.2s, color 0.2s;
 }
 
-.remove-artist:hover {
-  background-color: #cbd5e1;
-  color: #dc2626;
+.search {
+  position: relative;
 }
 
-.artist-results {
-  background: #fff;
-  border: 1px solid #cbd5e1;
-  margin-top: 4px;
-  padding: 0;
-  list-style: none;
+.spinner {
   position: absolute;
-  z-index: 10;
-  width: 100%;
-  max-height: 250px;
-  overflow-y: auto;
-  border-radius: 6px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 2px solid rgba(245, 248, 252, 0.22);
+  border-top-color: rgba(29, 185, 84, 0.95);
+  animation: spin 0.8s linear infinite;
 }
 
-.artist-field li {
-  display: flex;
-  align-items: center;
-  padding: 6px 10px;
+@keyframes spin {
+  to {
+    transform: translateY(-50%) rotate(360deg);
+  }
+}
+
+.results {
+  display: grid;
+  gap: 8px;
+}
+
+.result {
+  width: 100%;
+  text-align: left;
+  border-radius: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--c-border);
+  background: var(--c-surface-2);
+  color: var(--c-text);
   cursor: pointer;
-  color: #111;
+  transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
 }
 
-.artist-field li:hover {
-  background-color: #e2e8f0;
+.result:hover {
+  transform: translateY(-1px);
+  background: #193024;
+  border-color: var(--c-border-2);
 }
 
-.artist-name {
-  flex: 1;
+.result__name :deep(mark) {
+  background: rgba(29, 185, 84, 0.35);
+  color: rgba(245, 248, 252, 0.98);
+  padding: 0 3px;
+  border-radius: 4px;
 }
 
-.artist-field mark {
-  background-color: #16a34a;
-  color: white;
-  padding: 0 2px;
-  border-radius: 2px;
+.btn--sm {
+  padding: 8px 12px;
 }
 
-.status {
-  font-size: 12px;
-  color: #555;
+.loading {
+  display: grid;
+  gap: 10px;
 }
 
-.submit-btn {
-  width: 100%;
-  font-weight: bold;
+.skeleton {
+  height: 44px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--c-border);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04),
+    rgba(255, 255, 255, 0.08),
+    rgba(255, 255, 255, 0.04)
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

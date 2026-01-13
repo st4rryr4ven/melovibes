@@ -5,20 +5,42 @@ import MusicList from '@/components/MusicList.vue'
 import { albumApi } from '@/api/albumApi'
 import { musicApi } from '@/api/musicApi'
 import type { AlbumTrackItem, AlbumTracksResponse } from '@/types'
+import { useFlashStore } from '@/stores/flashStore'
 
 const route = useRoute()
 const router = useRouter()
+const flash = useFlashStore()
 
 const albumId = computed(() => String(route.params.albumId ?? ''))
 
 const loading = ref(false)
 const error = ref<string | null>(null)
 const data = ref<AlbumTracksResponse | null>(null)
-
 const busySpotifyId = ref<string | null>(null)
 
 const album = computed(() => data.value?.album ?? null)
 const tracks = computed<AlbumTrackItem[]>(() => data.value?.tracks ?? [])
+const artistsLabel = computed(() => album.value?.artists.map((a) => a.name).filter(Boolean).join(', ') ?? '')
+const metaLine = computed(() => {
+  if (!album.value) return ''
+  const parts: string[] = []
+  if (album.value.releaseDate) parts.push(album.value.releaseDate)
+  if (typeof album.value.totalTracks === 'number') {
+    const n = album.value.totalTracks
+    parts.push(`${n} titre${n > 1 ? 's' : ''}`)
+  }
+  return parts.join(' • ')
+})
+
+function errorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error && err.message) return err.message
+  if (typeof err === 'string' && err) return err
+  return fallback
+}
+
+function goBack() {
+  router.back()
+}
 
 function goToMusicDetail(id: number) {
   router.push({ name: 'musicDetail', params: { id } })
@@ -27,7 +49,7 @@ function goToMusicDetail(id: number) {
 async function loadAlbumTracks(): Promise<void> {
   const id = albumId.value
   if (!id) {
-    error.value = 'Album invalide'
+    error.value = 'Album introuvable.'
     data.value = null
     return
   }
@@ -37,8 +59,8 @@ async function loadAlbumTracks(): Promise<void> {
 
   try {
     data.value = await albumApi.getSpotifyAlbumTracks(id, 'FR')
-  } catch (e: any) {
-    error.value = e?.message ?? "Erreur lors du chargement de l'album"
+  } catch (e) {
+    error.value = errorMessage(e, "Erreur lors du chargement de l'album.")
     data.value = null
   } finally {
     loading.value = false
@@ -60,7 +82,7 @@ async function onSelectAlbumTrack(item: AlbumTrackItem) {
   error.value = null
 
   try {
-    const imported = await musicApi.importFromSpotify(spotifyId)
+    const created = await musicApi.importFromSpotify(spotifyId)
 
     const d = data.value
     if (d) {
@@ -69,15 +91,16 @@ async function onSelectAlbumTrack(item: AlbumTrackItem) {
           ? t
           : {
             ...t,
-            local: { isImported: true, musicId: imported.id }
+            local: { ...t.local, musicId: created.id, isImported: true }
           }
       )
       data.value = { ...d }
     }
 
-    goToMusicDetail(imported.id)
-  } catch (e: any) {
-    error.value = e?.message ?? "Erreur lors de l'import"
+    goToMusicDetail(created.id)
+  } catch (e) {
+    const msg = errorMessage(e, 'Action impossible.')
+    flash.error(msg)
   } finally {
     busySpotifyId.value = null
   }
@@ -89,93 +112,268 @@ watch(albumId, loadAlbumTracks)
 
 <template>
   <div class="page">
-    <div class="header" v-if="album">
-      <img v-if="album.picture" class="cover" :src="album.picture" :alt="album.name" />
-      <div class="info">
-        <h2 class="title">{{ album.name }}</h2>
-        <div class="subtitle">{{ album.artists.map((a) => a.name).join(', ') }}</div>
-        <div class="meta">
-          <span v-if="album.releaseDate" class="badge">{{ album.releaseDate }}</span>
-          <span v-if="album.totalTracks != null" class="badge">{{ album.totalTracks }} tracks</span>
-        </div>
-      </div>
+    <div class="top">
+      <button class="btn btn--ghost" type="button" @click="goBack">← Retour</button>
     </div>
 
-    <div v-if="loading" class="muted">Chargement...</div>
-    <div v-if="error" class="error">{{ error }}</div>
+    <div v-if="loading" class="panel state">
+      <div class="muted">Chargement…</div>
+      <div class="skeleton" />
+    </div>
 
-    <MusicList
-      v-if="tracks.length"
-      mode="album"
-      :items="tracks"
-      :busy-spotify-id="busySpotifyId"
-      @select-album="onSelectAlbumTrack"
-    />
+    <div v-else-if="error" class="panel state errorBox">
+      <div class="errorBox__title">Chargement impossible</div>
+      <div class="errorBox__text">{{ error }}</div>
+      <button class="btn btn--ghost" type="button" @click="loadAlbumTracks">Réessayer</button>
+    </div>
 
-    <div v-if="!loading && !error && tracks.length === 0" class="muted">Aucune musique.</div>
+    <section v-else-if="album" class="layout">
+      <div class="posterWrap">
+        <div class="poster">
+          <img v-if="album.picture" class="poster__img" :src="album.picture" :alt="album.name" />
+          <div v-else class="poster__placeholder" aria-hidden="true">♪</div>
+          <div class="poster__shade" aria-hidden="true" />
+          <div class="poster__glow" aria-hidden="true" />
+
+          <div class="poster__content">
+            <div class="poster__title" :title="album.name">{{ album.name }}</div>
+            <div v-if="artistsLabel" class="poster__subtitle" :title="artistsLabel">{{ artistsLabel }}</div>
+            <div v-if="metaLine" class="poster__meta">{{ metaLine }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="listCard card">
+        <div class="listCard__head">
+          <div class="listCard__title">Titres</div>
+          <div class="listCard__count muted">{{ tracks.length }}</div>
+        </div>
+        <div class="divider" />
+
+        <div class="listCard__body">
+          <MusicList
+            v-if="tracks.length"
+            mode="album"
+            :items="tracks"
+            :busy-spotify-id="busySpotifyId"
+            @select-album="onSelectAlbumTrack"
+          />
+          <div v-else class="muted empty">Aucun titre.</div>
+        </div>
+      </div>
+    </section>
+
+    <div v-else class="panel state">
+      <div class="muted">Album introuvable.</div>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .page {
-  padding: 10px 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.header {
-  display: grid;
-  grid-template-columns: 96px 1fr;
-  gap: 12px;
-  align-items: center;
-  padding: 12px;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-}
-
-.cover {
-  width: 96px;
-  height: 96px;
-  object-fit: cover;
-  border-radius: 14px;
-}
-
-.title {
-  margin: 0;
-  font-weight: 900;
-}
-
-.subtitle {
-  font-size: 13px;
-  opacity: 0.8;
-  margin-top: 4px;
-}
-
-.meta {
+.top {
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 10px;
+  align-items: center;
+  justify-content: space-between;
 }
 
-.badge {
-  font-size: 12px;
-  padding: 2px 10px;
-  border: 1px solid #cbd5e1;
-  border-radius: 999px;
+.layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 300px) 1fr;
+  gap: 14px;
+  align-items: start;
+}
+
+.posterWrap {
+  position: sticky;
+  top: 75px;
+}
+
+.poster {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid var(--c-border);
+  background: #0b121a;
+  box-shadow: var(--shadow-1);
+  aspect-ratio: 2 / 3;
+}
+
+.poster__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.02);
+}
+
+.poster__placeholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: 40px;
+  color: rgba(245, 248, 252, 0.78);
+  background: radial-gradient(160px 160px at 25% 20%, rgba(29, 185, 84, 0.22), transparent 60%),
+  radial-gradient(220px 220px at 90% 85%, rgba(17, 217, 138, 0.16), transparent 60%),
+  #0b121a;
+}
+
+.poster__shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.08) 0%, rgba(0, 0, 0, 0.18) 35%, rgba(0, 0, 0, 0.9) 100%);
+}
+
+.poster__glow {
+  position: absolute;
+  inset: -2px;
+  background: radial-gradient(520px 320px at 20% 20%, rgba(29, 185, 84, 0.18), transparent 55%),
+  radial-gradient(420px 300px at 80% 85%, rgba(17, 217, 138, 0.14), transparent 55%);
   opacity: 0.9;
+  mix-blend-mode: screen;
+  pointer-events: none;
 }
 
-.error {
-  padding: 10px 12px;
-  border: 1px solid #ef4444;
-  border-radius: 12px;
-  background: white;
+.poster__content {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.poster__title {
+  font-weight: 980;
+  letter-spacing: 0.2px;
+  line-height: 1.05;
+  color: rgba(245, 248, 252, 0.98);
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.6);
+  font-size: 20px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.poster__subtitle {
+  font-size: 14px;
+  color: rgba(245, 248, 252, 0.78);
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.poster__meta {
+  font-size: 12px;
+  color: rgba(245, 248, 252, 0.62);
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.listCard {
+  padding: 12px;
+}
+
+.listCard__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 10px;
+}
+
+.listCard__title {
+  font-weight: 900;
+  letter-spacing: 0.2px;
+}
+
+.listCard__count {
+  font-weight: 750;
+  font-size: 13px;
+}
+
+.listCard__body {
+  padding-top: 12px;
+}
+
+.state {
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.skeleton {
+  height: 80px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--c-border);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04),
+    rgba(255, 255, 255, 0.08),
+    rgba(255, 255, 255, 0.04)
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.errorBox {
+  border-color: rgba(255, 77, 79, 0.45);
+  background: #3a1a1e;
+}
+
+.errorBox__title {
+  font-weight: 900;
+  letter-spacing: 0.2px;
+}
+
+.errorBox__text {
+  color: rgba(255, 245, 245, 0.92);
+  font-size: 14px;
+}
+
+.empty {
+  padding: 6px 2px;
 }
 
 .muted {
-  opacity: 0.75;
+  color: var(--c-text-mute);
+  font-weight: 650;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .posterWrap {
+    position: static;
+  }
+
+  .poster {
+    max-width: 420px;
+  }
 }
 </style>

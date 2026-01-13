@@ -38,7 +38,7 @@ const router = createRouter({
 
     { path: '/profile', name: 'profile', component: Profile, meta: { requiresAuth: true } },
 
-    { path: '/music', name: 'music', component: AllMusic },
+    { path: '/music', name: 'music', component: AllMusic, meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/music/create', name: 'music-create', component: MusicCreate, meta: { requiresAuth: true } },
     {
       path: '/music/:id/edit',

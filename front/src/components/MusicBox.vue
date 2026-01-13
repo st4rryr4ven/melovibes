@@ -1,9 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import type { Music } from '@/types'
-import { useStoreAuthentification } from '@/stores/storeAuthentification'
-import { userApi } from '@/api/userApi'
 import { musicApi } from '@/api/musicApi'
 
 const showReviewModal = ref(false);
@@ -13,10 +11,11 @@ const emit = defineEmits<{
   (e: 'validated', id: number): void
 }>()
 
-const authStore = useStoreAuthentification()
 const router = useRouter()
-const isFavorite = ref(false)
-const loading = ref(false)
+const busy = ref(false)
+
+const artistsLabel = computed(() => (props.music.artists ?? []).map((a) => a.name).filter(Boolean).join(', '))
+const isPending = computed(() => !props.music.isValidated)
 
 function errorMessage(err: unknown, fallback: string): string {
   if (err instanceof Error && err.message) return err.message
@@ -24,268 +23,248 @@ function errorMessage(err: unknown, fallback: string): string {
   return fallback
 }
 
-const isAdmin = computed(() => authStore.utilisateurConnecte?.roles?.includes('ROLE_ADMIN') ?? false)
-
-const artistNames = computed(() => (props.music.artists ?? []).map(a => a.name).filter(Boolean).join(', '))
-
-async function loadFavorite(): Promise<void> {
-  const userId = authStore.utilisateurConnecte?.id
-  if (!userId) {
-    isFavorite.value = false
-    return
-  }
-
-  try {
-    const favorites = await userApi.getFavorites(userId)
-    isFavorite.value = favorites.some(m => m.id === props.music.id)
-  } catch {
-    isFavorite.value = false
-  }
+function goDetail() {
+  router.push({ name: 'musicDetail', params: { id: props.music.id } })
 }
 
-watch(
-  () => [authStore.utilisateurConnecte?.id, props.music.id],
-  async () => {
-    await loadFavorite()
-  },
-  { immediate: true }
-)
+function editMusic() {
+  router.push({ name: 'music-edit', params: { id: props.music.id } })
+}
 
-async function toggleFavorite(): Promise<void> {
-  const userId = authStore.utilisateurConnecte?.id
-  if (!userId) {
-    alert('Vous devez être connecté pour gérer vos favoris.')
-    return
-  }
+async function validateMusic(): Promise<void> {
+  if (!isPending.value) return
+  if (!confirm(`Valider « ${props.music.title} » ?`)) return
 
+  busy.value = true
   try {
-    await userApi.toggleFavorite(userId, props.music.id)
-    await loadFavorite()
-  } catch (err) {
-    console.error(err)
-    alert(errorMessage(err, 'Erreur lors de la gestion des favoris.'))
+    await musicApi.patch(props.music.id, { isValidated: true })
+    emit('validated', props.music.id)
+  } catch (e) {
+    alert(errorMessage(e, 'Erreur lors de la validation.'))
+  } finally {
+    busy.value = false
   }
 }
 
 async function deleteMusic(): Promise<void> {
   if (!confirm('Supprimer cette musique ?')) return
 
+  busy.value = true
   try {
-    loading.value = true
     await musicApi.delete(props.music.id)
-    alert('Musique supprimée avec succès !')
     emit('deleted', props.music.id)
-  } catch (err) {
-    console.error(err)
-    alert(errorMessage(err, 'Erreur lors de la suppression de la musique.'))
+  } catch (e) {
+    alert(errorMessage(e, 'Erreur lors de la suppression.'))
   } finally {
-    loading.value = false
+    busy.value = false
   }
-}
-
-async function validateMusic(): Promise<void> {
-  if (!confirm(`Valider la musique ${props.music.title} ?`)) return
-
-  try {
-    loading.value = true
-    await musicApi.patch(props.music.id, { isValidated: true })
-    emit('validated', props.music.id)
-    alert('Musique validée avec succès !')
-  } catch (err) {
-    console.error(err)
-    alert(errorMessage(err, 'Erreur lors de la validation de la musique.'))
-  } finally {
-    loading.value = false
-  }
-}
-
-function editMusic(): void {
-  router.push({ name: 'music-edit', params: { id: props.music.id } })
 }
 </script>
 
 <template>
-  <div class="main">
-    <img v-if="music.picture" class="cover" :src="music.picture" :alt="music.title" />
+  <article class="row card">
+    <div class="row__media" :class="{ 'row__media--empty': !music.picture }">
+      <img v-if="music.picture" class="row__img" :src="music.picture" :alt="music.title" />
+      <div v-else class="row__ph" aria-hidden="true">♪</div>
+      <div v-if="isPending" class="tag tag--warn">En attente</div>
+      <div v-else class="tag tag--ok">Validée</div>
+    </div>
 
-    <div class="info">
-      <div class="title-row">
-        <h2 class="title">{{ music.title }}</h2>
-
-        <div class="actions">
-          <button v-if="authStore.estConnecte" type="button" class="icon-btn" @click="toggleFavorite">
-            {{ isFavorite ? '💖' : '🤍' }}
-          </button>
-
-          <button
-            v-if="authStore.estConnecte"
-            type="button"
-            class="icon-btn"
-            @click="showReviewModal = true"
-          >
-            💬
-          </button>
-
-          <template v-if="isAdmin">
-            <button type="button" class="icon-btn" :disabled="loading" @click="editMusic">✏️</button>
-            <button type="button" class="icon-btn" :disabled="loading" @click="deleteMusic">🗑️</button>
-            <button
-              v-if="!music.isValidated"
-              type="button"
-              class="icon-btn"
-              :disabled="loading"
-              @click="validateMusic"
-            >
-              ✅
-            </button>
-          </template>
+    <div class="row__main" @click="goDetail" role="button" tabindex="0">
+      <div class="row__top">
+        <div class="row__title" :title="music.title">{{ music.title }}</div>
+        <div class="row__ids">
+          <span class="id">#{{ music.id }}</span>
+          <span v-if="music.spotifyId" class="id id--soft">{{ music.spotifyId }}</span>
         </div>
       </div>
 
-      <div class="subtitle" v-if="artistNames">{{ artistNames }}</div>
-      <ReviewModal
-        v-if="showReviewModal"
-        :music-id="music.id"
-        @close="showReviewModal = false"
-        @submitted="showReviewModal = false"
-      />
+      <div v-if="artistsLabel" class="row__sub" :title="artistsLabel">{{ artistsLabel }}</div>
 
-      <div class="subtitle" v-if="artistNames.length">
-        {{ artistNames.join(', ') }}
-      </div>
-
-      <div class="meta">
-        <span class="badge" v-if="typeof music.popularity === 'number'">Popularité: {{ music.popularity }}</span>
-      </div>
-
-      <div class="details">
-        <div class="row" v-if="music.genre?.length">
-          <div class="label">Genres</div>
-          <div class="value">{{ music.genre.join(', ') }}</div>
-        </div>
-
-        <div class="row" v-if="music.link">
-          <div class="label">Lien</div>
-          <div class="value">
-            <a :href="music.link" target="_blank" rel="noreferrer">Écouter</a>
-          </div>
-        </div>
+      <div class="row__meta">
+        <span v-if="typeof music.popularity === 'number'" class="chip">Pop {{ music.popularity }}</span>
+        <span v-if="music.genre?.length" class="chip chip--soft">{{ music.genre.slice(0, 4).join(' • ') }}</span>
+        <a v-if="music.link" class="chip chip--link" :href="music.link" target="_blank" rel="noreferrer" @click.stop>
+          Ouvrir
+        </a>
       </div>
     </div>
-  </div>
+
+    <div class="row__actions">
+      <button class="btn btn--ghost" type="button" :disabled="busy" @click="goDetail">Voir</button>
+      <button class="btn btn--ghost" type="button" :disabled="busy" @click="editMusic">Éditer</button>
+      <button v-if="isPending" class="btn" type="button" :disabled="busy" @click="validateMusic">Valider</button>
+      <button class="btn btn--danger" type="button" :disabled="busy" @click="deleteMusic">Supprimer</button>
+    </div>
+  </article>
+  <button
+    v-if="authStore.estConnecte"
+    type="button"
+    class="icon-btn"
+    @click="showReviewModal = true"
+  >
+    💬
+  </button>
+  <ReviewModal
+    v-if="showReviewModal"
+    :music-id="music.id"
+    @close="showReviewModal = false"
+    @submitted="showReviewModal = false"
+  />
 </template>
 
 <style scoped>
-@import "@/components/css/content-box.css";
-
-.admin-actions .icon-btn {
-  margin-left: 5px;
-}
-
-.main {
+.row {
+  padding: 12px;
   display: grid;
-  grid-template-columns: 120px 1fr;
-  gap: 14px;
-  align-items: start;
-  margin-top: 12px;
+  grid-template-columns: 86px 1fr auto;
+  gap: 12px;
+  align-items: stretch;
 }
 
-.cover {
-  width: 120px;
-  height: 120px;
+.row__media {
+  position: relative;
+  width: 86px;
+  height: 86px;
   border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.12));
+  background: #0b121a;
+}
+
+.row__img {
+  width: 86px;
+  height: 86px;
   object-fit: cover;
 }
 
-.info {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.row__ph {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  font-weight: 950;
+  color: rgba(245, 248, 252, 0.75);
+  background: radial-gradient(90px 90px at 25% 20%, rgba(29, 185, 84, 0.22), transparent 60%),
+  radial-gradient(120px 120px at 90% 85%, rgba(17, 217, 138, 0.16), transparent 60%),
+  #0b121a;
 }
 
-.title-row {
+.tag {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 850;
+  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.12));
+  background: rgba(0, 0, 0, 0.55);
+  color: rgba(245, 248, 252, 0.92);
+}
+
+.tag--warn {
+  border-color: rgba(255, 176, 32, 0.45);
+}
+
+.tag--ok {
+  border-color: rgba(29, 185, 84, 0.45);
+}
+
+.row__main {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+  cursor: pointer;
+  align-content: start;
+}
+
+.row__top {
   display: flex;
+  align-items: baseline;
   justify-content: space-between;
   gap: 10px;
-  align-items: center;
 }
 
-.title {
-  margin: 0;
-  font-weight: 900;
-  line-height: 1.1;
+.row__title {
+  font-weight: 950;
+  letter-spacing: 0.2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.subtitle {
-  font-size: 13px;
-  opacity: 0.8;
-}
-
-.actions {
+.row__ids {
   display: flex;
   gap: 8px;
-  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
-.icon-btn {
-  border: 1px solid #e2e8f0;
-  background: white;
-  border-radius: 12px;
-  padding: 8px 10px;
-  cursor: pointer;
+.id {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.12));
+  background: var(--c-surface-3, #162820);
+  color: var(--c-text-soft, rgba(245, 248, 252, 0.82));
 }
 
-.icon-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.7;
+.id--soft {
+  color: var(--c-text-mute, rgba(245, 248, 252, 0.66));
 }
 
-.meta {
+.row__sub {
+  font-size: 13px;
+  color: var(--c-text-mute, rgba(245, 248, 252, 0.66));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row__meta {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.badge {
-  font-size: 12px;
-  padding: 2px 10px;
-  border: 1px solid #cbd5e1;
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
   border-radius: 999px;
-  opacity: 0.95;
-}
-
-.details {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding-top: 6px;
-}
-
-.row {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.label {
-  font-weight: 800;
+  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.12));
+  background: var(--c-surface-3, #162820);
+  color: var(--c-text-soft, rgba(245, 248, 252, 0.82));
   font-size: 12px;
-  opacity: 0.85;
+  font-weight: 750;
 }
 
-.value {
-  font-size: 14px;
+.chip--soft {
+  color: var(--c-text-mute, rgba(245, 248, 252, 0.66));
 }
 
-@media (max-width: 640px) {
-  .main {
-    grid-template-columns: 1fr;
+.chip--link {
+  color: rgba(220, 255, 235, 0.95);
+  border-color: rgba(29, 185, 84, 0.35);
+}
+
+.row__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+@media (max-width: 860px) {
+  .row {
+    grid-template-columns: 86px 1fr;
   }
 
-  .cover {
-    width: 100%;
-    height: auto;
-    max-height: 280px;
+  .row__actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
   }
 }
 </style>

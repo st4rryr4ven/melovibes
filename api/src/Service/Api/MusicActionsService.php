@@ -57,7 +57,7 @@ final class MusicActionsService
                     'picture' => $m->getPicture(),
                     'genre' => $m->getGenre(),
                     'popularity' => $m->getPopularity(),
-                    'isValidated' => $m->isValidated(),
+                    'isValidated' => $m->getIsValidated(),
                     'artists' => $artists,
                 ],
                 'spotify' => null,

@@ -56,7 +56,6 @@ export async function apiJson<T>(path: string, init: ApiJsonInit = {}): Promise<
         : `Request failed with status ${res.status}`
     throw new ApiError(message, res.status, payload)
   }
-
   return (await parseBody(res)) as T
 }
 
