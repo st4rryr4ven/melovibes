@@ -4,7 +4,6 @@ import { useRouter } from 'vue-router'
 import type { Music } from '@/types'
 import { musicApi } from '@/api/musicApi'
 
-const showReviewModal = ref(false);
 const props = defineProps<{ music: Music }>();
 const emit = defineEmits<{
   (e: 'deleted', id: number): void
@@ -97,20 +96,6 @@ async function deleteMusic(): Promise<void> {
       <button class="btn btn--danger" type="button" :disabled="busy" @click="deleteMusic">Supprimer</button>
     </div>
   </article>
-  <button
-    v-if="authStore.estConnecte"
-    type="button"
-    class="icon-btn"
-    @click="showReviewModal = true"
-  >
-    💬
-  </button>
-  <ReviewModal
-    v-if="showReviewModal"
-    :music-id="music.id"
-    @close="showReviewModal = false"
-    @submitted="showReviewModal = false"
-  />
 </template>
 
 <style scoped>
