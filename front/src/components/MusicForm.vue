@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
-import { artistApi } from '@/api/artistApi'
-import { musicApi } from '@/api/musicApi'
-import { API_URL } from '@/api/httpClient'
-import type { Artist, MusicSearchResponse } from '@/types'
-import { useFlashStore } from '@/stores/flashStore'
+import {computed, onMounted, reactive, ref, watch} from 'vue'
+import {useRouter} from 'vue-router'
+import {artistApi} from '@/api/artistApi'
+import {musicApi} from '@/api/musicApi'
+import {API_URL} from '@/api/httpClient'
+import type {Artist, MusicSearchResponse} from '@/types'
+import {useFlashStore} from '@/stores/flashStore'
 
 const props = defineProps<{ id?: number }>()
 const router = useRouter()
@@ -22,8 +22,21 @@ function errorMessage(err: unknown, fallback: string): string {
 const form = reactive({
   title: '',
   spotifyTrackId: '',
-  selectedArtists: [] as Artist[]
-})
+  selectedArtists: [] as Artist[],
+  genre: [] as string[],
+  picture: '',
+  link: ''
+});
+
+const genreInput = computed({
+  get: () => form.genre.join(', '),
+  set: (val: string) => {
+    form.genre = val
+      .split(',')
+      .map(g => g.trim())
+      .filter(Boolean)
+  }
+});
 
 const artistQuery = ref('')
 const artistResults = ref<Artist[]>([])
@@ -44,6 +57,9 @@ function resetForm() {
   form.title = ''
   form.spotifyTrackId = ''
   form.selectedArtists = []
+  form.picture = ''
+  form.link = ''
+  form.genre = []
   artistQuery.value = ''
   artistResults.value = []
 }
@@ -76,7 +92,7 @@ watch(artistQuery, async (q) => {
 
   artistLoading.value = true
   try {
-    const res = await artistApi.search({ q: query, limit: 6, offset: 0 })
+    const res = await artistApi.search({q: query, limit: 6, offset: 0})
     artistResults.value = res.items ?? []
   } catch {
     artistResults.value = []
@@ -115,7 +131,7 @@ async function addNewArtist(name: string) {
   if (!n) return
 
   try {
-    const created = await artistApi.create({ name: n })
+    const created = await artistApi.create({name: n})
     const alreadySelected = form.selectedArtists.some(
       (a) => a.id === created.id || a.name.toLowerCase() === created.name.toLowerCase()
     )
@@ -128,21 +144,21 @@ async function addNewArtist(name: string) {
   }
 }
 
-async function onImportSpotify() {
-  const idOrUrl = form.spotifyTrackId.trim()
-  if (!idOrUrl || importing.value) return
-
-  importing.value = true
-  try {
-    const imported = await musicApi.importFromSpotify(idOrUrl)
-    flash.success('Musique ajoutée.')
-    await router.push({ name: 'musicDetail', params: { id: imported.id } })
-  } catch (err) {
-    flash.error(errorMessage(err, 'Action impossible.'))
-  } finally {
-    importing.value = false
-  }
-}
+// async function onImportSpotify() {
+//   const idOrUrl = form.spotifyTrackId.trim()
+//   if (!idOrUrl || importing.value) return
+//
+//   importing.value = true
+//   try {
+//     const imported = await musicApi.importFromSpotify(idOrUrl)
+//     flash.success('Musique ajoutée.')
+//     await router.push({ name: 'musicDetail', params: { id: imported.id } })
+//   } catch (err) {
+//     flash.error(errorMessage(err, 'Action impossible.'))
+//   } finally {
+//     importing.value = false
+//   }
+// }
 
 async function saveMusic() {
   const title = form.title.trim()
@@ -177,7 +193,7 @@ async function saveMusic() {
         continue
       }
 
-      const created = await artistApi.create({ name: artist.name })
+      const created = await artistApi.create({name: artist.name})
       form.selectedArtists[i] = created
       dbArtistIds.push(created.id)
     }
@@ -186,15 +202,15 @@ async function saveMusic() {
     const artistIris = dbArtistIds.map((id) => `${basePath}artists/${id}`.replace(/([^:])\/\/+/g, '$1/'))
 
     if (isEdit.value && props.id) {
-      const updated = await musicApi.patch(props.id, { title, artists: artistIris })
+      const updated = await musicApi.patch(props.id, {title, artists: artistIris})
       flash.success('Enregistré.')
-      await router.push({ name: 'musicDetail', params: { id: updated.id } })
+      await router.push({name: 'musicDetail', params: {id: updated.id}})
       return
     }
 
     let searchResults: MusicSearchResponse | null = null
     try {
-      searchResults = await musicApi.search({ q: title, limit: 20, offset: 0, market: 'FR' })
+      searchResults = await musicApi.search({q: title, limit: 20, offset: 0, market: 'FR'})
     } catch {
       searchResults = null
     }
@@ -231,12 +247,18 @@ async function saveMusic() {
         const imported = await musicApi.importFromSpotify(spotifyMatch.spotify.id)
         flash.success('Musique ajoutée.')
         resetForm()
-        await router.push({ name: 'musicDetail', params: { id: imported.id } })
+        await router.push({name: 'musicDetail', params: {id: imported.id}})
         return
       }
     }
 
-    await musicApi.create({ title, artists: artistIris })
+    await musicApi.create({
+      title,
+      artists: artistIris,
+      picture: form.picture || null,
+      link: form.link || null,
+      genre: form.genre.length ? form.genre : null
+    })
     flash.success('Musique créée.')
     resetForm()
   } catch (err) {
@@ -256,7 +278,7 @@ watch(
     }
     resetForm()
   },
-  { immediate: true }
+  {immediate: true}
 )
 
 function goBack() {
@@ -274,29 +296,29 @@ function goBack() {
         </div>
       </header>
 
-      <div class="divider" />
+      <div class="divider"/>
 
       <form class="form" @submit.prevent="saveMusic">
         <div v-if="loadingExisting" class="loading">
-          <div class="skeleton" />
-          <div class="skeleton" />
-          <div class="skeleton" />
+          <div class="skeleton"/>
+          <div class="skeleton"/>
+          <div class="skeleton"/>
         </div>
 
         <template v-else>
-          <div v-if="!isEdit" class="field">
-            <label class="label">Spotify</label>
-            <div class="row">
-              <input v-model="form.spotifyTrackId" class="input" type="text" placeholder="ID ou URL" />
-              <button class="btn btn--primary" type="button" :disabled="importing || !form.spotifyTrackId.trim()" @click="onImportSpotify">
-                {{ importing ? '…' : 'Importer' }}
-              </button>
-            </div>
-          </div>
+          <!--          <div v-if="!isEdit" class="field">-->
+          <!--            <label class="label">Spotify</label>-->
+          <!--            <div class="row">-->
+          <!--              <input v-model="form.spotifyTrackId" class="input" type="text" placeholder="ID ou URL" />-->
+          <!--              <button class="btn btn&#45;&#45;primary" type="button" :disabled="importing || !form.spotifyTrackId.trim()" @click="onImportSpotify">-->
+          <!--                {{ importing ? '…' : 'Importer' }}-->
+          <!--              </button>-->
+          <!--            </div>-->
+          <!--          </div>-->
 
           <div class="field">
             <label class="label">Titre</label>
-            <input v-model="form.title" class="input" type="text" placeholder="Titre" />
+            <input v-model="form.title" class="input" type="text" placeholder="Titre"/>
           </div>
 
           <div class="field artistField">
@@ -317,8 +339,14 @@ function goBack() {
             </div>
 
             <div class="search">
-              <input v-model="artistQuery" class="input" type="text" placeholder="Rechercher…" />
-              <span v-if="artistLoading" class="spinner" aria-hidden="true" />
+              <input
+                v-model="artistQuery"
+                class="input"
+                type="text"
+                placeholder="Rechercher ou écrire un artiste…"
+                @keydown.enter.prevent="addNewArtist(artistQuery)"
+              />
+              <span v-if="artistLoading" class="spinner" aria-hidden="true"/>
             </div>
 
             <div v-if="artistResults.length" class="results">
@@ -333,21 +361,45 @@ function goBack() {
               </button>
             </div>
 
-            <button
-              v-else-if="artistQuery.trim()"
-              class="btn btn--ghost btn--sm"
-              type="button"
-              @click="addNewArtist(artistQuery)"
-            >
-              Créer « {{ artistQuery.trim() }} »
-            </button>
+            <div v-else-if="artistQuery.trim()" class="create-artist">
+              <button
+                class="btn btn--ghost btn--sm"
+                type="button"
+                @click="addNewArtist(artistQuery)"
+              >
+                Créer « {{ artistQuery.trim() }} »
+              </button>
+            </div>
           </div>
+
+          <div class="field">
+            <label class="label">Image URL</label>
+            <input v-model="form.picture" class="input" type="url" placeholder="https://…"/>
+          </div>
+
+          <div class="field">
+            <label class="label">Lien externe</label>
+            <input v-model="form.link" class="input" type="url" placeholder="https://…"/>
+          </div>
+
+          <div class="field">
+            <label class="label">Genres (séparés par des virgules)</label>
+            <input
+              v-model="genreInput"
+              class="input"
+              type="text"
+              placeholder="Rock, Pop, Indie"
+            />
+          </div>
+
 
           <div class="actions">
             <button class="btn btn--primary" type="submit" :disabled="importing">
               {{ isEdit ? 'Enregistrer' : 'Créer' }}
             </button>
-            <button class="btn btn--ghost" type="button" :disabled="importing" @click="goBack">Annuler</button>
+            <button class="btn btn--ghost" type="button" :disabled="importing" @click="goBack">
+              Annuler
+            </button>
           </div>
         </template>
       </form>

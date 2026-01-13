@@ -2,16 +2,18 @@
 
 namespace App\State;
 
+
+use ApiPlatform\Doctrine\Common\State\PersistProcessor;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\Entity\Music;
 use Symfony\Bundle\SecurityBundle\Security;
 
-class MusicProcessor
+class MusicProcessor implements ProcessorInterface
 {
     public function __construct(
-        private ProcessorInterface $persistProcessor,
-        private Security           $security
+        private PersistProcessor $persistProcessor,
+        private Security         $security
     )
     {
     }
@@ -24,9 +26,11 @@ class MusicProcessor
             } else {
                 $data->setIsValidated(true);
             }
+            if ($data->getPopularity() === null) {
+                $data->setPopularity(100);
+            }
         }
-
         return $this->persistProcessor->process($data, $operation, $uriVariables, $context);
     }
-
 }
+

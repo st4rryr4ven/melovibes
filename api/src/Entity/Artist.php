@@ -42,6 +42,10 @@ use Symfony\Component\Serializer\Attribute\Groups;
             deserialize: false,
             validate: false,
         ),
+        new Post(
+            normalizationContext: ['groups' => ['artist:read']],
+            denormalizationContext: ['groups' => ['artist:write']]
+        ),
         new Get(
             uriTemplate: '/artist/{artistId}/music',
             requirements: ['artistId' => '\\d+'],
@@ -77,7 +81,7 @@ class Artist
     private ?string $spotifyId = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['artist:read', 'music:read'])]
+    #[Groups(['artist:read', 'music:read', 'artist:write'])]
     private ?string $name = null;
 
     /**

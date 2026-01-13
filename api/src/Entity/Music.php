@@ -140,7 +140,7 @@ class Music
     #[ORM\Column(nullable: true)]
     private ?array $requestJSON = null;
 
-    #[ORM\Column]
+    #[ORM\Column(nullable: true)]
     #[Groups(['music:read', 'music:lite', 'serialization:music:create'])]
     private ?int $popularity = null;
 
