@@ -2,15 +2,15 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Doctrine\Orm\Filter\BooleanFilter;
 use ApiPlatform\Metadata\ApiFilter;
-use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\ApiProperty;
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
-use ApiPlatform\Metadata\Post;
 use ApiPlatform\Metadata\Patch;
-use ApiPlatform\Metadata\Delete;
-use ApiPlatform\Doctrine\Orm\Filter\BooleanFilter;
+use ApiPlatform\Metadata\Post;
 use App\Api\Action\AlbumTracksAction;
 use App\Api\Action\MusicImportSpotifyTrackAction;
 use App\Api\Action\MusicNewReleasesAction;
@@ -86,10 +86,11 @@ class Music
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['music:read'])]
+    #[Groups(['music:read', 'music:lite'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 64, unique: true, nullable: true)]
+    #[Groups(['music:read', 'music:lite'])]
     private ?string $spotifyId = null;
 
     #[ORM\Column(length: 64, nullable: true)]
@@ -101,7 +102,7 @@ class Music
     #[ORM\Column(length: 255)]
     #[Assert\NotNull]
     #[Assert\NotBlank(message: 'La musique doit avoir un titre.', groups: ['validation:music:create', 'validation:music:update'])]
-    #[Groups(['music:read', 'serialization:music:create', 'serialization:music:update'])]
+    #[Groups(['music:read', 'music:lite', 'serialization:music:create', 'serialization:music:update'])]
     private ?string $title = null;
 
     /**
@@ -111,7 +112,7 @@ class Music
     #[Assert\NotNull(groups: ['validation:music:create', 'validation:music:update'])]
     #[Assert\Count(min: 1, minMessage: 'Une musique doit avoir au moins un artiste.', groups: ['validation:music:create', 'validation:music:update'])]
     #[Groups(['music:read', 'serialization:music:create', 'serialization:music:update'])]
-    #[ApiProperty(readableLink: false)]
+    #[ApiProperty(readableLink: true)]
     private Collection $artists;
 
     #[ORM\Column(nullable: true)]
@@ -120,12 +121,12 @@ class Music
     private ?array $genre = null;
 
     #[ORM\Column(length: 255, nullable: true)]
-    #[Groups(['music:read', 'serialization:music:create', 'serialization:music:update'])]
+    #[Groups(['music:read', 'music:lite', 'serialization:music:create', 'serialization:music:update'])]
     private ?string $picture = null;
 
     #[ORM\Column(length: 255, nullable: true)]
     #[Assert\Url(groups: ['validation:music:create', 'validation:music:update'])]
-    #[Groups(['music:read', 'serialization:music:create', 'serialization:music:update'])]
+    #[Groups(['music:read', 'music:lite', 'serialization:music:create', 'serialization:music:update'])]
     private ?string $link = null;
 
     #[ORM\Column]
@@ -140,7 +141,7 @@ class Music
     private ?array $requestJSON = null;
 
     #[ORM\Column]
-    #[Groups(['music:read', 'serialization:music:create'])]
+    #[Groups(['music:read', 'music:lite', 'serialization:music:create'])]
     private ?int $popularity = null;
 
     /**
@@ -148,6 +149,7 @@ class Music
      */
     #[ORM\OneToMany(targetEntity: Review::class, mappedBy: 'music')]
     #[Groups(['music:read'])]
+    #[ApiProperty(readableLink: true)]
     private Collection $reviews;
 
     public function __construct()
@@ -256,7 +258,7 @@ class Music
         return $this;
     }
 
-    public function isValidated(): ?bool
+    public function getIsValidated(): ?bool
     {
         return $this->isValidated;
     }

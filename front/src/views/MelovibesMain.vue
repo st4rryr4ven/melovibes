@@ -5,11 +5,13 @@ import MusicSearchBar from '@/components/MusicSearchBar.vue'
 import MusicList from '@/components/MusicList.vue'
 import AlbumList from '@/components/AlbumList.vue'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
-import { searchMusic, importSpotifyTrack } from '@/api/musicApi'
-import { getAlbumNewReleases } from '@/api/albumApi'
-import type { AlbumUiItem, MusicSearchItem, MusicUiItem, SpotifyTrack } from '@/types'
+import { musicApi } from '@/api/musicApi'
+import { albumApi } from '@/api/albumApi'
+import type { MusicSearchItem, NewReleaseAlbumItem } from '@/types'
+import { useFlashStore } from '@/stores/flashStore'
 
 const router = useRouter()
+const flash = useFlashStore()
 
 const query = ref('')
 const debouncedQuery = useDebouncedRef(query, 300)
@@ -17,99 +19,51 @@ const isSearchOpen = computed(() => query.value.trim().length > 0)
 
 const albumsLoading = ref(false)
 const albumsError = ref<string | null>(null)
-const albums = ref<AlbumUiItem[]>([])
+const albums = ref<NewReleaseAlbumItem[]>([])
 
 const searchLoading = ref(false)
 const searchError = ref<string | null>(null)
-const searchItems = ref<MusicUiItem[]>([])
-const busyTrackKey = ref<string | null>(null)
+const searchItems = ref<MusicSearchItem[]>([])
+const busySpotifyId = ref<string | null>(null)
 
-function spotifyPicture(track: SpotifyTrack): string | null {
-  return track.album?.images?.[0]?.url ?? null
-}
-
-function spotifyArtistsLabel(track: SpotifyTrack): string {
-  const names = (track.artists ?? []).map((a: { name: never }) => a.name).filter(Boolean)
-  return names.join(', ') || 'Artiste inconnu'
-}
-
-function mapSearchItem(item: MusicSearchItem): MusicUiItem {
-  if (item.source === 'local') {
-    return {
-      key: `local-${item.local.musicId}`,
-      source: 'search-local',
-      musicId: item.local.musicId,
-      spotifyTrackId: item.local.spotifyId,
-      title: item.local.title,
-      artistsLabel: item.local.artists.map((a: { name: never }) => a.name).join(', ') || 'Artiste inconnu',
-      picture: item.local.picture,
-      link: item.local.link,
-      popularity: item.local.popularity,
-      isImported: true
-    }
-  }
-
-  return {
-    key: `spotify-${item.spotify.id}`,
-    source: 'search-spotify',
-    musicId: item.local.musicId,
-    spotifyTrackId: item.spotify.id,
-    title: item.spotify.name,
-    artistsLabel: spotifyArtistsLabel(item.spotify),
-    picture: spotifyPicture(item.spotify),
-    link: item.spotify.external_urls?.spotify ?? null,
-    isImported: item.local.isImported
-  }
+function errorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error && err.message) return err.message
+  if (typeof err === 'string' && err) return err
+  return fallback
 }
 
 async function loadAlbums() {
   albumsLoading.value = true
   albumsError.value = null
   try {
-    const res = await getAlbumNewReleases({ limit: 20, country: 'FR' })
-    albums.value = res.items.map((a) => ({
-      key: `album-${a.albumId}`,
-      albumId: a.albumId,
-      name: a.name,
-      artistsLabel: a.artists.map((x) => x.name).join(', ') || 'Artiste inconnu',
-      picture: a.picture,
-      releaseDate: a.releaseDate ?? null,
-      totalTracks: a.totalTracks ?? null,
-      link: a.link
-    }))
-  } catch (e: any) {
-    albumsError.value = e?.message ?? 'Erreur lors du chargement'
+    const res = await albumApi.getNewReleases({ limit: 20, country: 'FR' })
+    albums.value = res.items
+  } catch (e) {
+    albumsError.value = errorMessage(e, 'Erreur lors du chargement')
     albums.value = []
   } finally {
     albumsLoading.value = false
   }
 }
 
-let lastSearchId = 0
 async function loadSearch(q: string) {
-  const searchId = ++lastSearchId
   searchLoading.value = true
   searchError.value = null
   try {
-    const res = await searchMusic({ q, limit: 20, market: 'FR' })
-    if (searchId !== lastSearchId) return
-    searchItems.value = res.items.map(mapSearchItem)
-  } catch (e: any) {
-    if (searchId !== lastSearchId) return
-    searchError.value = e?.message ?? 'Erreur lors de la recherche'
+    const res = await musicApi.search({ q, limit: 20, market: 'FR' })
+    searchItems.value = res.items
+  } catch (e) {
+    searchError.value = errorMessage(e, 'Erreur lors de la recherche')
     searchItems.value = []
-  } finally {
-    if (searchId === lastSearchId) searchLoading.value = false
   }
 }
 
 function closeSearch() {
   query.value = ''
-  lastSearchId++
   searchLoading.value = false
   searchError.value = null
   searchItems.value = []
-  busyTrackKey.value = null
+  busySpotifyId.value = null
 }
 
 function onKeydown(e: KeyboardEvent) {
@@ -120,39 +74,48 @@ function goToMusicDetail(id: number) {
   router.push({ name: 'musicDetail', params: { id } })
 }
 
-async function onSelectTrack(item: MusicUiItem) {
-  if (busyTrackKey.value) return
+async function onSelectSearchTrack(item: MusicSearchItem) {
+  if (busySpotifyId.value) return
 
-  if (typeof item.musicId === 'number' && !Number.isNaN(item.musicId)) {
-    goToMusicDetail(item.musicId)
+  if (item.source === 'local') {
+    goToMusicDetail(item.local.musicId)
     return
   }
 
-  if (!item.spotifyTrackId) return
+  if (item.local?.isImported && typeof item.local.musicId === 'number') {
+    goToMusicDetail(item.local.musicId)
+    return
+  }
 
-  busyTrackKey.value = item.key
+  const spotifyId = item.spotify.id
+  busySpotifyId.value = spotifyId
   searchError.value = null
 
   try {
-    const imported = await importSpotifyTrack(item.spotifyTrackId, 'FR')
-    searchItems.value = searchItems.value.map((it: { key: never }) =>
-      it.key !== item.key
-        ? it
-        : {
-          ...it,
-          musicId: imported.musicId,
-          isImported: true
+    const imported = await musicApi.importFromSpotify(spotifyId)
+
+    searchItems.value = searchItems.value.map((it) => {
+      if (it.source !== 'spotify') return it
+      if (it.spotify.id !== spotifyId) return it
+      return {
+        ...it,
+        local: {
+          isImported: true,
+          musicId: imported.id
         }
-    )
-    goToMusicDetail(imported.musicId)
-  } catch (e: any) {
-    searchError.value = e?.message ?? "Erreur lors de l'import"
+      }
+    })
+
+    goToMusicDetail(imported.id)
+  } catch (e) {
+    searchError.value = errorMessage(e, "Erreur lors de l'import")
+    flash.error(searchError.value)
   } finally {
-    busyTrackKey.value = null
+    busySpotifyId.value = null
   }
 }
 
-function onSelectAlbum(item: AlbumUiItem) {
+function onSelectAlbum(item: NewReleaseAlbumItem) {
   router.push({ name: 'albumTracks', params: { albumId: item.albumId } })
 }
 
@@ -161,11 +124,10 @@ watch(
   async (q) => {
     const trimmed = q.trim()
     if (trimmed === '') {
-      lastSearchId++
       searchLoading.value = false
       searchError.value = null
       searchItems.value = []
-      busyTrackKey.value = null
+      busySpotifyId.value = null
       return
     }
     await loadSearch(trimmed)
@@ -184,32 +146,67 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="page">
-    <div class="top">
-      <MusicSearchBar
-        v-model="query"
-        :loading="isSearchOpen ? searchLoading : albumsLoading"
-        placeholder="Rechercher une musique..."
-        @submit="() => query.trim() && loadSearch(query.trim())"
-      />
-
-      <div class="title">
-        <h2>New Releases</h2>
+    <section class="hero card">
+      <div class="hero__row">
+        <div class="hero__text">
+          <h1 class="hero__title">Découvrir</h1>
+          <p class="hero__subtitle">Recherche et sélection de musiques.</p>
+        </div>
       </div>
-    </div>
 
-    <AlbumList :items="albums" @select="onSelectAlbum" />
+      <div class="hero__search">
+        <MusicSearchBar
+          v-model="query"
+          :loading="isSearchOpen ? searchLoading : albumsLoading"
+          placeholder="Rechercher une musique…"
+          @submit="() => query.trim() && loadSearch(query.trim())"
+        />
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section__head">
+        <h2 class="section__title">Nouveautés</h2>
+        <span v-if="albumsLoading" class="muted section__meta">Chargement…</span>
+      </div>
+
+      <div v-if="albumsError" class="panel notice notice--error">
+        <div class="notice__title">Chargement impossible</div>
+        <div class="notice__text">{{ albumsError }}</div>
+        <button class="btn btn--ghost" type="button" @click="loadAlbums">Réessayer</button>
+      </div>
+
+      <AlbumList :items="albums" @select="onSelectAlbum" />
+    </section>
 
     <div v-if="isSearchOpen" class="overlay" role="dialog" aria-modal="true">
       <div class="overlay__backdrop" @click="closeSearch"></div>
 
-      <div class="overlay__panel">
+      <div class="overlay__panel card">
         <div class="overlay__header">
-          <div class="overlay__title">Résultats pour "{{ query.trim() }}"</div>
-          <button type="button" class="overlay__close" @click="closeSearch">✕</button>
+          <div class="overlay__title">
+            Résultats — <span class="overlay__query">“{{ query.trim() }}”</span>
+          </div>
+          <button type="button" class="overlay__close" @click="closeSearch" aria-label="Fermer">✕</button>
         </div>
 
         <div class="overlay__content">
-          <MusicList :items="searchItems" :busy-key="busyTrackKey" @select="onSelectTrack" />
+          <div v-if="searchError" class="panel notice notice--error">
+            <div class="notice__title">Erreur</div>
+            <div class="notice__text">{{ searchError }}</div>
+          </div>
+
+          <div v-else-if="!searchLoading && searchItems.length === 0" class="panel notice">
+            <div class="notice__title">Aucun résultat</div>
+            <div class="notice__text">Aucune musique trouvée pour cette recherche.</div>
+          </div>
+
+          <MusicList
+            mode="search"
+            :items="searchItems"
+            :busy-spotify-id="busySpotifyId"
+            @select-search="onSelectSearchTrack"
+          />
         </div>
       </div>
     </div>
@@ -218,36 +215,107 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .page {
-  padding: 10px 0;
-}
-
-.top {
-  padding-bottom: 10px;
-}
-
-.title {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-bottom: 10px;
+  gap: 14px;
 }
 
-.hint {
+.hero {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: radial-gradient(900px 260px at 0% 0%, rgba(29, 185, 84, 0.16), transparent 55%),
+  linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
+}
+
+.hero__row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.hero__title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 950;
+  letter-spacing: 0.2px;
+}
+
+.hero__subtitle {
+  margin: 6px 0 0;
+  color: var(--c-text-mute);
+  font-size: 13px;
+}
+
+.hero__search {
+  width: 100%;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.section__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.section__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+}
+
+.section__meta {
+  font-size: 13px;
+}
+
+.muted {
+  color: var(--c-text-mute);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--c-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--c-text-soft);
   font-size: 12px;
-  opacity: 0.7;
 }
 
-.error {
-  padding: 10px 12px;
-  border: 1px solid #ef4444;
-  border-radius: 12px;
-  background: white;
-  margin-bottom: 12px;
+.chip--soft {
+  color: var(--c-text-mute);
 }
 
-.empty {
-  margin-top: 12px;
-  opacity: 0.7;
+.notice {
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.notice--error {
+  border-color: rgba(255, 77, 79, 0.35);
+  background: rgba(255, 77, 79, 0.12);
+}
+
+.notice__title {
+  font-weight: 900;
+  letter-spacing: 0.2px;
+}
+
+.notice__text {
+  color: var(--c-text-soft);
+  font-size: 14px;
 }
 
 .overlay {
@@ -262,44 +330,54 @@ onBeforeUnmount(() => {
 .overlay__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(15, 23, 42, 0.55);
+  background: rgba(0, 0, 0, 0.55);
 }
 
 .overlay__panel {
   position: relative;
-  width: min(880px, 100%);
+  width: min(900px, 100%);
   max-height: calc(100vh - 32px);
-  background: rgb(225, 240, 255);
-  border-radius: 16px;
-  border: 1px solid rgba(15, 23, 42, 0.12);
   overflow: hidden;
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.35);
 }
 
 .overlay__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 12px;
-  background: white;
-  border-bottom: 1px solid #e2e8f0;
+  gap: 10px;
+  padding: 12px;
+  border-bottom: 1px solid var(--c-border);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .overlay__title {
-  font-weight: 800;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+}
+
+.overlay__query {
+  color: rgba(29, 185, 84, 0.95);
 }
 
 .overlay__close {
-  border: 1px solid #e2e8f0;
-  background: white;
+  border: 1px solid var(--c-border);
+  background: rgba(255, 255, 255, 0.03);
   border-radius: 10px;
   padding: 6px 10px;
   cursor: pointer;
+  color: var(--c-text);
+}
+
+.overlay__close:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.14);
 }
 
 .overlay__content {
   padding: 12px;
   overflow: auto;
-  max-height: calc(100vh - 32px - 52px);
+  max-height: calc(100vh - 32px - 56px);
+  display: grid;
+  gap: 10px;
 }
 </style>

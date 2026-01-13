@@ -1,6 +1,6 @@
-import {defineStore} from 'pinia'
-import {apiStore} from '@/util/apiStore'
-import type {LoginResult, User} from '@/types'
+import { defineStore } from 'pinia'
+import type { LoginResult, UpdateUserPayload, User } from '@/types'
+import { userApi } from '@/api/userApi'
 
 const USER_STORAGE_KEY = 'melovibes_auth_user'
 
@@ -8,14 +8,28 @@ export const useStoreAuthentification = defineStore('auth', {
   state: () => ({
     estConnecte: false,
     utilisateurConnecte: null as User | null,
-    authStatus: 'unknown' as 'unknown' | 'authenticated' | 'guest',
+    authStatus: 'unknown' as 'unknown' | 'authenticated' | 'guest'
   }),
 
   getters: {
-    estAdmin: (state) => state.utilisateurConnecte?.roles?.includes('ROLE_ADMIN') ?? false,
+    estAdmin: (state) => state.utilisateurConnecte?.roles?.includes('ROLE_ADMIN') ?? false
   },
 
   actions: {
+    setAuthenticated(user: User): void {
+      this.utilisateurConnecte = user
+      this.estConnecte = true
+      this.authStatus = 'authenticated'
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user))
+    },
+
+    setGuest(): void {
+      this.utilisateurConnecte = null
+      this.estConnecte = false
+      this.authStatus = 'guest'
+      localStorage.removeItem(USER_STORAGE_KEY)
+    },
+
     async init(): Promise<void> {
       const stored = JSON.parse(localStorage.getItem(USER_STORAGE_KEY) || 'null') as User | null
 
@@ -28,74 +42,85 @@ export const useStoreAuthentification = defineStore('auth', {
       try {
         let me: User
         try {
-          me = await apiStore.me()
+          me = await userApi.me()
         } catch {
-          await apiStore.refresh()
-          me = await apiStore.me()
+          await userApi.refresh()
+          me = await userApi.me()
         }
-
-        this.utilisateurConnecte = me
-        this.estConnecte = true
-        this.authStatus = 'authenticated'
-        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(me))
+        this.setAuthenticated(me)
       } catch {
-        this.utilisateurConnecte = null
-        this.estConnecte = false
-        this.authStatus = 'guest'
-        localStorage.removeItem(USER_STORAGE_KEY)
+        this.setGuest()
       }
     },
 
     async login(login: string, password: string): Promise<LoginResult> {
       try {
-        await apiStore.login(login, password)
-        const me = await apiStore.me()
-        this.utilisateurConnecte = me
-        this.estConnecte = true
-        this.authStatus = 'authenticated'
-        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(me))
-        return {success: true}
+        await userApi.login(login, password)
+        const me = await userApi.me()
+        this.setAuthenticated(me)
+        return { success: true }
       } catch (err: any) {
-        this.utilisateurConnecte = null
-        this.estConnecte = false
-        this.authStatus = 'guest'
-        localStorage.removeItem(USER_STORAGE_KEY)
-        return {success: false, error: err.message}
+        this.setGuest()
+        return { success: false, error: err?.message ?? 'Connexion impossible' }
       }
     },
 
     async logout(): Promise<LoginResult> {
       try {
-        await apiStore.logout()
+        await userApi.logout()
+      } catch {
       } finally {
-        this.utilisateurConnecte = null
-        this.estConnecte = false
-        this.authStatus = 'guest'
-        localStorage.removeItem(USER_STORAGE_KEY)
+        this.setGuest()
       }
-      return {success: true}
+      return { success: true }
     },
 
     async register(login: string, email: string, password: string): Promise<LoginResult> {
       try {
-        await apiStore.register({login, email, password})
-        return {success: true}
+        await userApi.register({ login, email, password })
+        return { success: true }
       } catch (err: any) {
-        return {success: false, error: err.message}
+        return { success: false, error: err?.message ?? "Erreur lors de l'inscription" }
       }
     },
 
     async refresh(): Promise<LoginResult> {
       try {
-        await apiStore.refresh()
-        return {success: true}
+        await userApi.refresh()
+        const me = await userApi.me()
+        this.setAuthenticated(me)
+        return { success: true }
       } catch {
-        this.utilisateurConnecte = null
-        this.estConnecte = false
-        this.authStatus = 'guest'
-        localStorage.removeItem(USER_STORAGE_KEY)
-        return {success: false, error: 'Session expirée'}
+        this.setGuest()
+        return { success: false, error: 'Session expirée' }
       }
     },
-  },
+
+    async updateMyProfile(payload: UpdateUserPayload): Promise<LoginResult> {
+      const me = this.utilisateurConnecte
+      if (!me) return { success: false, error: 'Non authentifié' }
+
+      try {
+        await userApi.update(me.id, payload as unknown as Record<string, unknown>)
+        const refreshed = await userApi.me()
+        this.setAuthenticated(refreshed)
+        return { success: true }
+      } catch (err: any) {
+        return { success: false, error: err?.message ?? 'Erreur lors de la mise à jour' }
+      }
+    },
+
+    async deleteMyAccount(): Promise<LoginResult> {
+      const me = this.utilisateurConnecte
+      if (!me) return { success: false, error: 'Non authentifié' }
+
+      try {
+        await userApi.delete(me.id)
+        this.setGuest()
+        return { success: true }
+      } catch (err: any) {
+        return { success: false, error: err?.message ?? 'Erreur lors de la suppression' }
+      }
+    }
+  }
 })

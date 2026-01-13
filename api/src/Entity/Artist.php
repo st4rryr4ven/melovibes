@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
@@ -14,21 +15,17 @@ use App\Repository\ArtistRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
+use Symfony\Component\Serializer\Attribute\Groups;
 
 #[ORM\Entity(repositoryClass: ArtistRepository::class)]
 #[ORM\Table(name: 'artist')]
 #[ORM\UniqueConstraint(name: 'UNIQ_SPOTIFY_ID', columns: ['spotify_id'])]
-#[UniqueEntity(fields: ['spotify_id'], message: 'This spotifyId is already used.')]
+#[UniqueEntity(fields: ['spotifyId'], message: 'This spotifyId is already used.')]
 #[ApiResource(
     operations: [
-        new Get(
-//            security: "(is_granted('ROLE_USER') and object == user) or is_granted('ROLE_ADMIN')"
-        ),
-        new GetCollection(
-            security: "is_granted('ROLE_ADMIN')"
-        ),
+        new Get(),
+        new GetCollection(security: "is_granted('ROLE_ADMIN')"),
         new GetCollection(
             uriTemplate: '/artist/search',
             controller: ArtistSearchAction::class,
@@ -62,6 +59,7 @@ use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
             deserialize: false,
         ),
     ],
+    normalizationContext: ['groups' => ['artist:read', 'music:lite']]
 )]
 class Artist
 {
@@ -75,10 +73,11 @@ class Artist
      * Spotify identifier when the record comes from Spotify.
      */
     #[ORM\Column(length: 64, unique: true, nullable: true)]
+    #[Groups(['artist:read', 'music:read'])]
     private ?string $spotifyId = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['artist:read'])]
+    #[Groups(['artist:read', 'music:read'])]
     private ?string $name = null;
 
     /**
@@ -86,6 +85,8 @@ class Artist
      * @var Collection<int, Music>
      */
     #[ORM\ManyToMany(targetEntity: Music::class, mappedBy: 'artists')]
+    #[Groups(['artist:read'])]
+    #[ApiProperty(readableLink: true)]
     private Collection $music;
 
     public function __construct()
@@ -106,7 +107,6 @@ class Artist
     public function setSpotifyId(?string $spotifyId): static
     {
         $this->spotifyId = $spotifyId;
-
         return $this;
     }
 
@@ -118,7 +118,6 @@ class Artist
     public function setName(string $name): static
     {
         $this->name = $name;
-
         return $this;
     }
 
