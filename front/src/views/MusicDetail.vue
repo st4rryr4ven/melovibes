@@ -311,7 +311,7 @@ async function deleteMusic(): Promise<void> {
           </div>
 
           <button v-if="authStore.estConnecte" class="btn btn--primary" type="button" @click="openReviewModal">Donner un avis</button>
-          <RouterLink v-else :to="{name: 'login'}">Connecte-vous pour donner votre avis</RouterLink>
+          <RouterLink v-else :to="{name: 'login'}">Connectez-vous pour donner votre avis</RouterLink>
         </header>
 
         <div class="reviews__body">
