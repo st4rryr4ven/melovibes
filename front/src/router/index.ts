@@ -2,16 +2,16 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useStoreAuthentification } from '@/stores/storeAuthentification'
 
 import Melovibes from '@/views/MelovibesMain.vue'
-import AllUsers from '@/views/AllUsers.vue'
-import SingleUser from '@/views/SingleUser.vue'
-import AllMusic from '@/views/AllMusic.vue'
-import MusicDetail from '@/views/MusicDetail.vue'
+import AllUsers from '@/views/user/AllUsers.vue'
+import SingleUser from '@/views/user/SingleUser.vue'
+import AllMusic from '@/views/music/AllMusic.vue'
+import MusicDetail from '@/views/music/MusicDetail.vue'
 import AlbumTracks from '@/views/AlbumTracks.vue'
-import Login from '@/views/Login.vue'
-import Register from '@/views/Register.vue'
-import Profile from '@/views/Profile.vue'
-import MusicEdit from "@/views/MusicEdit.vue";
-import MusicCreate from "@/views/MusicCreate.vue";
+import Login from '@/views/user/Login.vue'
+import Register from '@/views/user/Register.vue'
+import Profile from '@/views/user/Profile.vue'
+import MusicEdit from "@/views/music/MusicEdit.vue";
+import MusicCreate from "@/views/music/MusicCreate.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),

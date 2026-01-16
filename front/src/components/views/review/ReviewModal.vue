@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { reviewApi } from '@/api/reviewApi'
-import { useFlashStore } from '@/stores/flashStore'
-import type { Review } from '@/types'
+import {computed, ref, watch} from 'vue'
+import {reviewApi} from '@/api/reviewApi.ts'
+import {useFlashStore} from '@/stores/flashStore.ts'
+import type {Review} from '@/types.ts'
 
-const props = defineProps<{ musicId: number }>()
+const props = defineProps<{
+  musicId: number
+  review?: Review
+}>()
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -17,14 +20,25 @@ const rating = ref<number>(0)
 const comment = ref<string>('')
 const loading = ref(false)
 
-const canSubmit = computed(() => rating.value >= 1 && rating.value <= 5 && !loading.value)
+const canSubmit = computed(() =>
+  rating.value >= 1 && rating.value <= 5 && !loading.value
+)
 
+/**
+ * Prefill when editing OR reset when creating / music changes
+ */
 watch(
-  () => props.musicId,
+  () => [props.musicId, props.review],
   () => {
-    rating.value = 0
-    comment.value = ''
-  }
+    if (props.review) {
+      rating.value = props.review.rating
+      comment.value = props.review.comment ?? ''
+    } else {
+      rating.value = 0
+      comment.value = ''
+    }
+  },
+  {immediate: true}
 )
 
 async function submit(): Promise<void> {
@@ -32,15 +46,32 @@ async function submit(): Promise<void> {
 
   try {
     loading.value = true
-    const created = await reviewApi.createForMusicId({
-      musicId: props.musicId,
-      rating: rating.value,
-      comment: comment.value.trim()
-    })
-    flash.success('Avis envoyé.')
-    emit('submitted', created)
+
+    let result: Review
+
+    if (props.review) {
+      // ✏️ EDIT
+      result = await reviewApi.patch(props.review.id, {
+        rating: rating.value,
+        comment: comment.value.trim() || null
+      })
+      flash.success('Avis modifié.')
+    } else {
+      // ➕ CREATE
+      result = await reviewApi.createForMusicId({
+        musicId: props.musicId,
+        rating: rating.value,
+        comment: comment.value.trim()
+      })
+      flash.success('Avis envoyé.')
+    }
+
+    emit('submitted', result)
   } catch (e) {
-    const msg = e instanceof Error && e.message ? e.message : 'Erreur lors de l’envoi de l’avis.'
+    const msg =
+      e instanceof Error && e.message
+        ? e.message
+        : 'Erreur lors de l’envoi de l’avis.'
     flash.error(msg)
   } finally {
     loading.value = false
@@ -63,11 +94,22 @@ function setRating(v: number): void {
     <div class="modal card">
       <header class="head">
         <div>
-          <div class="title">Donner votre avis</div>
-          <div class="muted">Notez la musique et ajoutez un commentaire (optionnel).</div>
+          <div class="title">
+            {{ review ? 'Modifier votre avis' : 'Donner votre avis' }}
+          </div>
+          <div class="muted">
+            Notez la musique et ajoutez un commentaire (optionnel).
+          </div>
         </div>
 
-        <button class="btn btn--ghost" type="button" :disabled="loading" @click="close">✕</button>
+        <button
+          class="btn btn--ghost"
+          type="button"
+          :disabled="loading"
+          @click="close"
+        >
+          ✕
+        </button>
       </header>
 
       <div class="body">
@@ -85,14 +127,40 @@ function setRating(v: number): void {
           </button>
         </div>
 
-        <textarea v-model="comment" class="input textarea" :disabled="loading" placeholder="Votre commentaire…" />
+        <textarea
+          v-model="comment"
+          class="input textarea"
+          :disabled="loading"
+          placeholder="Votre commentaire…"
+        />
       </div>
 
       <footer class="foot">
-        <button class="btn btn--ghost" type="button" :disabled="loading" @click="close">Annuler</button>
-        <button class="btn btn--primary" type="button" :disabled="!canSubmit" @click="submit">
-          <span v-if="loading" class="spinner" aria-hidden="true" />
-          <span>{{ loading ? 'Envoi…' : 'Envoyer' }}</span>
+        <button
+          class="btn btn--ghost"
+          type="button"
+          :disabled="loading"
+          @click="close"
+        >
+          Annuler
+        </button>
+
+        <button
+          class="btn btn--primary"
+          type="button"
+          :disabled="!canSubmit"
+          @click="submit"
+        >
+          <span v-if="loading" class="spinner" aria-hidden="true"/>
+          <span>
+            {{
+              loading
+                ? 'Envoi…'
+                : review
+                  ? 'Modifier'
+                  : 'Envoyer'
+            }}
+          </span>
         </button>
       </footer>
     </div>

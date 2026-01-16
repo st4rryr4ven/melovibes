@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { NewReleaseAlbumItem } from '@/types'
+import type { NewReleaseAlbumItem } from '@/types.ts'
 
 const props = withDefaults(
   defineProps<{

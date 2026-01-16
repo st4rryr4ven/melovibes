@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import type { Music } from '@/types'
-import { musicApi } from '@/api/musicApi'
-import { userApi } from '@/api/userApi'
-import { useStoreAuthentification } from '@/stores/storeAuthentification'
-import { useFlashStore } from '@/stores/flashStore'
-import ReviewModal from '@/components/ReviewModal.vue'
-import ReviewList from '@/components/ReviewList.vue'
+import type { Music } from '@/types.ts'
+import { musicApi } from '@/api/musicApi.ts'
+import { userApi } from '@/api/userApi.ts'
+import { useStoreAuthentification } from '@/stores/storeAuthentification.ts'
+import { useFlashStore } from '@/stores/flashStore.ts'
+import ReviewModal from '@/components/views/review/ReviewModal.vue'
+import ReviewList from '@/components/views/review/ReviewList.vue'
 
 const props = defineProps<{ id: number }>()
 

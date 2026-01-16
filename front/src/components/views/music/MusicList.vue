@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import MusicCard from '@/components/MusicCard.vue'
-import type { AlbumTrackItem, MusicSearchItem } from '@/types'
-import { useStoreAuthentification } from '@/stores/storeAuthentification'
+import MusicCard from '@/components/views/music/MusicCard.vue'
+import type { AlbumTrackItem, MusicSearchItem } from '@/types.ts'
+import { useStoreAuthentification } from '@/stores/storeAuthentification.ts'
 
 type Props =
   | {

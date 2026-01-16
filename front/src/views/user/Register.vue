@@ -1,41 +1,60 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useStoreAuthentification } from '@/stores/storeAuthentification'
-import { useFlashStore } from '@/stores/flashStore'
+import { useStoreAuthentification } from '@/stores/storeAuthentification.ts'
+import { useFlashStore } from '@/stores/flashStore.ts'
 
 const authStore = useStoreAuthentification()
 const flash = useFlashStore()
 const router = useRouter()
 
-const connectingUser = ref({ login: '', password: '' })
+const form = ref({
+  login: '',
+  email: '',
+  password: '',
+  confirmPassword: ''
+})
+
 const loading = ref(false)
 
 const canSubmit = computed(() => {
-  return connectingUser.value.login.trim().length > 0 && connectingUser.value.password.length > 0
+  const loginOk = form.value.login.trim().length >= 3
+  const emailOk = form.value.email.trim().length > 3
+  const passOk = form.value.password.length >= 6
+  const match = form.value.password === form.value.confirmPassword
+  return loginOk && emailOk && passOk && match
 })
 
-async function connect(): Promise<void> {
-  const login = connectingUser.value.login.trim()
-  const password = connectingUser.value.password
+const passwordMismatch = computed(() => {
+  return form.value.confirmPassword.length > 0 && form.value.password !== form.value.confirmPassword
+})
 
-  if (!login || !password) {
-    flash.error('Connexion échouée.')
+function normalizeEmail(v: string): string {
+  return v.trim()
+}
+
+async function register(): Promise<void> {
+  const login = form.value.login.trim()
+  const email = normalizeEmail(form.value.email)
+  const password = form.value.password
+
+  if (!login || !email || !password || password !== form.value.confirmPassword) {
+    flash.error("Inscription échouée.")
     return
   }
 
   loading.value = true
 
   try {
-    const result = await authStore.login(login, password)
-    if (result.success) {
-      flash.success('Connexion effectuée.')
-      await router.push({ name: 'melovibes' })
+    const result = await authStore.register( login, email, password )
+    if (result?.success) {
+      flash.success('Compte créé.')
+      await router.push({ name: 'login' })
       return
     }
-    flash.error('Connexion échouée.')
+    flash.error("Inscription échouée.")
   } catch {
-    flash.error('Connexion échouée.')
+    flash.error("Inscription échouée.")
   } finally {
     loading.value = false
   }
@@ -50,23 +69,23 @@ async function connect(): Promise<void> {
         <div class="poster__shade" aria-hidden="true" />
         <div class="poster__content">
           <div class="poster__mark">M</div>
-          <div class="poster__title">Retrouve ta musique.</div>
+          <div class="poster__title">Créer un compte</div>
           <div class="poster__subtitle">
-            Garde tes favoris, partage tes découvertes, et publie tes avis.
+            Suis tes favoris, construis ta collection, et partage tes avis.
           </div>
 
           <div class="poster__bullets">
             <div class="bullet">
               <span class="bullet__dot" aria-hidden="true" />
-              <span>Accède à tes musiques favorites en un clic</span>
+              <span>Ajoute des musiques à ta collection</span>
             </div>
             <div class="bullet">
               <span class="bullet__dot" aria-hidden="true" />
-              <span>Partage tes découvertes avec les autres</span>
+              <span>Découvre les avis des autres</span>
             </div>
             <div class="bullet">
               <span class="bullet__dot" aria-hidden="true" />
-              <span>Écris des avis et retrouve ceux de la communauté</span>
+              <span>Partage tes coups de cœur</span>
             </div>
           </div>
         </div>
@@ -74,22 +93,36 @@ async function connect(): Promise<void> {
 
       <div class="form">
         <div class="form__head">
-          <h1 class="form__title">Connexion</h1>
+          <h1 class="form__title">Inscription</h1>
           <div class="form__meta muted">
-            Pas de compte ?
-            <RouterLink class="link" :to="{ name: 'register' }">Créer un compte</RouterLink>
+            Déjà un compte ?
+            <RouterLink class="link" :to="{ name: 'login' }">Se connecter</RouterLink>
           </div>
         </div>
 
-        <form class="form__body" @submit.prevent="connect">
+        <form class="form__body" @submit.prevent="register">
           <div class="field">
             <label class="label" for="login">Login</label>
             <input
               id="login"
-              v-model="connectingUser.login"
+              v-model="form.login"
               class="input"
               autocomplete="username"
               inputmode="text"
+              spellcheck="false"
+            />
+            <div class="hint muted">3 caractères minimum.</div>
+          </div>
+
+          <div class="field">
+            <label class="label" for="email">Email</label>
+            <input
+              id="email"
+              v-model="form.email"
+              class="input"
+              type="email"
+              autocomplete="email"
+              inputmode="email"
               spellcheck="false"
             />
           </div>
@@ -98,16 +131,31 @@ async function connect(): Promise<void> {
             <label class="label" for="password">Mot de passe</label>
             <input
               id="password"
-              v-model="connectingUser.password"
+              v-model="form.password"
               class="input"
               type="password"
-              autocomplete="current-password"
+              autocomplete="new-password"
             />
+            <div class="hint muted">6 caractères minimum.</div>
+          </div>
+
+          <div class="field">
+            <label class="label" for="confirmPassword">Confirmer</label>
+            <input
+              id="confirmPassword"
+              v-model="form.confirmPassword"
+              class="input"
+              type="password"
+              autocomplete="new-password"
+            />
+            <div v-if="passwordMismatch" class="hint hint--error" role="alert">
+              Les mots de passe ne correspondent pas.
+            </div>
           </div>
 
           <div class="actions">
             <button class="btn btn--primary" type="submit" :disabled="loading || !canSubmit">
-              {{ loading ? 'Connexion…' : 'Se connecter' }}
+              {{ loading ? 'Création…' : 'Créer mon compte' }}
             </button>
             <RouterLink class="btn btn--ghost" :to="{ name: 'melovibes' }">Retour</RouterLink>
           </div>
@@ -133,7 +181,7 @@ async function connect(): Promise<void> {
 
 .poster {
   position: relative;
-  min-height: 460px;
+  min-height: 520px;
   border-right: 1px solid var(--c-border);
   background: #0b121a;
 }
@@ -184,7 +232,7 @@ async function connect(): Promise<void> {
 .poster__subtitle {
   color: rgba(245, 248, 252, 0.74);
   font-weight: 650;
-  max-width: 42ch;
+  max-width: 44ch;
 }
 
 .poster__bullets {
@@ -254,6 +302,20 @@ async function connect(): Promise<void> {
   color: var(--c-text-soft);
 }
 
+.hint {
+  font-size: 12px;
+  color: var(--c-text-mute);
+  font-weight: 650;
+}
+
+.hint--error {
+  color: rgba(255, 245, 245, 0.92);
+  background: #3a1a1e;
+  border: 1px solid rgba(255, 77, 79, 0.45);
+  border-radius: 12px;
+  padding: 8px 10px;
+}
+
 .actions {
   display: flex;
   gap: 10px;
@@ -274,7 +336,7 @@ async function connect(): Promise<void> {
   .poster {
     border-right: none;
     border-bottom: 1px solid var(--c-border);
-    min-height: 220px;
+    min-height: 240px;
   }
 }
 </style>

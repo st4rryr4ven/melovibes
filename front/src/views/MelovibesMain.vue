@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import MusicSearchBar from '@/components/MusicSearchBar.vue'
-import MusicList from '@/components/MusicList.vue'
-import AlbumList from '@/components/AlbumList.vue'
+import MusicSearchBar from '@/components/views/music/MusicSearchBar.vue'
+import MusicList from '@/components/views/music/MusicList.vue'
+import AlbumList from '@/components/views/album/AlbumList.vue'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
 import { musicApi } from '@/api/musicApi'
 import { albumApi } from '@/api/albumApi'

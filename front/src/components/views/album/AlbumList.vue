@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import AlbumCard from '@/components/AlbumCard.vue'
-import type { NewReleaseAlbumItem } from '@/types'
+import AlbumCard from '@/components/views/album/AlbumCard.vue'
+import type { NewReleaseAlbumItem } from '@/types.ts'
 
 const props = withDefaults(
   defineProps<{

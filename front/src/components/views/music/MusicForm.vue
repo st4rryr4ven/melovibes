@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import {computed, onMounted, reactive, ref, watch} from 'vue'
 import {useRouter} from 'vue-router'
-import {artistApi} from '@/api/artistApi'
-import {musicApi} from '@/api/musicApi'
-import {API_URL} from '@/api/httpClient'
-import type {Artist, MusicSearchResponse} from '@/types'
-import {useFlashStore} from '@/stores/flashStore'
+import {artistApi} from '@/api/artistApi.ts'
+import {musicApi} from '@/api/musicApi.ts'
+import {API_URL} from '@/api/httpClient.ts'
+import type {Artist, MusicSearchResponse} from '@/types.ts'
+import {useFlashStore} from '@/stores/flashStore.ts'
 
 const props = defineProps<{ id?: number }>()
 const router = useRouter()

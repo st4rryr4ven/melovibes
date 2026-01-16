@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useStoreAuthentification } from '@/stores/storeAuthentification'
-import { getProfilePictureUrl } from '@/util/avatar'
-import { useFlashStore } from '@/stores/flashStore'
+import { useStoreAuthentification } from '@/stores/storeAuthentification.ts'
+import { getProfilePictureUrl } from '@/util/avatar.ts'
+import { useFlashStore } from '@/stores/flashStore.ts'
 
 const router = useRouter()
 const authStore = useStoreAuthentification()

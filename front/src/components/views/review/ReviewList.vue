@@ -1,10 +1,14 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import type { Review, User } from '@/types'
+import {computed} from 'vue'
+import type {Review, User} from '@/types.ts'
 
 const props = withDefaults(defineProps<{ reviews: Review[]; emptyText?: string }>(), {
   emptyText: 'Aucun avis pour le moment.'
-})
+});
+
+const emit = defineEmits<{
+  (e: 'edit', review: Review): void
+}>();
 
 function authorLabel(author: Review['author']): string {
   if (!author) return 'Utilisateur'
@@ -17,7 +21,7 @@ function formatDate(value?: string | null): string {
   if (!value) return ''
   const d = new Date(value)
   if (Number.isNaN(d.getTime())) return ''
-  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' })
+  return d.toLocaleDateString(undefined, {year: 'numeric', month: 'short', day: '2-digit'})
 }
 
 const sorted = computed(() => {
@@ -48,6 +52,14 @@ function stars(rating: number): string {
 
       <div v-if="r.comment" class="item__comment">{{ r.comment }}</div>
       <div v-else class="item__comment muted">(Sans commentaire)</div>
+
+      <button
+        class="btn btn--ghost btn--xs"
+        type="button"
+        @click="emit('edit', r)"
+      >
+        ✏️
+      </button>
     </article>
 
     <div v-if="!sorted.length" class="empty panel">
@@ -100,5 +112,11 @@ function stars(rating: number): string {
 
 .empty {
   padding: 12px;
+}
+
+.item__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 </style>
