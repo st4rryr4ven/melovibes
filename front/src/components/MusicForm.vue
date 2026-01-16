@@ -70,8 +70,13 @@ async function loadExistingMusic(): Promise<void> {
   loadingExisting.value = true
   try {
     const m = await musicApi.get(props.id)
+
     form.title = m.title ?? ''
     form.selectedArtists = [...(m.artists ?? [])]
+    form.picture = m.picture ?? ''
+    form.link = m.link ?? ''
+    form.genre = Array.isArray(m.genre) ? [...m.genre] : []
+
     form.spotifyTrackId = ''
     artistQuery.value = ''
     artistResults.value = []
@@ -82,6 +87,7 @@ async function loadExistingMusic(): Promise<void> {
     loadingExisting.value = false
   }
 }
+
 
 watch(artistQuery, async (q) => {
   const query = q.trim()
@@ -202,7 +208,13 @@ async function saveMusic() {
     const artistIris = dbArtistIds.map((id) => `${basePath}artists/${id}`.replace(/([^:])\/\/+/g, '$1/'))
 
     if (isEdit.value && props.id) {
-      const updated = await musicApi.patch(props.id, {title, artists: artistIris})
+      const updated = await musicApi.patch(props.id, {
+        title,
+        artists: artistIris,
+        picture: form.picture || null,
+        link: form.link || null,
+        genre: form.genre.length ? form.genre : null
+      })
       flash.success('Enregistré.')
       await router.push({name: 'musicDetail', params: {id: updated.id}})
       return
