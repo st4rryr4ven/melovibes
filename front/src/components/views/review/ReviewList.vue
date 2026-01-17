@@ -56,23 +56,18 @@ function stars(rating: number): string {
           <div v-if="r.createdAt" class="item__date muted">{{ formatDate(r.createdAt) }}</div>
         </div>
 
-        <div class="item__rating" :aria-label="`Note ${r.rating}/5`">{{ stars(r.rating) }}</div>
+        <div class="item__right-group">
+          <div class="item__rating" :aria-label="`Note ${r.rating}/5`">{{ stars(r.rating) }}</div>
 
-        <div v-if="editableReviewId === r.id" class="item__right">
-          <button
-            class="btn btn--ghost btn--sm"
-            type="button"
-            @click="emit('edit', r)"
-          >
-            Modifier
-          </button>
-          <button
-            class="btn btn--ghost btn--sm btn--danger"
-            type="button"
-            @click="emit('delete', r)"
-          >
-            Supprimer
-          </button>
+          <div v-if="editableReviewId === r.id" class="item__actions">
+            <button class="btn btn--ghost btn--sm" type="button" @click="emit('edit', r)">
+              Modifier
+            </button>
+            <button class="btn btn--ghost btn--sm btn--danger" type="button"
+                    @click="emit('delete', r)">
+              Supprimer
+            </button>
+          </div>
         </div>
       </header>
 
@@ -137,5 +132,23 @@ function stars(rating: number): string {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.item__right-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.item__actions {
+  display: flex;
+  gap: 6px;
+}
+
+.btn--sm {
+  padding: 4px 8px;
+  font-size: 11px;
+  height: auto;
 }
 </style>

@@ -77,19 +77,21 @@ async function loadMusic(): Promise<void> {
   error.value = null
 
   try {
-    const m = await musicApi.get(props.id)
-    if (blockIfNotValidatedForUser(m)) {
+    const rawMusic = await musicApi.get(props.id)
+
+    if (blockIfNotValidatedForUser(rawMusic)) {
       music.value = null
       error.value = 'Musique introuvable.'
-      router.replace({name: 'melovibes'})
+      await router.replace({name: 'melovibes'})
       return
     }
 
-    music.value = m
+    // USE THE NEW HELPER HERE
+    music.value = musicApi.enrichMusicData(rawMusic)
+
     await loadFavorite()
   } catch (e) {
-    const msg = errorMessage(e, 'Erreur lors du chargement')
-    error.value = msg
+    error.value = errorMessage(e, 'Erreur lors du chargement')
     music.value = null
   } finally {
     loading.value = false
@@ -136,9 +138,14 @@ async function toggleFavorite(): Promise<void> {
 const showReviewModal = ref(false)
 const editingReview = ref<Review | null>(null)
 
-const userReview = computed(() =>
-  reviews.value.find(r => r.author?.id === authStore.utilisateurConnecte?.id) ?? null
-)
+const userReview = computed(() => {
+  const userId = authStore.utilisateurConnecte?.id
+  const reviewsList = music.value?.reviews
+
+  if (!userId || !reviewsList) return null
+
+  return reviewsList.find(r => Number(r.author?.id) === Number(userId)) ?? null
+})
 
 function openReviewModal() {
   editingReview.value = null
@@ -346,14 +353,14 @@ async function deleteMusic(): Promise<void> {
           </button>
 
           <span v-else-if="!authStore.estConnecte">
-              <RouterLink :to="{ name: 'login' }">Connectez-vous pour donner votre avis</RouterLink>
+            <RouterLink :to="{ name: 'login' }">Connectez-vous pour donner votre avis</RouterLink>
           </span>
         </header>
 
         <div class="reviews__body">
           <ReviewList
             :reviews="reviews"
-            :editable-review-id="userReview?.id ?? null"
+            :editable-review-id="userReview?.id"
             @edit="openEditReview"
             @delete="handleReviewDelete"
           />
