@@ -1,17 +1,18 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
-import type { Music } from '@/types.ts'
-import { musicApi } from '@/api/musicApi.ts'
-import { useStoreAuthentification } from '@/stores/storeAuthentification.ts'
+import {computed, onMounted, ref, watch} from 'vue'
+import {useRouter} from 'vue-router'
+import type {Music} from '@/types.ts'
+import {musicApi} from '@/api/musicApi.ts'
+import {useStoreAuthentification} from '@/stores/storeAuthentification.ts'
 import MusicBox from "@/components/views/music/MusicBox.vue";
+import {userApi} from '@/api/userApi.ts'
 
 const authStore = useStoreAuthentification()
 const router = useRouter()
 
 const musics = ref<Music[]>([])
 const search = ref('')
-const status = ref<'all' | 'pending' | 'validated'>('all')
+const status = ref<'all' | 'pending' | 'validated' | 'favorites'>('all')
 const loading = ref(false)
 const error = ref<string | null>(null)
 
@@ -32,7 +33,7 @@ const counts = computed(() => {
   const total = musics.value.length
   const pending = musics.value.filter((m) => !m.isValidated).length
   const validated = total - pending
-  return { total, pending, validated }
+  return {total, pending, validated}
 })
 
 async function loadMusic(): Promise<void> {
@@ -40,12 +41,18 @@ async function loadMusic(): Promise<void> {
   error.value = null
 
   try {
-    const filters: Record<string, unknown> = {}
+    if (status.value === 'favorites') {
+      const userId = authStore.utilisateurConnecte?.id
+      if (!userId) throw new Error("Utilisateur non identifié")
 
-    if (status.value === 'pending') filters.isValidated = false
-    if (status.value === 'validated') filters.isValidated = true
+      musics.value = await userApi.getFavorites(userId)
+    } else {
+      const filters: Record<string, unknown> = {}
+      if (status.value === 'pending') filters.isValidated = false
+      if (status.value === 'validated') filters.isValidated = true
 
-    musics.value = await musicApi.list(filters)
+      musics.value = await musicApi.list(filters)
+    }
   } catch (e: any) {
     error.value = e?.message ?? 'Erreur lors du chargement'
     musics.value = []
@@ -56,18 +63,26 @@ async function loadMusic(): Promise<void> {
 
 function requireAdmin(): boolean {
   if (!authStore.estConnecte) {
-    router.replace({ name: 'login' })
+    router.replace({name: 'login'})
     return false
   }
   if (!authStore.estAdmin) {
-    router.replace({ name: 'melovibes' })
+    router.replace({name: 'melovibes'})
     return false
   }
   return true
 }
 
 onMounted(async () => {
-  if (!requireAdmin()) return
+  if (!authStore.estConnecte) {
+    await router.replace({name: 'login'})
+    return
+  }
+
+  if (!authStore.estAdmin) {
+    status.value = 'favorites'
+  }
+
   await loadMusic()
 })
 
@@ -99,28 +114,45 @@ function handleValidated() {
 
       <div class="head__right">
         <div class="seg">
-          <button class="seg__btn" type="button" :class="{ 'is-on': status === 'all' }" @click="status = 'all'">
-            Toutes
-          </button>
           <button
             class="seg__btn"
             type="button"
-            :class="{ 'is-on': status === 'pending' }"
-            @click="status = 'pending'"
+            :class="{ 'is-on': status === 'favorites' }"
+            @click="status = 'favorites'"
           >
-            En attente
+            ♥ Mes Favoris
           </button>
-          <button
-            class="seg__btn"
-            type="button"
-            :class="{ 'is-on': status === 'validated' }"
-            @click="status = 'validated'"
-          >
-            Validées
-          </button>
+
+          <template v-if="authStore.estAdmin">
+            <button
+              class="seg__btn"
+              type="button"
+              :class="{ 'is-on': status === 'all' }"
+              @click="status = 'all'"
+            >
+              Toutes
+            </button>
+            <button
+              class="seg__btn"
+              type="button"
+              :class="{ 'is-on': status === 'pending' }"
+              @click="status = 'pending'"
+            >
+              En attente
+            </button>
+            <button
+              class="seg__btn"
+              type="button"
+              :class="{ 'is-on': status === 'validated' }"
+              @click="status = 'validated'"
+            >
+              Validées
+            </button>
+          </template>
         </div>
 
-        <input v-model="search" class="input search" type="text" placeholder="Rechercher…" />
+        <input v-model="search" class="input search" type="text"
+               placeholder="Rechercher dans mes musiques…"/>
 
         <button class="btn btn--ghost" type="button" :disabled="loading" @click="loadMusic">
           Rafraîchir
@@ -130,8 +162,8 @@ function handleValidated() {
 
     <div v-if="loading" class="state card">
       <div class="muted">Chargement…</div>
-      <div class="skeleton" />
-      <div class="skeleton" />
+      <div class="skeleton"/>
+      <div class="skeleton"/>
     </div>
 
     <div v-else-if="error" class="state card errorBox">
@@ -265,8 +297,12 @@ function handleValidated() {
 }
 
 @keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 .errorBox {
