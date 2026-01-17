@@ -53,9 +53,9 @@ export const useStoreAuthentification = defineStore('auth', {
       }
     },
 
-    async login(login: string, password: string): Promise<LoginResult> {
+    async login(email: string, password: string): Promise<LoginResult> {
       try {
-        await userApi.login(login, password)
+        await userApi.login(email, password)
         const me = await userApi.me()
         this.setAuthenticated(me)
         return { success: true }

@@ -20,6 +20,12 @@ use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
+/**
+ * Application user entity.
+ *
+ * The user authenticates with an immutable email address.
+ * A public username (login) is used for display purposes and can be updated by the user.
+ */
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: 'user')]
 #[ORM\UniqueConstraint(name: 'UNIQ_LOGIN', columns: ['login'])]
@@ -53,15 +59,17 @@ use Symfony\Component\Validator\Constraints as Assert;
             denormalizationContext: ['groups' => ['serialization:user:update:favorites']],
             security: "is_granted('ROLE_USER') and object == user"
         ),
-        new Delete(security: "(is_granted('ROLE_USER') and object == user) or is_granted('ROLE_ADMIN')",
-        processor: UserProcessor::class)
+        new Delete(
+            security: "(is_granted('ROLE_USER') and object == user) or is_granted('ROLE_ADMIN')",
+            processor: UserProcessor::class
+        )
     ],
     normalizationContext: ['groups' => ['user:read', 'music:lite']],
 )]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     /**
-     * Unique identifier of the user
+     * Unique identifier of the user.
      */
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -70,49 +78,56 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?int $id = null;
 
     /**
-     * Unique username
+     * Public username displayed in the application.
      */
     #[ORM\Column(length: 30)]
-    #[Assert\NotBlank(groups: ['validation:user:create'])]
-    #[Assert\Length(min: 4, max: 30, groups: ['validation:user:create'])]
-    #[Groups(['user:read', 'serialization:user:create', 'music:read'])]
+    #[Assert\NotBlank(groups: ['validation:user:create', 'validation:user:update'])]
+    #[Assert\Length(min: 4, max: 30, groups: ['validation:user:create', 'validation:user:update'])]
+    #[Groups(['user:read', 'serialization:user:create', 'serialization:user:update', 'music:read'])]
     private ?string $login = null;
 
     /**
-     * Hashed password
+     * Hashed password.
      */
     #[ORM\Column]
     private string $password;
 
     /**
-     * Plain password (not persisted)
+     * Plain password used for hashing (not persisted).
      */
     #[Assert\NotBlank(message: 'Le mot de passe est obligatoire.', groups: ['validation:user:create'])]
     #[Assert\Length(min: 8, minMessage: "Le mot de passe doit contenir au moins 8 caractères.", groups: ['validation:user:create'])]
     #[Groups(['serialization:user:create', 'serialization:user:update'])]
     private ?string $plainPassword = null;
 
+    /**
+     * Current plain password used to authorize profile updates (not persisted).
+     */
     #[Assert\NotBlank(message: 'Le mot de passe est obligatoire pour faire les maj sur la compte.', groups: ['validation:user:update'])]
     #[Groups(['serialization:user:update'])]
     private ?string $currentPlainPassword = null;
 
     /**
-     * User email address
+     * Immutable email address used as the authentication identifier.
      */
     #[ORM\Column(length: 255)]
     #[Assert\NotBlank(groups: ['validation:user:create'])]
     #[Assert\Email(groups: ['validation:user:create', 'validation:user:update'])]
-    #[Groups(['user:read', 'serialization:user:create', 'serialization:user:update'])]
+    #[Groups(['user:read', 'serialization:user:create'])]
     private ?string $email = null;
 
     /**
-     * User roles
+     * User roles.
+     *
+     * @var array<int, string>
      */
     #[ORM\Column(type: 'json')]
     #[Groups(['user:read', 'serialization:user:update:admin', 'me:read'])]
     private array $roles = ['ROLE_USER'];
 
     /**
+     * Reviews authored by the user.
+     *
      * @var Collection<int, Review>
      */
     #[ORM\OneToMany(targetEntity: Review::class, mappedBy: 'author', orphanRemoval: true)]
@@ -120,103 +135,169 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ApiProperty(readableLink: true)]
     private Collection $reviews;
 
+    /**
+     * User favorite music.
+     *
+     * @var Collection<int, Music>
+     */
     #[ORM\ManyToMany(targetEntity: Music::class)]
     #[Groups(['user:read'])]
     #[ApiProperty(readableLink: true)]
     private Collection $favoriteMusic;
 
+    /**
+     * Create a new user instance.
+     */
     public function __construct()
     {
         $this->reviews = new ArrayCollection();
         $this->favoriteMusic = new ArrayCollection();
     }
 
+    /**
+     * Returns the unique identifier for authentication.
+     */
     public function getUserIdentifier(): string
     {
-        return $this->login;
+        return $this->email ?? $this->login ?? '';
     }
 
+    /**
+     * Returns the list of roles granted to the user.
+     *
+     * @return array<int, string>
+     */
     public function getRoles(): array
     {
         return array_unique(array_merge($this->roles, ['ROLE_USER']));
     }
 
+    /**
+     * Clears any transient sensitive data.
+     */
     public function eraseCredentials(): void
     {
         $this->plainPassword = null;
         $this->currentPlainPassword = null;
     }
 
+    /**
+     * Returns the database identifier.
+     */
     public function getId(): ?int
     {
         return $this->id;
     }
 
+    /**
+     * Returns the public username.
+     */
     public function getLogin(): string
     {
-        return $this->login;
+        return $this->login ?? '';
     }
 
+    /**
+     * Returns the hashed password.
+     */
     public function getPassword(): string
     {
         return $this->password;
     }
 
+    /**
+     * Returns the immutable email address.
+     */
     public function getEmail(): string
     {
-        return $this->email;
+        return $this->email ?? '';
     }
 
+    /**
+     * Returns the plain password (not persisted).
+     */
     public function getPlainPassword(): ?string
     {
         return $this->plainPassword;
     }
 
+    /**
+     * Sets the public username.
+     */
     public function setLogin(string $login): self
     {
         $this->login = $login;
+
         return $this;
     }
 
+    /**
+     * Sets the immutable email address.
+     */
     public function setEmail(string $email): static
     {
         $this->email = $email;
+
         return $this;
     }
 
+    /**
+     * Sets the hashed password.
+     */
     public function setPassword(string $password): self
     {
         $this->password = $password;
+
         return $this;
     }
 
+    /**
+     * Replaces the user roles.
+     *
+     * @param array<int, string> $roles
+     */
     public function setRoles(array $roles): self
     {
         $this->roles = $roles;
+
         return $this;
     }
 
+    /**
+     * Sets the plain password (not persisted).
+     */
     public function setPlainPassword(string $plainPassword): self
     {
         $this->plainPassword = $plainPassword;
+
         return $this;
     }
 
+    /**
+     * Adds a role to the user.
+     */
     public function addRole(string $role): self
     {
         if (!in_array($role, $this->roles, true)) {
             $this->roles[] = $role;
         }
-        return $this;
-    }
 
-    public function removeRole(string $role): self
-    {
-        $this->roles = array_values(array_filter($this->roles, fn($r) => $r !== $role));
         return $this;
     }
 
     /**
+     * Removes a role from the user.
+     */
+    public function removeRole(string $role): self
+    {
+        $this->roles = array_values(array_filter($this->roles, static fn ($r) => $r !== $role));
+
+        return $this;
+    }
+
+    /**
+     * Returns the reviews authored by the user.
+     *
      * @return Collection<int, Review>
      */
     public function getReviews(): Collection
@@ -224,6 +305,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->reviews;
     }
 
+    /**
+     * Adds a review authored by the user.
+     */
     public function addReview(Review $review): static
     {
         if (!$this->reviews->contains($review)) {
@@ -234,6 +318,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
+    /**
+     * Removes a review authored by the user.
+     */
     public function removeReview(Review $review): static
     {
         if ($this->reviews->removeElement($review)) {
@@ -245,18 +332,27 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
+    /**
+     * Returns the current plain password (not persisted).
+     */
     public function getCurrentPlainPassword(): ?string
     {
         return $this->currentPlainPassword;
     }
 
+    /**
+     * Sets the current plain password (not persisted).
+     */
     public function setCurrentPlainPassword(?string $currentPlainPassword): self
     {
         $this->currentPlainPassword = $currentPlainPassword;
+
         return $this;
     }
 
     /**
+     * Returns the user's favorite music.
+     *
      * @return Collection<int, Music>
      */
     public function getFavoriteMusic(): Collection
@@ -264,17 +360,25 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->favoriteMusic;
     }
 
+    /**
+     * Adds a music to the user's favorites.
+     */
     public function addFavoriteMusic(Music $music): self
     {
         if (!$this->favoriteMusic->contains($music)) {
             $this->favoriteMusic->add($music);
         }
+
         return $this;
     }
 
+    /**
+     * Removes a music from the user's favorites.
+     */
     public function removeFavoriteMusic(Music $music): self
     {
         $this->favoriteMusic->removeElement($music);
+
         return $this;
     }
 }
