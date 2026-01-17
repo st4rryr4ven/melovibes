@@ -53,7 +53,8 @@ use Symfony\Component\Validator\Constraints as Assert;
             denormalizationContext: ['groups' => ['serialization:user:update:favorites']],
             security: "is_granted('ROLE_USER') and object == user"
         ),
-        new Delete(security: "(is_granted('ROLE_USER') and object == user) or is_granted('ROLE_ADMIN')"),
+        new Delete(security: "(is_granted('ROLE_USER') and object == user) or is_granted('ROLE_ADMIN')",
+        processor: UserProcessor::class)
     ],
     normalizationContext: ['groups' => ['user:read', 'music:lite']],
 )]
