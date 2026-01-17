@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { useStoreAuthentification } from '@/stores/storeAuthentification.ts'
-import { useFlashStore } from '@/stores/flashStore.ts'
+import {computed, ref} from 'vue'
+import {useRouter} from 'vue-router'
+import {useStoreAuthentification} from '@/stores/storeAuthentification.ts'
+import {useFlashStore} from '@/stores/flashStore.ts'
 
 const authStore = useStoreAuthentification()
 const flash = useFlashStore()
 const router = useRouter()
 
-const connectingUser = ref({ email: '', password: '' })
+const connectingUser = ref({email: '', password: ''})
 const loading = ref(false)
 
 const canSubmit = computed(() => {
@@ -30,7 +30,7 @@ async function connect(): Promise<void> {
     const result = await authStore.login(email, password)
     if (result.success) {
       flash.success('Connexion effectuée.')
-      await router.push({ name: 'melovibes' })
+      await router.push({name: 'melovibes'})
       return
     }
     const errorMsg = result.error || 'Connexion échouée.'
@@ -56,8 +56,8 @@ async function connect(): Promise<void> {
   <div class="page">
     <section class="card shell">
       <div class="poster">
-        <div class="poster__bg" aria-hidden="true" />
-        <div class="poster__shade" aria-hidden="true" />
+        <div class="poster__bg" aria-hidden="true"/>
+        <div class="poster__shade" aria-hidden="true"/>
         <div class="poster__content">
           <div class="poster__mark">M</div>
           <div class="poster__title">Retrouve ta musique.</div>
@@ -67,15 +67,15 @@ async function connect(): Promise<void> {
 
           <div class="poster__bullets">
             <div class="bullet">
-              <span class="bullet__dot" aria-hidden="true" />
+              <span class="bullet__dot" aria-hidden="true"/>
               <span>Accède à tes musiques favorites en un clic</span>
             </div>
             <div class="bullet">
-              <span class="bullet__dot" aria-hidden="true" />
+              <span class="bullet__dot" aria-hidden="true"/>
               <span>Partage tes découvertes avec les autres</span>
             </div>
             <div class="bullet">
-              <span class="bullet__dot" aria-hidden="true" />
+              <span class="bullet__dot" aria-hidden="true"/>
               <span>Écris des avis et retrouve ceux de la communauté</span>
             </div>
           </div>
@@ -102,17 +102,24 @@ async function connect(): Promise<void> {
               autocomplete="email"
               inputmode="email"
               spellcheck="false"
+              required
             />
           </div>
 
           <div class="field">
-            <label class="label" for="password">Mot de passe</label>
+            <div class="field__header">
+              <label class="label" for="password">Mot de passe</label>
+              <RouterLink :to="{ name: 'forgotPassword' }" class="hint-link">
+                Oublié ?
+              </RouterLink>
+            </div>
             <input
               id="password"
               v-model="connectingUser.password"
               class="input"
               type="password"
               autocomplete="current-password"
+              required
             />
           </div>
 
@@ -275,6 +282,25 @@ async function connect(): Promise<void> {
 .muted {
   color: var(--c-text-mute);
   font-weight: 650;
+}
+
+.field__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.hint-link {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(#1db954);
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.hint-link:hover {
+  text-decoration: underline;
 }
 
 @media (max-width: 900px) {

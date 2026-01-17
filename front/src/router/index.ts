@@ -12,6 +12,8 @@ import Register from '@/views/user/Register.vue'
 import Profile from '@/views/user/Profile.vue'
 import MusicEdit from "@/views/music/MusicEdit.vue";
 import MusicCreate from "@/views/music/MusicCreate.vue";
+import ResetPassword from "@/views/ResetPassword.vue";
+import ForgotPassword from "@/views/ForgotPassword.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -54,7 +56,17 @@ const router = createRouter({
       props: (route) => ({ id: Number(route.params.id) })
     },
 
-    { path: '/album/:albumId', name: 'albumTracks', component: AlbumTracks }
+    { path: '/album/:albumId', name: 'albumTracks', component: AlbumTracks },
+    {
+      path: '/reset-password',
+      name: 'resetPassword',
+      component: ResetPassword
+    },
+    {
+      path: '/forgot-password',
+      name: 'forgotPassword',
+      component: ForgotPassword
+    }
   ]
 })
 
