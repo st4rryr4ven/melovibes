@@ -24,9 +24,6 @@ const canSubmit = computed(() =>
   rating.value >= 1 && rating.value <= 5 && !loading.value
 )
 
-/**
- * Prefill when editing OR reset when creating / music changes
- */
 watch(
   () => [props.musicId, props.review],
   () => {
@@ -46,32 +43,42 @@ async function submit(): Promise<void> {
 
   try {
     loading.value = true
-
     let result: Review
 
     if (props.review) {
-      // ✏️ EDIT
       result = await reviewApi.patch(props.review.id, {
         rating: rating.value,
         comment: comment.value.trim() || null
       })
       flash.success('Avis modifié.')
     } else {
-      // ➕ CREATE
-      result = await reviewApi.createForMusicId({
-        musicId: props.musicId,
+      result = await reviewApi.createForMusicId(props.musicId, {
         rating: rating.value,
-        comment: comment.value.trim()
+        comment: comment.value.trim() || null
       })
       flash.success('Avis envoyé.')
     }
 
     emit('submitted', result)
-  } catch (e) {
-    const msg =
-      e instanceof Error && e.message
-        ? e.message
-        : 'Erreur lors de l’envoi de l’avis.'
+  } catch (e: any) {
+    let msg = "Erreur lors de l'envoi de l'avis."
+
+    if (e instanceof Error) {
+      msg = e.message
+
+      if (
+        e.message.includes('deja poste') ||
+        e.message.includes('déjà posté') ||
+        e.message.includes('already')
+      ) {
+        msg = 'Vous avez déjà posté un avis pour cette musique.'
+      } else if ((e as any).status === 401) {
+        msg = 'Vous devez être connecté pour poster un avis.'
+      } else if ((e as any).status === 409) {
+        msg = 'Vous avez déjà posté un avis pour cette musique.'
+      }
+    }
+
     flash.error(msg)
   } finally {
     loading.value = false
@@ -101,15 +108,7 @@ function setRating(v: number): void {
             Notez la musique et ajoutez un commentaire (optionnel).
           </div>
         </div>
-
-        <button
-          class="btn btn--ghost"
-          type="button"
-          :disabled="loading"
-          @click="close"
-        >
-          ✕
-        </button>
+        <button class="btn btn--ghost" type="button" :disabled="loading" @click="close">✕</button>
       </header>
 
       <div class="body">
@@ -136,31 +135,12 @@ function setRating(v: number): void {
       </div>
 
       <footer class="foot">
-        <button
-          class="btn btn--ghost"
-          type="button"
-          :disabled="loading"
-          @click="close"
-        >
-          Annuler
+        <button class="btn btn--ghost" type="button" :disabled="loading" @click="close">Annuler
         </button>
 
-        <button
-          class="btn btn--primary"
-          type="button"
-          :disabled="!canSubmit"
-          @click="submit"
-        >
+        <button class="btn btn--primary" type="button" :disabled="!canSubmit" @click="submit">
           <span v-if="loading" class="spinner" aria-hidden="true"/>
-          <span>
-            {{
-              loading
-                ? 'Envoi…'
-                : review
-                  ? 'Modifier'
-                  : 'Envoyer'
-            }}
-          </span>
+          <span>{{ loading ? 'Envoi…' : review ? 'Modifier' : 'Envoyer' }}</span>
         </button>
       </footer>
     </div>
@@ -168,6 +148,7 @@ function setRating(v: number): void {
 </template>
 
 <style scoped>
+/* Same styling as before */
 .backdrop {
   position: fixed;
   inset: 0;
@@ -186,12 +167,11 @@ function setRating(v: number): void {
 .head {
   padding: 14px;
   display: flex;
-  align-items: flex-start;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 12px;
   border-bottom: 1px solid var(--c-border);
-  background: radial-gradient(900px 260px at 0% 0%, rgba(29, 185, 84, 0.12), transparent 55%),
-  rgba(255, 255, 255, 0.02);
+  background: radial-gradient(900px 260px at 0% 0%, rgba(29, 185, 84, 0.12), transparent 55%), rgba(255, 255, 255, 0.02);
 }
 
 .title {

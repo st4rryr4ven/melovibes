@@ -9,6 +9,7 @@ use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
+use App\Controller\UserReviewsController;
 use App\Repository\UserRepository;
 use App\State\UserProcessor;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -115,6 +116,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      * @var Collection<int, Review>
      */
     #[ORM\OneToMany(targetEntity: Review::class, mappedBy: 'author')]
+    #[Groups(['user:read'])]
+    #[ApiProperty(readableLink: true)]
     private Collection $reviews;
 
     #[ORM\ManyToMany(targetEntity: Music::class)]
@@ -209,7 +212,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function removeRole(string $role): self
     {
-        $this->roles = array_values(array_filter($this->roles, fn ($r) => $r !== $role));
+        $this->roles = array_values(array_filter($this->roles, fn($r) => $r !== $role));
         return $this;
     }
 

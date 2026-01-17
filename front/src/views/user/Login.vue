@@ -33,9 +33,19 @@ async function connect(): Promise<void> {
       await router.push({ name: 'melovibes' })
       return
     }
-    flash.error('Connexion échouée.')
-  } catch {
-    flash.error('Connexion échouée.')
+    const errorMsg = result.error || 'Connexion échouée.'
+    if (errorMsg.includes('401') || errorMsg.includes('Invalid') || errorMsg.includes('credentials')) {
+      flash.error('Login ou mot de passe incorrect.')
+    } else {
+      flash.error(errorMsg)
+    }
+  } catch (e: any) {
+    const errorMsg = e?.message || 'Connexion échouée.'
+    if (errorMsg.includes('401') || errorMsg.includes('Invalid') || errorMsg.includes('credentials')) {
+      flash.error('Login ou mot de passe incorrect.')
+    } else {
+      flash.error(errorMsg)
+    }
   } finally {
     loading.value = false
   }

@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
-import type { Music } from '@/types.ts'
-import { musicApi } from '@/api/musicApi.ts'
-import { userApi } from '@/api/userApi.ts'
-import { useStoreAuthentification } from '@/stores/storeAuthentification.ts'
-import { useFlashStore } from '@/stores/flashStore.ts'
+import {computed, onMounted, ref, watch} from 'vue'
+import {useRouter} from 'vue-router'
+import type {Music, Review} from '@/types.ts'
+import {musicApi} from '@/api/musicApi.ts'
+import {userApi} from '@/api/userApi.ts'
+import {reviewApi} from '@/api/reviewApi.ts'
+import {useStoreAuthentification} from '@/stores/storeAuthentification.ts'
+import {useFlashStore} from '@/stores/flashStore.ts'
 import ReviewModal from '@/components/views/review/ReviewModal.vue'
 import ReviewList from '@/components/views/review/ReviewList.vue'
 
@@ -22,8 +23,6 @@ const music = ref<Music | null>(null)
 const isFavorite = ref(false)
 const favoriteLoading = ref(false)
 const adminLoading = ref(false)
-
-const showReviewModal = ref(false)
 
 const isAdmin = computed(() => authStore.estAdmin)
 const artistNames = computed(() => (music.value?.artists ?? []).map((a) => a.name).filter(Boolean).join(', '))
@@ -82,7 +81,7 @@ async function loadMusic(): Promise<void> {
     if (blockIfNotValidatedForUser(m)) {
       music.value = null
       error.value = 'Musique introuvable.'
-      router.replace({ name: 'melovibes' })
+      router.replace({name: 'melovibes'})
       return
     }
 
@@ -134,19 +133,39 @@ async function toggleFavorite(): Promise<void> {
   }
 }
 
-function openReviewModal(): void {
-  const m = music.value
-  if (!m) return
-  if (!authStore.estConnecte) {
-    flash.warning('Connexion requise.')
-    return
-  }
+const showReviewModal = ref(false)
+const editingReview = ref<Review | null>(null)
+
+const userReview = computed(() =>
+  reviews.value.find(r => r.author?.id === authStore.utilisateurConnecte?.id) ?? null
+)
+
+function openReviewModal() {
+  editingReview.value = null
   showReviewModal.value = true
 }
 
-async function handleReviewSubmitted(_review: unknown): Promise<void> {
+function openEditReview(review: Review) {
+  editingReview.value = review
+  showReviewModal.value = true
+}
+
+function handleReviewSubmitted() {
   showReviewModal.value = false
-  await loadMusic()
+  editingReview.value = null
+  loadMusic()
+}
+
+async function handleReviewDelete(review: Review): Promise<void> {
+  if (!confirm('Supprimer cet avis ?')) return
+
+  try {
+    await reviewApi.delete(review.id)
+    flash.success('Avis supprimé.')
+    loadMusic()
+  } catch (e) {
+    flash.error(errorMessage(e, 'Erreur lors de la suppression.'))
+  }
 }
 
 function goBack(): void {
@@ -156,7 +175,7 @@ function goBack(): void {
 function goEdit(): void {
   const m = music.value
   if (!m) return
-  router.push({ name: 'music-edit', params: { id: m.id } })
+  router.push({name: 'music-edit', params: {id: m.id}})
 }
 
 async function validateMusic(): Promise<void> {
@@ -167,7 +186,7 @@ async function validateMusic(): Promise<void> {
 
   try {
     adminLoading.value = true
-    music.value = await musicApi.patch(m.id, { isValidated: true })
+    music.value = await musicApi.patch(m.id, {isValidated: true})
     flash.success('Musique validée.')
   } catch (e) {
     flash.error(errorMessage(e, 'Erreur lors de la validation.'))
@@ -185,7 +204,7 @@ async function deleteMusic(): Promise<void> {
     adminLoading.value = true
     await musicApi.delete(m.id)
     flash.success('Musique supprimée.')
-    router.push({ name: 'melovibes' })
+    router.push({name: 'melovibes'})
   } catch (e) {
     flash.error(errorMessage(e, 'Erreur lors de la suppression.'))
   } finally {
@@ -202,7 +221,7 @@ async function deleteMusic(): Promise<void> {
 
     <div v-if="loading && !music" class="state panel">
       <div class="muted">Chargement…</div>
-      <div class="heroSkeleton" />
+      <div class="heroSkeleton"/>
     </div>
 
     <div v-else-if="error" class="state">
@@ -216,14 +235,17 @@ async function deleteMusic(): Promise<void> {
     <div v-else-if="music" class="content">
       <section class="cinema card">
         <div class="cinema__poster" :class="{ 'cinema__poster--empty': !hasCover }">
-          <img v-if="music.picture" class="cinema__img" :src="music.picture" :alt="music.title" />
+          <img v-if="music.picture" class="cinema__img" :src="music.picture" :alt="music.title"/>
           <div v-else class="cinema__placeholder" aria-hidden="true">♪</div>
-          <div class="cinema__shade" aria-hidden="true" />
-          <div class="cinema__glow" aria-hidden="true" />
+          <div class="cinema__shade" aria-hidden="true"/>
+          <div class="cinema__glow" aria-hidden="true"/>
 
           <div class="cinema__posterContent">
             <div class="cinema__title" :title="music.title">{{ music.title }}</div>
-            <div v-if="artistNames" class="cinema__subtitle" :title="artistNames">{{ artistNames }}</div>
+            <div v-if="artistNames" class="cinema__subtitle" :title="artistNames">{{
+                artistNames
+              }}
+            </div>
             <div v-if="genres.length" class="cinema__chips">
               <span v-for="g in genres.slice(0, 6)" :key="g" class="chip">{{ g }}</span>
             </div>
@@ -243,7 +265,8 @@ async function deleteMusic(): Promise<void> {
               <span>{{ isFavorite ? 'Favori' : 'Ajouter aux favoris' }}</span>
             </button>
 
-            <a v-if="music.link" class="btn btn--primary" :href="music.link" target="_blank" rel="noreferrer">
+            <a v-if="music.link" class="btn btn--primary" :href="music.link" target="_blank"
+               rel="noreferrer">
               Écouter
             </a>
           </div>
@@ -263,7 +286,9 @@ async function deleteMusic(): Promise<void> {
           <section v-if="isAdmin" class="admin panel">
             <div class="admin__title">Administration</div>
             <div class="admin__actions">
-              <button class="btn btn--ghost" type="button" :disabled="adminLoading" @click="goEdit">Éditer</button>
+              <button class="btn btn--ghost" type="button" :disabled="adminLoading" @click="goEdit">
+                Éditer
+              </button>
               <button
                 v-if="!music.isValidated"
                 class="btn"
@@ -273,7 +298,8 @@ async function deleteMusic(): Promise<void> {
               >
                 Valider
               </button>
-              <button class="btn btn--danger" type="button" :disabled="adminLoading" @click="deleteMusic">
+              <button class="btn btn--danger" type="button" :disabled="adminLoading"
+                      @click="deleteMusic">
                 Supprimer
               </button>
             </div>
@@ -310,18 +336,34 @@ async function deleteMusic(): Promise<void> {
             </div>
           </div>
 
-          <button v-if="authStore.estConnecte" class="btn btn--primary" type="button" @click="openReviewModal">Donner un avis</button>
-          <RouterLink v-else :to="{name: 'login'}">Connectez-vous pour donner votre avis</RouterLink>
+          <button
+            v-if="authStore.estConnecte && !userReview"
+            class="btn btn--primary"
+            type="button"
+            @click="openReviewModal"
+          >
+            Donner un avis
+          </button>
+
+          <span v-else-if="!authStore.estConnecte">
+              <RouterLink :to="{ name: 'login' }">Connectez-vous pour donner votre avis</RouterLink>
+          </span>
         </header>
 
         <div class="reviews__body">
-          <ReviewList :reviews="reviews" />
+          <ReviewList
+            :reviews="reviews"
+            :editable-review-id="userReview?.id ?? null"
+            @edit="openEditReview"
+            @delete="handleReviewDelete"
+          />
         </div>
       </section>
 
       <ReviewModal
         v-if="showReviewModal"
         :music-id="music.id"
+        :review="editingReview ?? undefined"
         @close="showReviewModal = false"
         @submitted="handleReviewSubmitted"
       />
