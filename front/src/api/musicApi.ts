@@ -19,11 +19,9 @@ export class MusicApi {
     return {
       ...music,
       reviews: music.reviews.map((r) => {
-        // Safely extract Review ID
         const rawReviewIri = (r as any)['@id'] as string | undefined
         const reviewId = r.id || this.extractIdFromIri(rawReviewIri)
 
-        // Safely extract Author ID
         const rawAuthorIri = (r.author as any)?.['@id'] as string | undefined
         const authorId = r.author?.id || this.extractIdFromIri(rawAuthorIri)
 

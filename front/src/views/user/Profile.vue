@@ -81,6 +81,18 @@ function handleReviewSubmitted(): void {
   loadReviews()
 }
 
+async function handleDeleteReview(review: Review) {
+  if (!confirm('Voulez-vous vraiment supprimer cet avis ?')) return
+
+  try {
+    await reviewApi.delete(review.id)
+    flash.success('Avis supprimé')
+    await loadReviews()
+  } catch (e) {
+    flash.error(errorMessage(e, 'Erreur lors de la suppression'))
+  }
+}
+
 onMounted(async () => {
   if (!authStore.utilisateurConnecte) {
     await router.replace({name: 'login'})
@@ -272,7 +284,10 @@ async function deleteAccount(): Promise<void> {
                 v-else
                 :reviews="reviews"
                 :editable-review-id="myUserId"
+                show-music-title
                 @edit="openEditReview"
+                @delete="handleDeleteReview"
+                @select-music="(id) => router.push({ name: 'musicDetail', params: { id } })"
               />
             </div>
           </section>

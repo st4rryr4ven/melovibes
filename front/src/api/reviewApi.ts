@@ -27,6 +27,7 @@ export class ReviewApi {
         }
         : undefined,
       author: {
+        ...r.author,
         id: Number((r.author as any)['@id'].split('/').pop())
       }
     }))

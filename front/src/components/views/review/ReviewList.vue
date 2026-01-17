@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {computed} from 'vue'
-import type {Review, User} from '@/types.ts'
+import type {Review} from '@/types.ts'
 import {useStoreAuthentification} from '@/stores/storeAuthentification.ts'
 
 const authStore = useStoreAuthentification()
@@ -10,15 +10,18 @@ const props = withDefaults(
     reviews: Review[]
     editableReviewId?: number | null
     emptyText?: string
+    showMusicTitle?: boolean // Added: useful for Profile view
   }>(),
   {
-    emptyText: 'Aucun avis pour le moment.'
+    emptyText: 'Aucun avis pour le moment.',
+    showMusicTitle: false
   }
 )
 
 const emit = defineEmits<{
   (e: 'edit', review: Review): void
   (e: 'delete', review: Review): void
+  (e: 'selectMusic', musicId: number): void // Added: for navigation
 }>()
 
 function getAuthorId(author: any): number | null {
@@ -30,8 +33,9 @@ function getAuthorId(author: any): number | null {
 
 function authorLabel(author: any): string {
   if (!author) return 'Utilisateur';
+  // Check specifically for login or username
   if (typeof author === 'object') {
-    return author.login || author.email || 'Utilisateur';
+    return author.login || author.username || author.email || 'Utilisateur';
   }
   return 'Utilisateur';
 }
@@ -40,7 +44,6 @@ function canDeleteReview(review: Review): boolean {
   const userId = authStore.utilisateurConnecte?.id
   const isAdmin = authStore.estAdmin
   const authorId = getAuthorId(review.author)
-
   return isAdmin || (userId !== undefined && authorId !== null && userId === authorId)
 }
 
@@ -49,7 +52,6 @@ function canEditReview(review: Review): boolean {
   const authorId = getAuthorId(review.author)
   return userId !== undefined && authorId !== null && userId === authorId
 }
-
 
 function formatDate(value?: string | null): string {
   if (!value) return ''
@@ -75,7 +77,14 @@ function stars(rating: number): string {
     <article v-for="r in sorted" :key="r.id" class="item panel">
       <header class="item__head">
         <div class="item__left">
-          <div class="item__author">{{ authorLabel(r.author) }}</div>
+          <div v-if="showMusicTitle && r.music" class="item__music">
+            <button class="link-btn" type="button" @click="emit('selectMusic', r.music.id)">
+              {{ r.music.title }}
+            </button>
+          </div>
+
+          <div v-if="!showMusicTitle" class="item__author">{{ authorLabel(r.author) }}</div>
+
           <div v-if="r.createdAt" class="item__date muted">{{ formatDate(r.createdAt) }}</div>
         </div>
 
@@ -84,14 +93,15 @@ function stars(rating: number): string {
             {{ stars(r.rating) }}
           </div>
           <div v-if="canEditReview(r) || canDeleteReview(r)" class="item__actions">
-            <button v-if="canEditReview(r)" class="btn btn--ghost btn--sm" type="button" @click="emit('edit', r)">
+            <button v-if="canEditReview(r)" class="btn btn--ghost btn--sm" type="button"
+                    @click="emit('edit', r)">
               Modifier
             </button>
-            <button v-if="canDeleteReview(r)" class="btn btn--ghost btn--sm" type="button" @click="emit('delete', r)">
+            <button v-if="canDeleteReview(r)" class="btn btn--ghost btn--sm" type="button"
+                    @click="emit('delete', r)">
               Supprimer
             </button>
           </div>
-
         </div>
       </header>
 
@@ -121,8 +131,28 @@ function stars(rating: number): string {
   </div>
 </template>
 
-
 <style scoped>
+.item__music {
+  margin-bottom: 2px;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 15px;
+  font-weight: 950;
+  color: #1db954;
+  cursor: pointer;
+  text-align: left;
+  transition: opacity 0.2s;
+}
+
+.link-btn:hover {
+  text-decoration: underline;
+  opacity: 0.8;
+}
+
 .list {
   display: grid;
   gap: 10px;
