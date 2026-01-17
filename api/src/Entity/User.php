@@ -9,7 +9,6 @@ use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
-use App\Controller\UserReviewsController;
 use App\Repository\UserRepository;
 use App\State\UserProcessor;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -115,7 +114,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     /**
      * @var Collection<int, Review>
      */
-    #[ORM\OneToMany(targetEntity: Review::class, mappedBy: 'author')]
+    #[ORM\OneToMany(targetEntity: Review::class, mappedBy: 'author', orphanRemoval: true)]
     #[Groups(['user:read'])]
     #[ApiProperty(readableLink: true)]
     private Collection $reviews;
