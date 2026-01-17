@@ -21,11 +21,19 @@ const emit = defineEmits<{
   (e: 'delete', review: Review): void
 }>()
 
-function authorLabel(author: Review['author']): string {
-  if (!author) return 'Utilisateur'
-  if (typeof author === 'string') return 'Utilisateur'
-  const u = author as User
-  return u.login || u.email || 'Utilisateur'
+function getAuthorId(author: any): number | null {
+  if (!author) return null;
+  if (typeof author === 'number') return author;
+  if (typeof author === 'object') return author.id;
+  return null;
+}
+
+function authorLabel(author: any): string {
+  if (!author) return 'Utilisateur';
+  if (typeof author === 'object') {
+    return author.login || author.email || 'Utilisateur';
+  }
+  return 'Utilisateur';
 }
 
 function formatDate(value?: string | null): string {
@@ -60,7 +68,10 @@ function stars(rating: number): string {
           <div class="item__rating" :aria-label="`Note ${r.rating}/5`">
             {{ stars(r.rating) }}
           </div>
-          <div v-if="editableReviewId === r.id" class="item__actions">
+          <div
+            v-if="editableReviewId === (r.author?.id ?? r.author)"
+            class="item__actions"
+          >
             <button class="btn btn--ghost btn--sm" type="button" @click="emit('edit', r)">
               Modifier
             </button>
@@ -68,7 +79,8 @@ function stars(rating: number): string {
         </div>
       </header>
 
-      <div class="item__details" v-if="r.melodyRating || r.lyricsRating || r.vocalsRating || r.impactRating">
+      <div class="item__details"
+           v-if="r.melodyRating || r.lyricsRating || r.vocalsRating || r.impactRating">
         <div class="detail-row" v-if="r.melodyRating">
           <span class="detail-label">Mélodie</span>
           <span class="detail-stars">{{ stars(r.melodyRating) }}</span>
@@ -164,19 +176,34 @@ function stars(rating: number): string {
   height: auto;
 }
 
-.item__sub-ratings {
-  display: flex;
-  flex-wrap: wrap;
+.item__details {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 8px;
-  margin-bottom: 4px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  margin-top: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.sub-note {
+.detail-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.detail-label {
   font-size: 10px;
-  background: var(--c-surface-3);
-  color: var(--c-text-soft);
-  padding: 2px 8px;
-  border-radius: 999px;
-  border: 1px solid var(--c-border);
+  text-transform: uppercase;
+  font-weight: 800;
+  color: var(--c-text-mute);
+  letter-spacing: 0.5px;
+}
+
+.detail-stars {
+  font-size: 12px;
+  color: #1db954;
+  letter-spacing: 1px;
 }
 </style>

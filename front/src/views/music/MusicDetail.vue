@@ -346,7 +346,7 @@ async function deleteMusic(): Promise<void> {
         <div class="reviews__body">
           <ReviewList
             :reviews="reviews"
-            :editable-review-id="userReview?.id"
+            :editable-review-id="authStore.utilisateurConnecte?.id"
             @edit="openEditReview"
           />
         </div>

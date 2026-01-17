@@ -7,6 +7,7 @@ import {getProfilePictureUrl} from '@/util/avatar.ts'
 import {reviewApi} from '@/api/reviewApi.ts'
 import ReviewModal from '@/components/views/review/ReviewModal.vue'
 import type {Review} from '@/types'
+import ReviewList from "@/components/views/review/ReviewList.vue";
 
 const router = useRouter()
 const authStore = useStoreAuthentification()
@@ -67,7 +68,11 @@ async function loadReviews(): Promise<void> {
 
   reviewsLoading.value = true
   try {
-    reviews.value = await reviewApi.listByUserId(userId)
+    const data = await reviewApi.listByUserId(userId)
+    reviews.value = data.map(r => ({
+      ...r,
+      author: r.author || {id: userId, login: login.value}
+    }))
 
     reviews.value.sort((a, b) => {
       const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0
@@ -273,61 +278,13 @@ async function deleteAccount(): Promise<void> {
               <div v-else-if="!reviews.length" class="empty panel">
                 <div class="muted">Vous n'avez pas encore posté d'avis.</div>
               </div>
-              <div v-else class="list">
-                <article v-for="r in reviews" :key="r.id" class="item panel">
-                  <header class="item__head">
-                    <div class="item__left">
-                      <RouterLink
-                        v-if="r.music?.id"
-                        :to="{ name: 'musicDetail', params: { id: r.music?.id } }"
-                        class="item__music"
-                      >
-                        {{ r.music?.title || 'Musique inconnue' }}
-                      </RouterLink>
-                      <div v-else class="item__music">Musique inconnue</div>
 
-                      <div v-if="r.createdAt" class="item__date muted">
-                        {{ formatDate(r.createdAt) }}
-                      </div>
-                    </div>
-
-                    <div class="item__right-group">
-                      <div class="item__rating" :aria-label="`Note ${r.rating}/5`">
-                        {{ stars(r.rating) }}
-                      </div>
-                      <div class="item__actions">
-                        <button class="btn btn--ghost btn--sm" type="button"
-                                @click="openEditReview(r)">
-                          Modifier
-                        </button>
-                      </div>
-                    </div>
-                  </header>
-
-                  <div class="item__details"
-                       v-if="r.melodyRating || r.lyricsRating || r.vocalsRating || r.impactRating">
-                    <div class="detail-row" v-if="r.melodyRating">
-                      <span class="detail-label">Mélodie</span>
-                      <span class="detail-stars">{{ stars(r.melodyRating) }}</span>
-                    </div>
-                    <div class="detail-row" v-if="r.lyricsRating">
-                      <span class="detail-label">Paroles</span>
-                      <span class="detail-stars">{{ stars(r.lyricsRating) }}</span>
-                    </div>
-                    <div class="detail-row" v-if="r.vocalsRating">
-                      <span class="detail-label">Vocals</span>
-                      <span class="detail-stars">{{ stars(r.vocalsRating) }}</span>
-                    </div>
-                    <div class="detail-row" v-if="r.impactRating">
-                      <span class="detail-label">Impact</span>
-                      <span class="detail-stars">{{ stars(r.impactRating) }}</span>
-                    </div>
-                  </div>
-
-                  <div v-if="r.comment" class="item__comment">{{ r.comment }}</div>
-                  <div v-else class="item__comment muted">(Sans commentaire)</div>
-                </article>
-              </div>
+              <ReviewList
+                v-else
+                :reviews="reviews"
+                :editable-review-id="myUserId"
+                @edit="openEditReview"
+              />
             </div>
           </section>
         </div>
@@ -455,61 +412,6 @@ async function deleteAccount(): Promise<void> {
 
 .reviews__body {
   margin-top: 12px;
-}
-
-.list {
-  display: grid;
-  gap: 10px;
-}
-
-.item {
-  padding: 12px;
-  display: grid;
-  gap: 10px;
-}
-
-.item__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.item__left {
-  display: grid;
-  gap: 4px;
-}
-
-.item__music {
-  font-weight: 900;
-  letter-spacing: 0.2px;
-  color: var(--c-text);
-  text-decoration: none;
-  transition: color 0.15s ease;
-}
-
-.item__date {
-  font-size: 12px;
-  margin-top: 2px;
-}
-
-.item__rating {
-  font-size: 14px;
-  letter-spacing: 2px;
-  color: rgba(255, 238, 210, 0.95);
-  user-select: none;
-  white-space: nowrap;
-}
-
-.item__comment {
-  white-space: pre-wrap;
-  line-height: 1.5;
-}
-
-.item__right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .empty {
