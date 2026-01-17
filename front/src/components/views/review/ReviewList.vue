@@ -63,10 +63,6 @@ function stars(rating: number): string {
             <button class="btn btn--ghost btn--sm" type="button" @click="emit('edit', r)">
               Modifier
             </button>
-            <button class="btn btn--ghost btn--sm btn--danger" type="button"
-                    @click="emit('delete', r)">
-              Supprimer
-            </button>
           </div>
         </div>
       </header>

@@ -85,8 +85,6 @@ async function loadMusic(): Promise<void> {
       await router.replace({name: 'melovibes'})
       return
     }
-
-    // USE THE NEW HELPER HERE
     music.value = musicApi.enrichMusicData(rawMusic)
 
     await loadFavorite()
@@ -161,18 +159,6 @@ function handleReviewSubmitted() {
   showReviewModal.value = false
   editingReview.value = null
   loadMusic()
-}
-
-async function handleReviewDelete(review: Review): Promise<void> {
-  if (!confirm('Supprimer cet avis ?')) return
-
-  try {
-    await reviewApi.delete(review.id)
-    flash.success('Avis supprimé.')
-    loadMusic()
-  } catch (e) {
-    flash.error(errorMessage(e, 'Erreur lors de la suppression.'))
-  }
 }
 
 function goBack(): void {
@@ -362,7 +348,6 @@ async function deleteMusic(): Promise<void> {
             :reviews="reviews"
             :editable-review-id="userReview?.id"
             @edit="openEditReview"
-            @delete="handleReviewDelete"
           />
         </div>
       </section>

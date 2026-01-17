@@ -92,17 +92,6 @@ function handleReviewSubmitted(): void {
   loadReviews()
 }
 
-async function handleReviewDelete(review: Review): Promise<void> {
-  if (!confirm('Supprimer cet avis ?')) return
-  try {
-    await reviewApi.delete(review.id)
-    flash.success('Avis supprimé.')
-    loadReviews()
-  } catch (e) {
-    flash.error(errorMessage(e, 'Erreur lors de la suppression.'))
-  }
-}
-
 onMounted(async () => {
   if (!authStore.utilisateurConnecte) {
     await router.replace({name: 'login'})
@@ -297,9 +286,6 @@ async function deleteAccount(): Promise<void> {
                     <div class="item__right">
                       <button class="btn btn--ghost btn--sm" type="button"
                               @click="openEditReview(r)">Modifier
-                      </button>
-                      <button class="btn btn--ghost btn--sm btn--danger" type="button"
-                              @click="handleReviewDelete(r)">Supprimer
                       </button>
                     </div>
                   </header>

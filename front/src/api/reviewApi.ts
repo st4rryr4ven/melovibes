@@ -61,9 +61,6 @@ export class ReviewApi {
     })
   }
 
-  async delete(id: number): Promise<void> {
-    await apiVoid(`reviews/${id}`, {method: 'DELETE'})
-  }
 }
 
 export const reviewApi = new ReviewApi()

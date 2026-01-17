@@ -148,7 +148,6 @@ function setRating(v: number): void {
 </template>
 
 <style scoped>
-/* Same styling as before */
 .backdrop {
   position: fixed;
   inset: 0;
