@@ -1,10 +1,25 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import type { Review, User } from '@/types'
+import {computed} from 'vue'
+import type {Review, User} from '@/types.ts'
+import {useStoreAuthentification} from '@/stores/storeAuthentification.ts'
 
-const props = withDefaults(defineProps<{ reviews: Review[]; emptyText?: string }>(), {
-  emptyText: 'Aucun avis pour le moment.'
-})
+const authStore = useStoreAuthentification()
+
+const props = withDefaults(
+  defineProps<{
+    reviews: Review[]
+    editableReviewId?: number | null
+    emptyText?: string
+  }>(),
+  {
+    emptyText: 'Aucun avis pour le moment.'
+  }
+)
+
+const emit = defineEmits<{
+  (e: 'edit', review: Review): void
+  (e: 'delete', review: Review): void
+}>()
 
 function authorLabel(author: Review['author']): string {
   if (!author) return 'Utilisateur'
@@ -17,16 +32,14 @@ function formatDate(value?: string | null): string {
   if (!value) return ''
   const d = new Date(value)
   if (Number.isNaN(d.getTime())) return ''
-  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' })
+  return d.toLocaleDateString(undefined, {year: 'numeric', month: 'short', day: '2-digit'})
 }
 
-const sorted = computed(() => {
-  return [...(props.reviews ?? [])].sort((a, b) => {
-    const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0
-    const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0
-    return tb - ta
-  })
-})
+const sorted = computed(() => [...(props.reviews ?? [])].sort((a, b) => {
+  const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0
+  const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0
+  return tb - ta
+}))
 
 function stars(rating: number): string {
   const r = Math.max(0, Math.min(5, Math.round(rating)))
@@ -43,7 +56,15 @@ function stars(rating: number): string {
           <div v-if="r.createdAt" class="item__date muted">{{ formatDate(r.createdAt) }}</div>
         </div>
 
-        <div class="item__rating" :aria-label="`Note ${r.rating}/5`">{{ stars(r.rating) }}</div>
+        <div class="item__right-group">
+          <div class="item__rating" :aria-label="`Note ${r.rating}/5`">{{ stars(r.rating) }}</div>
+
+          <div v-if="editableReviewId === r.id" class="item__actions">
+            <button class="btn btn--ghost btn--sm" type="button" @click="emit('edit', r)">
+              Modifier
+            </button>
+          </div>
+        </div>
       </header>
 
       <div v-if="r.comment" class="item__comment">{{ r.comment }}</div>
@@ -55,6 +76,7 @@ function stars(rating: number): string {
     </div>
   </div>
 </template>
+
 
 <style scoped>
 .list {
@@ -100,5 +122,29 @@ function stars(rating: number): string {
 
 .empty {
   padding: 12px;
+}
+
+.item__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.item__right-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.item__actions {
+  display: flex;
+  gap: 6px;
+}
+
+.btn--sm {
+  padding: 4px 8px;
+  font-size: 11px;
+  height: auto;
 }
 </style>

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import UserBox from '@/components/UserBox.vue'
-import { userApi } from '@/api/userApi'
-import type { User } from '@/types'
+import UserBox from '@/components/views/user/UserBox.vue'
+import { userApi } from '@/api/userApi.ts'
+import type { User } from '@/types.ts'
 
 const route = useRoute()
 

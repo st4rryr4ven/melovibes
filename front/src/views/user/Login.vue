@@ -1,60 +1,51 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useStoreAuthentification } from '@/stores/storeAuthentification'
-import { useFlashStore } from '@/stores/flashStore'
+import { useStoreAuthentification } from '@/stores/storeAuthentification.ts'
+import { useFlashStore } from '@/stores/flashStore.ts'
 
 const authStore = useStoreAuthentification()
 const flash = useFlashStore()
 const router = useRouter()
 
-const form = ref({
-  login: '',
-  email: '',
-  password: '',
-  confirmPassword: ''
-})
-
+const connectingUser = ref({ login: '', password: '' })
 const loading = ref(false)
 
 const canSubmit = computed(() => {
-  const loginOk = form.value.login.trim().length >= 3
-  const emailOk = form.value.email.trim().length > 3
-  const passOk = form.value.password.length >= 6
-  const match = form.value.password === form.value.confirmPassword
-  return loginOk && emailOk && passOk && match
+  return connectingUser.value.login.trim().length > 0 && connectingUser.value.password.length > 0
 })
 
-const passwordMismatch = computed(() => {
-  return form.value.confirmPassword.length > 0 && form.value.password !== form.value.confirmPassword
-})
+async function connect(): Promise<void> {
+  const login = connectingUser.value.login.trim()
+  const password = connectingUser.value.password
 
-function normalizeEmail(v: string): string {
-  return v.trim()
-}
-
-async function register(): Promise<void> {
-  const login = form.value.login.trim()
-  const email = normalizeEmail(form.value.email)
-  const password = form.value.password
-
-  if (!login || !email || !password || password !== form.value.confirmPassword) {
-    flash.error("Inscription échouée.")
+  if (!login || !password) {
+    flash.error('Connexion échouée.')
     return
   }
 
   loading.value = true
 
   try {
-    const result = await authStore.register( login, email, password )
-    if (result?.success) {
-      flash.success('Compte créé.')
-      await router.push({ name: 'login' })
+    const result = await authStore.login(login, password)
+    if (result.success) {
+      flash.success('Connexion effectuée.')
+      await router.push({ name: 'melovibes' })
       return
     }
-    flash.error("Inscription échouée.")
-  } catch {
-    flash.error("Inscription échouée.")
+    const errorMsg = result.error || 'Connexion échouée.'
+    if (errorMsg.includes('401') || errorMsg.includes('Invalid') || errorMsg.includes('credentials')) {
+      flash.error('Login ou mot de passe incorrect.')
+    } else {
+      flash.error(errorMsg)
+    }
+  } catch (e: any) {
+    const errorMsg = e?.message || 'Connexion échouée.'
+    if (errorMsg.includes('401') || errorMsg.includes('Invalid') || errorMsg.includes('credentials')) {
+      flash.error('Login ou mot de passe incorrect.')
+    } else {
+      flash.error(errorMsg)
+    }
   } finally {
     loading.value = false
   }
@@ -69,23 +60,23 @@ async function register(): Promise<void> {
         <div class="poster__shade" aria-hidden="true" />
         <div class="poster__content">
           <div class="poster__mark">M</div>
-          <div class="poster__title">Créer un compte</div>
+          <div class="poster__title">Retrouve ta musique.</div>
           <div class="poster__subtitle">
-            Suis tes favoris, construis ta collection, et partage tes avis.
+            Garde tes favoris, partage tes découvertes, et publie tes avis.
           </div>
 
           <div class="poster__bullets">
             <div class="bullet">
               <span class="bullet__dot" aria-hidden="true" />
-              <span>Ajoute des musiques à ta collection</span>
+              <span>Accède à tes musiques favorites en un clic</span>
             </div>
             <div class="bullet">
               <span class="bullet__dot" aria-hidden="true" />
-              <span>Découvre les avis des autres</span>
+              <span>Partage tes découvertes avec les autres</span>
             </div>
             <div class="bullet">
               <span class="bullet__dot" aria-hidden="true" />
-              <span>Partage tes coups de cœur</span>
+              <span>Écris des avis et retrouve ceux de la communauté</span>
             </div>
           </div>
         </div>
@@ -93,36 +84,22 @@ async function register(): Promise<void> {
 
       <div class="form">
         <div class="form__head">
-          <h1 class="form__title">Inscription</h1>
+          <h1 class="form__title">Connexion</h1>
           <div class="form__meta muted">
-            Déjà un compte ?
-            <RouterLink class="link" :to="{ name: 'login' }">Se connecter</RouterLink>
+            Pas de compte ?
+            <RouterLink class="link" :to="{ name: 'register' }">Créer un compte</RouterLink>
           </div>
         </div>
 
-        <form class="form__body" @submit.prevent="register">
+        <form class="form__body" @submit.prevent="connect">
           <div class="field">
             <label class="label" for="login">Login</label>
             <input
               id="login"
-              v-model="form.login"
+              v-model="connectingUser.login"
               class="input"
               autocomplete="username"
               inputmode="text"
-              spellcheck="false"
-            />
-            <div class="hint muted">3 caractères minimum.</div>
-          </div>
-
-          <div class="field">
-            <label class="label" for="email">Email</label>
-            <input
-              id="email"
-              v-model="form.email"
-              class="input"
-              type="email"
-              autocomplete="email"
-              inputmode="email"
               spellcheck="false"
             />
           </div>
@@ -131,31 +108,16 @@ async function register(): Promise<void> {
             <label class="label" for="password">Mot de passe</label>
             <input
               id="password"
-              v-model="form.password"
+              v-model="connectingUser.password"
               class="input"
               type="password"
-              autocomplete="new-password"
+              autocomplete="current-password"
             />
-            <div class="hint muted">6 caractères minimum.</div>
-          </div>
-
-          <div class="field">
-            <label class="label" for="confirmPassword">Confirmer</label>
-            <input
-              id="confirmPassword"
-              v-model="form.confirmPassword"
-              class="input"
-              type="password"
-              autocomplete="new-password"
-            />
-            <div v-if="passwordMismatch" class="hint hint--error" role="alert">
-              Les mots de passe ne correspondent pas.
-            </div>
           </div>
 
           <div class="actions">
             <button class="btn btn--primary" type="submit" :disabled="loading || !canSubmit">
-              {{ loading ? 'Création…' : 'Créer mon compte' }}
+              {{ loading ? 'Connexion…' : 'Se connecter' }}
             </button>
             <RouterLink class="btn btn--ghost" :to="{ name: 'melovibes' }">Retour</RouterLink>
           </div>
@@ -181,7 +143,7 @@ async function register(): Promise<void> {
 
 .poster {
   position: relative;
-  min-height: 520px;
+  min-height: 460px;
   border-right: 1px solid var(--c-border);
   background: #0b121a;
 }
@@ -232,7 +194,7 @@ async function register(): Promise<void> {
 .poster__subtitle {
   color: rgba(245, 248, 252, 0.74);
   font-weight: 650;
-  max-width: 44ch;
+  max-width: 42ch;
 }
 
 .poster__bullets {
@@ -302,20 +264,6 @@ async function register(): Promise<void> {
   color: var(--c-text-soft);
 }
 
-.hint {
-  font-size: 12px;
-  color: var(--c-text-mute);
-  font-weight: 650;
-}
-
-.hint--error {
-  color: rgba(255, 245, 245, 0.92);
-  background: #3a1a1e;
-  border: 1px solid rgba(255, 77, 79, 0.45);
-  border-radius: 12px;
-  padding: 8px 10px;
-}
-
 .actions {
   display: flex;
   gap: 10px;
@@ -336,7 +284,7 @@ async function register(): Promise<void> {
   .poster {
     border-right: none;
     border-bottom: 1px solid var(--c-border);
-    min-height: 240px;
+    min-height: 220px;
   }
 }
 </style>

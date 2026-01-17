@@ -50,10 +50,16 @@ export async function apiJson<T>(path: string, init: ApiJsonInit = {}): Promise<
 
   if (!res.ok) {
     const payload = await parseBody(res)
-    const message =
-      typeof payload === 'object' && payload && 'message' in payload
-        ? String((payload as any).message)
-        : `Request failed with status ${res.status}`
+    let message = `Request failed with status ${res.status}`
+    if (typeof payload === 'object' && payload) {
+      if ('message' in payload) {
+        message = String((payload as any).message)
+      } else if ('error' in payload) {
+        message = String((payload as any).error)
+      } else if ('hydra:description' in payload) {
+        message = String((payload as any)['hydra:description'])
+      }
+    }
     throw new ApiError(message, res.status, payload)
   }
   return (await parseBody(res)) as T

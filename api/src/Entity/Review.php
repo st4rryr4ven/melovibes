@@ -2,10 +2,13 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
+use ApiPlatform\Metadata\ApiFilter;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use App\Controller\ReviewCreateController;
@@ -24,6 +27,10 @@ use Symfony\Component\Validator\Constraints as Assert;
         new ORM\UniqueConstraint(name: "unique_review_per_user_per_music", columns: ["author_id", "music_id"])
     ]
 )]
+#[ApiFilter(SearchFilter::class, properties: [
+    'author' => 'exact',
+    'music' => 'exact',
+])]
 #[UniqueEntity(
     fields: ['author', 'music'],
     message: 'Vous avez déjà posté un avis pour cette musique.'
@@ -31,16 +38,18 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new Get(requirements: ['id' => '\d+']),
+        new GetCollection(),
         new Post(
             controller: ReviewCreateController::class,
             denormalizationContext: ['groups' => ['review:write']],
+            security: "is_granted('ROLE_USER')",
             validationContext: ['groups' => ['review:write']]
         ),
         new Patch(
             inputFormats: ['json' => ['application/merge-patch+json']],
-            denormalizationContext: ['groups' => ['serialization:review:update']],
+            denormalizationContext: ['groups' => ['review:update']],
             security: "is_granted('ROLE_ADMIN') or object.getAuthor() == user",
-            validationContext: ['groups' => ['validation:review:update']]
+            validationContext: ['groups' => ['review:update']]
         ),
         new Delete(
             security: "is_granted('ROLE_ADMIN') or object.getAuthor() == user"
@@ -53,7 +62,7 @@ class Review
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['music:read'])]
+    #[Groups(['review:read', 'music:read', 'user:read'])]
     private ?int $id = null;
 
     /**
@@ -62,6 +71,7 @@ class Review
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
     #[Groups(['review:read', 'review:write'])]
+    #[ApiProperty(readableLink: true)]
     private ?Music $music = null;
 
     /**
@@ -77,7 +87,7 @@ class Review
      * Comment of the review
      */
     #[ORM\Column(type: Types::TEXT, nullable: true)]
-    #[Groups(['review:read', 'review:write', 'music:read'])]
+    #[Groups(['review:read', 'review:write', 'review:update', 'music:read'])]
     private ?string $comment = null;
 
     /**
@@ -90,7 +100,7 @@ class Review
         min: 0,
         max: 5
     )]
-    #[Groups(['review:read', 'review:write', 'music:read'])]
+    #[Groups(['review:read', 'review:write', 'review:update', 'music:read'])]
     private ?int $rating = null;
 
     /**
@@ -134,10 +144,9 @@ class Review
         return $this->comment;
     }
 
-    public function setComment(string $comment): static
+    public function setComment(?string $comment): static
     {
         $this->comment = $comment;
-
         return $this;
     }
 
@@ -168,6 +177,18 @@ class Review
     public function __construct()
     {
         $this->createdAt = new DateTimeImmutable();
+    }
+
+    #[Groups(['review:read'])]
+    public function getMusicTitle(): ?string
+    {
+        return $this->music?->getTitle();
+    }
+
+    #[Groups(['review:read'])]
+    public function getMusicId(): ?int
+    {
+        return $this->music?->getId();
     }
 
 }

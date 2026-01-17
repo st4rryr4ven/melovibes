@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import type { User } from '@/types'
-import { userApi } from '@/api/userApi'
-import { useStoreAuthentification } from '@/stores/storeAuthentification'
-import { useFlashStore } from '@/stores/flashStore'
-import UserBox from '@/components/UserBox.vue'
+import type { User } from '@/types.ts'
+import { userApi } from '@/api/userApi.ts'
+import { useStoreAuthentification } from '@/stores/storeAuthentification.ts'
+import { useFlashStore } from '@/stores/flashStore.ts'
+import UserBox from '@/components/views/user/UserBox.vue'
 
 const authStore = useStoreAuthentification()
 const flash = useFlashStore()

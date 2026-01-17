@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import type { Music } from '@/types'
-import { musicApi } from '@/api/musicApi'
+import type { Music } from '@/types.ts'
+import { musicApi } from '@/api/musicApi.ts'
 
 const props = defineProps<{ music: Music }>();
 const emit = defineEmits<{

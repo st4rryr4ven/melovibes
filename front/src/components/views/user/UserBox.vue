@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import type { User } from '@/types'
-import { userApi } from '@/api/userApi'
-import { useFlashStore } from '@/stores/flashStore'
-import { getProfilePictureUrl } from '@/util/avatar'
+import type { User } from '@/types.ts'
+import { userApi } from '@/api/userApi.ts'
+import { useFlashStore } from '@/stores/flashStore.ts'
+import { getProfilePictureUrl } from '@/util/avatar.ts'
 
 const props = defineProps<{ user: User }>()
 

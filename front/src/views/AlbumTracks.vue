@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import MusicList from '@/components/MusicList.vue'
+import MusicList from '@/components/views/music/MusicList.vue'
 import { albumApi } from '@/api/albumApi'
 import { musicApi } from '@/api/musicApi'
 import type { AlbumTrackItem, AlbumTracksResponse } from '@/types'

@@ -1,35 +1,66 @@
-import type { Review } from '@/types'
-import { apiCollection, apiJson } from '@/api/httpClient'
+import type {Review} from '@/types'
+import {apiJson, apiVoid} from '@/api/httpClient'
+
+interface JsonLdCollection<T> {
+  '@context': string
+  '@id': string
+  '@type': string
+  totalItems: number
+  member: T[]
+}
 
 export class ReviewApi {
-  private musicIriFromId(musicId: number): string {
-    return `/api/music/${musicId}`
+  async list(): Promise<Review[]> {
+    const res = await apiJson<JsonLdCollection<Review>>('reviews')
+    return res.member || []
   }
 
-  async listByMusic(musicIri: string): Promise<Review[]> {
-    const usp = new URLSearchParams()
-    usp.set('music', musicIri)
-    return apiCollection<Review>(`reviews?${usp.toString()}`)
+  async listByUserId(userId: number): Promise<Review[]> {
+    const res = await apiJson<JsonLdCollection<any>>(`reviews?author=${userId}`)
+
+    return (res.member || []).map(r => ({
+      ...r,
+      music: r.music
+        ? {
+          id: Number((r.music as any)['@id'].split('/').pop()),
+          title: r.music.title
+        }
+        : undefined,
+      author: {
+        id: Number((r.author as any)['@id'].split('/').pop())
+      }
+    }))
   }
 
-  async create(payload: { musicIri: string; rating: number; comment?: string }): Promise<Review> {
+
+  async listByMusicId(musicId: number): Promise<Review[]> {
+    const musicIri = `/api/music/${musicId}`
+    const params = new URLSearchParams({music: musicIri})
+    const res = await apiJson<JsonLdCollection<Review>>(`reviews?${params.toString()}`)
+    return res.member || []
+  }
+
+  async get(id: number): Promise<Review> {
+    return apiJson<Review>(`reviews/${id}`)
+  }
+
+  async createForMusicId(musicId: number, data: Partial<Review>): Promise<Review> {
+    const musicIri = `/api/music/${musicId}`
     return apiJson<Review>('reviews', {
       method: 'POST',
-      json: {
-        music: payload.musicIri,
-        rating: payload.rating,
-        comment: payload.comment ?? ''
-      }
+      contentType: 'application/ld+json',
+      json: {...data, music: musicIri}
     })
   }
 
-  async createForMusicId(payload: { musicId: number; rating: number; comment?: string }): Promise<Review> {
-    return this.create({
-      musicIri: this.musicIriFromId(payload.musicId),
-      rating: payload.rating,
-      comment: payload.comment
+  async patch(id: number, data: Partial<Review>): Promise<Review> {
+    return apiJson<Review>(`reviews/${id}`, {
+      method: 'PATCH',
+      contentType: 'application/merge-patch+json',
+      json: data
     })
   }
+
 }
 
 export const reviewApi = new ReviewApi()

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { AlbumTrackItem, MusicSearchItem } from '@/types'
+import type { AlbumTrackItem, MusicSearchItem } from '@/types.ts'
 
 const props = withDefaults(
   defineProps<{

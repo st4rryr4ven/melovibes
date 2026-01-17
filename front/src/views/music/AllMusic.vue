@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import type { Music } from '@/types'
-import { musicApi } from '@/api/musicApi'
-import { useStoreAuthentification } from '@/stores/storeAuthentification'
-import MusicBox from "@/components/MusicBox.vue";
+import type { Music } from '@/types.ts'
+import { musicApi } from '@/api/musicApi.ts'
+import { useStoreAuthentification } from '@/stores/storeAuthentification.ts'
+import MusicBox from "@/components/views/music/MusicBox.vue";
 
 const authStore = useStoreAuthentification()
 const router = useRouter()

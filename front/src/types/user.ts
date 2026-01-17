@@ -1,4 +1,5 @@
 import type { Music } from './music'
+import type { Review } from './review'
 
 export interface User {
   id: number
@@ -6,6 +7,7 @@ export interface User {
   email: string
   roles: string[]
   favoriteMusic?: Music[]
+  reviews?: Review[]
 }
 
 export interface UpdateUserPayload {

@@ -31,7 +31,10 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiFilter(BooleanFilter::class, properties: ['isValidated'])]
 #[ApiResource(
     operations: [
-        new Get(requirements: ['id' => '\d+']),
+        new Get(
+            requirements: ['id' => '\d+'],
+            security: "is_granted('ROLE_USER') or object.getIsValidated() == true"
+        ),
         new GetCollection(security: "is_granted('ROLE_USER')"),
         new GetCollection(
             uriTemplate: '/music/search',
@@ -102,7 +105,7 @@ class Music
     #[ORM\Column(length: 255)]
     #[Assert\NotNull]
     #[Assert\NotBlank(message: 'La musique doit avoir un titre.', groups: ['validation:music:create', 'validation:music:update'])]
-    #[Groups(['music:read', 'music:lite', 'serialization:music:create', 'serialization:music:update'])]
+    #[Groups(['music:read', 'music:lite', 'review:read', 'serialization:music:create', 'serialization:music:update'])]
     private ?string $title = null;
 
     /**
@@ -312,7 +315,6 @@ class Music
     public function removeReview(Review $review): static
     {
         if ($this->reviews->removeElement($review)) {
-            // set the owning side to null (unless already changed)
             if ($review->getMusic() === $this) {
                 $review->setMusic(null);
             }

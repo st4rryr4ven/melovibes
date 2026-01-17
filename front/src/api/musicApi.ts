@@ -1,5 +1,5 @@
-import type { ImportedMusic, Music, MusicSearchResponse } from '@/types'
-import { apiCollection, apiJson, apiVoid } from '@/api/httpClient'
+import type {ImportedMusic, Music, MusicSearchResponse} from '@/types'
+import {apiCollection, apiJson, apiVoid} from '@/api/httpClient'
 
 export interface MusicSearchParams {
   q: string
@@ -11,6 +11,41 @@ export interface MusicSearchParams {
 export class MusicApi {
   async get(id: number): Promise<Music> {
     return apiJson<Music>(`music/${id}`)
+  }
+
+  enrichMusicData(music: Music): Music {
+    if (!music.reviews) return music
+
+    return {
+      ...music,
+      reviews: music.reviews.map((r) => {
+        // Safely extract Review ID
+        const rawReviewIri = (r as any)['@id'] as string | undefined
+        const reviewId = r.id || this.extractIdFromIri(rawReviewIri)
+
+        // Safely extract Author ID
+        const rawAuthorIri = (r.author as any)?.['@id'] as string | undefined
+        const authorId = r.author?.id || this.extractIdFromIri(rawAuthorIri)
+
+        return {
+          ...r,
+          id: reviewId,
+          author: r.author ? {...r.author, id: authorId} : r.author
+        }
+      })
+    }
+  }
+
+  private extractIdFromIri(iri: string | undefined): number {
+    if (!iri || typeof iri !== 'string') return 0
+
+    const parts = iri.split('/')
+    const lastPart = parts[parts.length - 1]
+
+    if (!lastPart) return 0
+
+    const id = parseInt(lastPart, 10)
+    return isNaN(id) ? 0 : id
   }
 
   async list(filters: Record<string, unknown> = {}): Promise<Music[]> {
@@ -30,7 +65,7 @@ export class MusicApi {
   }
 
   async delete(id: number): Promise<void> {
-    await apiVoid(`music/${id}`, { method: 'DELETE' })
+    await apiVoid(`music/${id}`, {method: 'DELETE'})
   }
 
   async patch(id: number, data: Record<string, unknown>): Promise<Music> {
@@ -48,7 +83,10 @@ export class MusicApi {
       trackId = match[1]
     }
 
-    const res = await apiJson<{ musicId: number; title: string }>(`music/import/spotify/${encodeURIComponent(trackId)}`, {
+    const res = await apiJson<{
+      musicId: number;
+      title: string
+    }>(`music/import/spotify/${encodeURIComponent(trackId)}`, {
       method: 'POST'
     })
 

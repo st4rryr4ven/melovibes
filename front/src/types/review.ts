@@ -3,7 +3,7 @@ import type { User } from './user'
 
 export interface Review {
   id: number
-  music: Music
+  music?: Pick<Music, 'id' | 'title'>
   author: User
   comment?: string | null
   rating: number
