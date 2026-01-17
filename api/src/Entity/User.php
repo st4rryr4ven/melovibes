@@ -35,7 +35,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new GetCollection(security: "is_granted('ROLE_ADMIN')"),
-        new Get(security: "(is_granted('ROLE_USER') and object == user) or is_granted('ROLE_ADMIN')"),
+        new Get(security: "is_granted('USER_VIEW', object)"),
         new Post(
             uriTemplate: '/users/register',
             denormalizationContext: ['groups' => ['serialization:user:create']],
@@ -47,7 +47,7 @@ use Symfony\Component\Validator\Constraints as Assert;
                 'json' => ['application/merge-patch+json'],
             ],
             denormalizationContext: ['groups' => ['serialization:user:update']],
-            security: "(is_granted('ROLE_USER') and object == user) or is_granted('ROLE_ADMIN')",
+            security: "is_granted('USER_EDIT', object)",
             validationContext: ['groups' => ['Default', 'validation:user:update']],
             processor: UserProcessor::class
         ),
@@ -57,10 +57,10 @@ use Symfony\Component\Validator\Constraints as Assert;
                 'json' => ['application/merge-patch+json'],
             ],
             denormalizationContext: ['groups' => ['serialization:user:update:favorites']],
-            security: "is_granted('ROLE_USER') and object == user"
+            security: "is_granted('USER_EDIT', object)",
         ),
         new Delete(
-            security: "(is_granted('ROLE_USER') and object == user) or is_granted('ROLE_ADMIN')",
+            security: "is_granted('USER_DELETE', object)",
             processor: UserProcessor::class
         )
     ],

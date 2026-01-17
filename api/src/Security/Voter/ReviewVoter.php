@@ -31,17 +31,12 @@ class ReviewVoter extends Voter
         /** @var Review $review */
         $review = $subject;
 
-        return match($attribute) {
+        return match ($attribute) {
             self::EDIT => $review->getAuthor() === $user,
 
             self::DELETE => $review->getAuthor() === $user || in_array('ROLE_ADMIN', $user->getRoles()),
 
             default => false,
         };
-    }
-
-    private function isOwner(Review $review, User $user): bool
-    {
-        return $review->getAuthor() === $user;
     }
 }

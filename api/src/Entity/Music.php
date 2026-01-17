@@ -77,10 +77,10 @@ use Symfony\Component\Validator\Constraints as Assert;
         new Patch(
             inputFormats: ['json' => ['application/merge-patch+json']],
             denormalizationContext: ['groups' => ['serialization:music:update']],
-            security: "is_granted('ROLE_ADMIN')",
+            security: "is_granted('MUSIC_VALIDATE', object)",
             validationContext: ['groups' => ['validation:music:update']]
         ),
-        new Delete(security: "is_granted('ROLE_ADMIN')")
+        new Delete(security: "is_granted('MUSIC_DELETE', object)")
     ],
     normalizationContext: ['groups' => ['music:read']]
 )]
