@@ -50,18 +50,6 @@ function handleImageError(event: Event) {
     'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iIzBiMTIxYSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE2IiBmaWxsPSJyZ2JhKDI0NSwyNDgsMjUyLDAuNzUpIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+QXZhdGFyPC90ZXh0Pjwvc3ZnPg=='
 }
 
-function formatDate(value?: string | null): string {
-  if (!value) return ''
-  const d = new Date(value)
-  if (Number.isNaN(d.getTime())) return ''
-  return d.toLocaleDateString(undefined, {year: 'numeric', month: 'short', day: '2-digit'})
-}
-
-function stars(rating: number): string {
-  const r = Math.max(0, Math.min(5, Math.round(rating)))
-  return '★'.repeat(r) + '☆'.repeat(5 - r)
-}
-
 async function loadReviews(): Promise<void> {
   const userId = myUserId.value
   if (!userId) return
@@ -229,7 +217,7 @@ async function deleteAccount(): Promise<void> {
             <form class="form" @submit.prevent="update">
               <div class="grid">
                 <div class="field">
-                  <label class="label" for="login">Login</label>
+                  <label class="label" for="login">Pseudo</label>
                   <input id="login" class="input" type="text" v-model="login" required/>
                   <div class="hint muted">Modifiable</div>
                 </div>
