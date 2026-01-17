@@ -7,6 +7,7 @@ import {getProfilePictureUrl} from '@/util/avatar.ts'
 import {reviewApi} from '@/api/reviewApi.ts'
 import ReviewModal from '@/components/views/review/ReviewModal.vue'
 import type {Review} from '@/types'
+import ReviewList from "@/components/views/review/ReviewList.vue";
 
 const router = useRouter()
 const authStore = useStoreAuthentification()
@@ -278,39 +279,13 @@ async function deleteAccount(): Promise<void> {
               <div v-else-if="!reviews.length" class="empty panel">
                 <div class="muted">Vous n'avez pas encore posté d'avis.</div>
               </div>
-              <div v-else class="list">
-                <article v-for="r in reviews" :key="r.id" class="item panel">
-                  <header class="item__head">
-                    <div class="item__left">
-                      <RouterLink
-                        v-if="r.music?.id"
-                        :to="{ name: 'musicDetail', params: { id: r.music?.id } }"
-                        class="item__music"
-                      >
-                        {{ r.music?.title || 'Musique inconnue' }}
-                      </RouterLink>
-                      <div v-else class="item__music">Musique inconnue</div>
 
-                      <div v-if="r.createdAt" class="item__date muted">
-                        {{ formatDate(r.createdAt) }}
-                      </div>
-                    </div>
-
-                    <div class="item__rating" :aria-label="`Note ${r.rating}/5`">
-                      {{ stars(r.rating) }}
-                    </div>
-
-                    <div class="item__right">
-                      <button class="btn btn--ghost btn--sm" type="button"
-                              @click="openEditReview(r)">Modifier
-                      </button>
-                    </div>
-                  </header>
-
-                  <div v-if="r.comment" class="item__comment">{{ r.comment }}</div>
-                  <div v-else class="item__comment muted">(Sans commentaire)</div>
-                </article>
-              </div>
+              <ReviewList
+                v-else
+                :reviews="reviews"
+                :editable-review-id="myUserId"
+                @edit="openEditReview"
+              />
             </div>
           </section>
         </div>
