@@ -291,16 +291,38 @@ async function deleteAccount(): Promise<void> {
                       </div>
                     </div>
 
-                    <div class="item__rating" :aria-label="`Note ${r.rating}/5`">
-                      {{ stars(r.rating) }}
-                    </div>
-
-                    <div class="item__right">
-                      <button class="btn btn--ghost btn--sm" type="button"
-                              @click="openEditReview(r)">Modifier
-                      </button>
+                    <div class="item__right-group">
+                      <div class="item__rating" :aria-label="`Note ${r.rating}/5`">
+                        {{ stars(r.rating) }}
+                      </div>
+                      <div class="item__actions">
+                        <button class="btn btn--ghost btn--sm" type="button"
+                                @click="openEditReview(r)">
+                          Modifier
+                        </button>
+                      </div>
                     </div>
                   </header>
+
+                  <div class="item__details"
+                       v-if="r.melodyRating || r.lyricsRating || r.vocalsRating || r.impactRating">
+                    <div class="detail-row" v-if="r.melodyRating">
+                      <span class="detail-label">Mélodie</span>
+                      <span class="detail-stars">{{ stars(r.melodyRating) }}</span>
+                    </div>
+                    <div class="detail-row" v-if="r.lyricsRating">
+                      <span class="detail-label">Paroles</span>
+                      <span class="detail-stars">{{ stars(r.lyricsRating) }}</span>
+                    </div>
+                    <div class="detail-row" v-if="r.vocalsRating">
+                      <span class="detail-label">Vocals</span>
+                      <span class="detail-stars">{{ stars(r.vocalsRating) }}</span>
+                    </div>
+                    <div class="detail-row" v-if="r.impactRating">
+                      <span class="detail-label">Impact</span>
+                      <span class="detail-stars">{{ stars(r.impactRating) }}</span>
+                    </div>
+                  </div>
 
                   <div v-if="r.comment" class="item__comment">{{ r.comment }}</div>
                   <div v-else class="item__comment muted">(Sans commentaire)</div>

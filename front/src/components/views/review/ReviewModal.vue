@@ -18,6 +18,10 @@ const flash = useFlashStore()
 
 const rating = ref<number>(0)
 const comment = ref<string>('')
+const melodyRating = ref<number>(0)
+const lyricsRating = ref<number>(0)
+const vocalsRating = ref<number>(0)
+const impactRating = ref<number>(0)
 const loading = ref(false)
 
 const canSubmit = computed(() =>
@@ -30,9 +34,17 @@ watch(
     if (props.review) {
       rating.value = props.review.rating
       comment.value = props.review.comment ?? ''
+      melodyRating.value = props.review.melodyRating ?? 0
+      lyricsRating.value = props.review.lyricsRating ?? 0
+      vocalsRating.value = props.review.vocalsRating ?? 0
+      impactRating.value = props.review.impactRating ?? 0
     } else {
       rating.value = 0
       comment.value = ''
+      melodyRating.value = 0
+      lyricsRating.value = 0
+      vocalsRating.value = 0
+      impactRating.value = 0
     }
   },
   {immediate: true}
@@ -40,25 +52,25 @@ watch(
 
 async function submit(): Promise<void> {
   if (!canSubmit.value) return
-
   try {
     loading.value = true
-    let result: Review
-
-    if (props.review) {
-      result = await reviewApi.patch(props.review.id, {
-        rating: rating.value,
-        comment: comment.value.trim() || null
-      })
-      flash.success('Avis modifié.')
-    } else {
-      result = await reviewApi.createForMusicId(props.musicId, {
-        rating: rating.value,
-        comment: comment.value.trim() || null
-      })
-      flash.success('Avis envoyé.')
+    const payload = {
+      rating: rating.value,
+      comment: comment.value.trim() || null,
+      melodyRating: melodyRating.value || null,
+      lyricsRating: lyricsRating.value || null,
+      vocalsRating: vocalsRating.value || null,
+      impactRating: impactRating.value || null
     }
 
+    let result: Review
+    if (props.review) {
+      result = await reviewApi.patch(props.review.id, payload)
+      flash.success('Avis modifié.')
+    } else {
+      result = await reviewApi.createForMusicId(props.musicId, payload)
+      flash.success('Avis envoyé.')
+    }
     emit('submitted', result)
   } catch (e: any) {
     let msg = "Erreur lors de l'envoi de l'avis."
@@ -94,6 +106,14 @@ function setRating(v: number): void {
   if (loading.value) return
   rating.value = v
 }
+
+function setSubRating(id: string, v: number) {
+  if (loading.value) return
+  if (id === 'melody') melodyRating.value = v
+  if (id === 'lyrics') lyricsRating.value = v
+  if (id === 'vocals') vocalsRating.value = v
+  if (id === 'impact') impactRating.value = v
+}
 </script>
 
 <template>
@@ -112,26 +132,30 @@ function setRating(v: number): void {
       </header>
 
       <div class="body">
-        <div class="stars" aria-label="Note">
-          <button
-            v-for="n in 5"
-            :key="n"
-            class="star"
-            type="button"
-            :class="{ 'is-on': n <= rating }"
-            :disabled="loading"
-            @click="setRating(n)"
-          >
-            ★
+        <label class="label">Note globale</label>
+        <div class="stars">
+          <button v-for="n in 5" :key="n" class="star" :class="{ 'is-on': n <= rating }"
+                  @click="setRating(n)">★
           </button>
         </div>
 
-        <textarea
-          v-model="comment"
-          class="input textarea"
-          :disabled="loading"
-          placeholder="Votre commentaire…"
-        />
+        <div class="sub-grid">
+          <div v-for="crit in [
+                {id: 'melody', label: 'Mélodie', val: melodyRating},
+                {id: 'lyrics', label: 'Paroles', val: lyricsRating},
+                {id: 'vocals', label: 'Vocals', val: vocalsRating},
+                {id: 'impact', label: 'Impact', val: impactRating},
+              ]" :key="crit.id" class="crit-row">
+            <span class="crit-label">{{ crit.label }}</span>
+            <div class="mini-stars">
+              <button v-for="n in 5" :key="n" type="button" class="mini-star"
+                      :class="{ 'is-on': n <= crit.val }" @click="setSubRating(crit.id, n)">★
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <textarea v-model="comment" class="input textarea" placeholder="Votre commentaire…"/>
       </div>
 
       <footer class="foot">
@@ -242,6 +266,46 @@ function setRating(v: number): void {
   border: 2px solid rgba(245, 248, 252, 0.25);
   border-top-color: rgba(245, 248, 252, 0.85);
   animation: spin 0.9s linear infinite;
+}
+
+.sub-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 12px;
+  background: var(--c-surface-3);
+  border-radius: 12px;
+}
+
+.crit-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.crit-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--c-text-mute);
+  text-transform: uppercase;
+}
+
+.mini-stars {
+  display: flex;
+  gap: 4px;
+}
+
+.mini-star {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 16px;
+  color: rgba(245, 248, 252, 0.15);
+  cursor: pointer;
+}
+
+.mini-star.is-on {
+  color: #1db954;
 }
 
 @keyframes spin {

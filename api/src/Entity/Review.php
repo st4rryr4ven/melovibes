@@ -103,6 +103,26 @@ class Review
     #[Groups(['review:read', 'review:write', 'review:update', 'music:read'])]
     private ?int $rating = null;
 
+    #[ORM\Column(nullable: true)]
+    #[Assert\Range(min: 0, max: 5)]
+    #[Groups(['review:read', 'review:write', 'review:update', 'music:read'])]
+    private ?int $melodyRating = null;
+
+    #[ORM\Column(nullable: true)]
+    #[Assert\Range(min: 0, max: 5)]
+    #[Groups(['review:read', 'review:write', 'review:update', 'music:read'])]
+    private ?int $lyricsRating = null;
+
+    #[ORM\Column(nullable: true)]
+    #[Assert\Range(min: 0, max: 5)]
+    #[Groups(['review:read', 'review:write', 'review:update', 'music:read'])]
+    private ?int $vocalsRating = null;
+
+    #[ORM\Column(nullable: true)]
+    #[Assert\Range(min: 0, max: 5)]
+    #[Groups(['review:read', 'review:write', 'review:update', 'music:read'])]
+    private ?int $impactRating = null;
+
     /**
      * When the review was posted
      */
@@ -189,6 +209,46 @@ class Review
     public function getMusicId(): ?int
     {
         return $this->music?->getId();
+    }
+
+    public function getMelodyRating(): ?int
+    {
+        return $this->melodyRating;
+    }
+
+    public function setMelodyRating(?int $melodyRating): void
+    {
+        $this->melodyRating = $melodyRating;
+    }
+
+    public function getLyricsRating(): ?int
+    {
+        return $this->lyricsRating;
+    }
+
+    public function setLyricsRating(?int $lyricsRating): void
+    {
+        $this->lyricsRating = $lyricsRating;
+    }
+
+    public function getVocalsRating(): ?int
+    {
+        return $this->vocalsRating;
+    }
+
+    public function setVocalsRating(?int $vocalsRating): void
+    {
+        $this->vocalsRating = $vocalsRating;
+    }
+
+    public function getImpactRating(): ?int
+    {
+        return $this->impactRating;
+    }
+
+    public function setImpactRating(?int $impactRating): void
+    {
+        $this->impactRating = $impactRating;
     }
 
 }
