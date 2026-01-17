@@ -206,7 +206,6 @@ async function deleteAccount(): Promise<void> {
 
       <div class="main">
         <div class="main__sections">
-          <!-- Profile Form -->
           <section class="card">
             <form class="form" @submit.prevent="update">
               <div class="grid">
@@ -246,8 +245,35 @@ async function deleteAccount(): Promise<void> {
               </div>
             </form>
           </section>
+          <div class="side card">
+            <div class="side__header">
+              <div class="avatar">
+                <img :src="profilePictureUrl" :alt="`Avatar de ${login}`" class="avatar__img"
+                     @error="handleImageError"/>
+              </div>
+              <div class="side__identity">
+                <div class="side__login">{{ login }}</div>
+                <div class="side__email muted">{{ email }}</div>
+              </div>
+            </div>
 
-          <!-- Reviews -->
+            <div class="side__footer">
+              <hr class="separator" />
+              <div class="avatar-info">
+                <p class="hint muted">Votre photo de profil est gérée par <strong>MyAvatar</strong>.</p>
+                <a
+                  href="https://webinfo.iutmontp.univ-montp2.fr/~mezencey/my-avatar/public/"
+                  target="_blank"
+                  rel="noopener"
+                  class="btn btn--ghost btn--sm btn--full"
+                >
+                  <span>Modifier ma photo</span>
+                  <span class="external-icon">↗</span>
+                </a>
+              </div>
+            </div>
+          </div>
+
           <section class="reviews card">
             <header class="reviews__head">
               <div class="reviews__title">Mes avis</div>
