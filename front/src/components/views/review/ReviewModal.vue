@@ -36,22 +36,15 @@ const criteriaList = computed(() => [
 ])
 
 watch(
-  () => [props.musicId, props.review],
-  () => {
-    if (props.review) {
-      rating.value = props.review.rating
-      comment.value = props.review.comment ?? ''
-      melodyRating.value = props.review.melodyRating ?? 0
-      lyricsRating.value = props.review.lyricsRating ?? 0
-      vocalsRating.value = props.review.vocalsRating ?? 0
-      impactRating.value = props.review.impactRating ?? 0
+  () => [melodyRating.value, lyricsRating.value, vocalsRating.value, impactRating.value],
+  ([mel, lyr, voc, imp]) => {
+    const values = [mel, lyr, voc, imp].filter((v): v is number => typeof v === 'number' && v > 0);
+
+    if (values.length > 0) {
+      const sum = values.reduce((acc: number, val: number) => acc + val, 0);
+      rating.value = Math.round(sum / values.length);
     } else {
-      rating.value = 0
-      comment.value = ''
-      melodyRating.value = 0
-      lyricsRating.value = 0
-      vocalsRating.value = 0
-      impactRating.value = 0
+      rating.value = 0;
     }
   },
   {immediate: true}
@@ -93,11 +86,6 @@ function close(): void {
   emit('close')
 }
 
-function setRating(v: number): void {
-  if (loading.value) return
-  rating.value = v
-}
-
 function setSubRating(id: string, v: number) {
   if (loading.value) return
   if (id === 'melody') melodyRating.value = v
@@ -123,11 +111,16 @@ function setSubRating(id: string, v: number) {
       </header>
 
       <div class="body">
-        <label class="label">Note globale</label>
+        <label class="label">Note globale (Auto)</label>
         <div class="stars">
-          <button v-for="n in 5" :key="n" class="star" :class="{ 'is-on': n <= rating }"
-                  @click="setRating(n)">★
-          </button>
+          <div
+            v-for="n in 5"
+            :key="n"
+            class="star readonly"
+            :class="{ 'is-on': n <= rating }"
+          >
+            ★
+          </div>
         </div>
 
         <div class="sub-grid">
@@ -299,6 +292,22 @@ function setSubRating(id: string, v: number) {
 
 .mini-star.is-on {
   color: #1db954;
+}
+
+.star.readonly {
+  cursor: default;
+  pointer-events: none;
+}
+
+.star.readonly.is-on {
+  background: #2e210a;
+  border-color: #e69b20;
+}
+
+.star:not(.readonly):hover {
+  transform: translateY(-1px);
+  border-color: var(--c-border-2);
+  background: #193024;
 }
 
 @keyframes spin {
