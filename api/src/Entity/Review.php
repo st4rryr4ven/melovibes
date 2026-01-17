@@ -48,11 +48,11 @@ use Symfony\Component\Validator\Constraints as Assert;
         new Patch(
             inputFormats: ['json' => ['application/merge-patch+json']],
             denormalizationContext: ['groups' => ['review:update']],
-            security: "is_granted('ROLE_ADMIN') or object.getAuthor() == user",
+            security: "is_granted('REVIEW_EDIT', object)",
             validationContext: ['groups' => ['review:update']]
         ),
         new Delete(
-            security: "is_granted('ROLE_ADMIN') or object.getAuthor() == user"
+            security: "is_granted('REVIEW_DELETE', object)"
         )
     ],
     normalizationContext: ['groups' => ['review:read']]
