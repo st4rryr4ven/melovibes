@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import {computed} from 'vue'
 import MusicCard from '@/components/views/music/MusicCard.vue'
-import type { AlbumTrackItem, MusicSearchItem } from '@/types.ts'
-import { useStoreAuthentification } from '@/stores/storeAuthentification.ts'
+import type {AlbumTrackItem, Music, MusicSearchItem} from '@/types.ts'
+import {useStoreAuthentification} from '@/stores/storeAuthentification.ts'
 
 type Props =
   | {
@@ -15,6 +15,11 @@ type Props =
   items: AlbumTrackItem[]
   busySpotifyId?: string | null
 }
+  | {
+  mode: 'local';
+  items: Music[];
+  busySpotifyId?: string | null
+}
 
 const props = withDefaults(defineProps<Props>(), {
   busySpotifyId: null
@@ -23,40 +28,35 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   (e: 'selectSearch', item: MusicSearchItem): void
   (e: 'selectAlbum', item: AlbumTrackItem): void
+  (e: 'select', id: number): void
 }>()
 
 const authStore = useStoreAuthentification()
 
-function keyOf(item: MusicSearchItem | AlbumTrackItem): string {
-  if ('source' in item) {
-    return item.source === 'local' ? `local-${item.local.id}` : `spotify-${item.spotify.id}`
+function keyOf(item: any): string {
+  if (props.mode === 'local') {
+    return `db-${item.id}`
   }
+
+  if ('source' in item) {
+    return item.source === 'local' ? `local-${item.local.musicId}` : `spotify-${item.spotify.id}`
+  }
+
   return `album-${item.spotify.id}`
 }
 
-function spotifyIdOf(item: MusicSearchItem | AlbumTrackItem): string | null {
+function spotifyIdOf(item: any): string | null {
+  if (props.mode === 'local') return item.spotifyId || null
   if ('source' in item) {
     return item.source === 'spotify' ? item.spotify.id : null
   }
   return item.spotify.id
 }
 
-function isBusy(item: MusicSearchItem | AlbumTrackItem): boolean {
-  const id = spotifyIdOf(item)
-  return !!id && id === props.busySpotifyId
-}
-
-function onSelect(item: MusicSearchItem | AlbumTrackItem): void {
-  if (props.mode === 'search') {
-    emit('selectSearch', item as MusicSearchItem)
-    return
-  }
-  emit('selectAlbum', item as AlbumTrackItem)
-}
-
 const visibleItems = computed(() => {
-  if (props.mode !== 'search') return props.items
+  if (props.mode === 'local') return props.items
 
+  if (props.mode !== 'search') return props.items
   if (authStore.estAdmin) return props.items
 
   return (props.items as MusicSearchItem[]).filter((it) => {
@@ -64,6 +64,26 @@ const visibleItems = computed(() => {
     return true;
   })
 })
+
+function isBusy(item: MusicSearchItem | AlbumTrackItem): boolean {
+  const id = spotifyIdOf(item)
+  return !!id && id === props.busySpotifyId
+}
+
+function onSelect(item: any): void {
+  if (props.mode === 'local') {
+    emit('select', item.id)
+    return
+  }
+
+  if (props.mode === 'search') {
+    emit('selectSearch', item as MusicSearchItem)
+    return
+  }
+
+  emit('selectAlbum', item as AlbumTrackItem)
+}
+
 </script>
 
 <template>

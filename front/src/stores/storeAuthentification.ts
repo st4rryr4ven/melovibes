@@ -1,6 +1,6 @@
-import { defineStore } from 'pinia'
-import type { LoginResult, UpdateUserPayload, User } from '@/types'
-import { userApi } from '@/api/userApi'
+import {defineStore} from 'pinia'
+import type {LoginResult, UpdateUserPayload, User} from '@/types'
+import {userApi} from '@/api/userApi'
 
 const USER_STORAGE_KEY = 'melovibes_auth_user'
 
@@ -12,7 +12,8 @@ export const useStoreAuthentification = defineStore('auth', {
   }),
 
   getters: {
-    estAdmin: (state) => state.utilisateurConnecte?.roles?.includes('ROLE_ADMIN') ?? false
+    estAdmin: (state) => state.utilisateurConnecte?.roles?.includes('ROLE_ADMIN') ?? false,
+    utilisateurId: (state) => state.utilisateurConnecte?.id ?? null
   },
 
   actions: {
@@ -58,10 +59,10 @@ export const useStoreAuthentification = defineStore('auth', {
         await userApi.login(email, password)
         const me = await userApi.me()
         this.setAuthenticated(me)
-        return { success: true }
+        return {success: true}
       } catch (err: any) {
         this.setGuest()
-        return { success: false, error: err?.message ?? 'Connexion impossible' }
+        return {success: false, error: err?.message ?? 'Connexion impossible'}
       }
     },
 
@@ -72,15 +73,15 @@ export const useStoreAuthentification = defineStore('auth', {
       } finally {
         this.setGuest()
       }
-      return { success: true }
+      return {success: true}
     },
 
     async register(login: string, email: string, password: string): Promise<LoginResult> {
       try {
-        await userApi.register({ login, email, password })
-        return { success: true }
+        await userApi.register({login, email, password})
+        return {success: true}
       } catch (err: any) {
-        return { success: false, error: err?.message ?? "Erreur lors de l'inscription" }
+        return {success: false, error: err?.message ?? "Erreur lors de l'inscription"}
       }
     },
 
@@ -89,38 +90,39 @@ export const useStoreAuthentification = defineStore('auth', {
         await userApi.refresh()
         const me = await userApi.me()
         this.setAuthenticated(me)
-        return { success: true }
+        return {success: true}
       } catch {
         this.setGuest()
-        return { success: false, error: 'Session expirée' }
+        return {success: false, error: 'Session expirée'}
       }
     },
 
     async updateMyProfile(payload: UpdateUserPayload): Promise<LoginResult> {
       const me = this.utilisateurConnecte
-      if (!me) return { success: false, error: 'Non authentifié' }
+      if (!me) return {success: false, error: 'Non authentifié'}
 
       try {
         await userApi.update(me.id, payload as unknown as Record<string, unknown>)
         const refreshed = await userApi.me()
         this.setAuthenticated(refreshed)
-        return { success: true }
+        return {success: true}
       } catch (err: any) {
-        return { success: false, error: err?.message ?? 'Erreur lors de la mise à jour' }
+        return {success: false, error: err?.message ?? 'Erreur lors de la mise à jour'}
       }
     },
 
     async deleteMyAccount(): Promise<LoginResult> {
       const me = this.utilisateurConnecte
-      if (!me) return { success: false, error: 'Non authentifié' }
+      if (!me) return {success: false, error: 'Non authentifié'}
 
       try {
         await userApi.delete(me.id)
         this.setGuest()
-        return { success: true }
+        return {success: true}
       } catch (err: any) {
-        return { success: false, error: err?.message ?? 'Erreur lors de la suppression' }
+        return {success: false, error: err?.message ?? 'Erreur lors de la suppression'}
       }
     }
+
   }
 })

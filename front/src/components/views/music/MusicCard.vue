@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import type { AlbumTrackItem, MusicSearchItem } from '@/types.ts'
+import {computed} from 'vue'
+import type {AlbumTrackItem, MusicSearchItem, Music} from '@/types.ts'
 
 const props = withDefaults(
   defineProps<{
-    item: AlbumTrackItem | MusicSearchItem
+    item: AlbumTrackItem | MusicSearchItem | Music
     busy?: boolean
   }>(),
   {
@@ -20,30 +20,49 @@ const title = computed(() => {
   if ('source' in props.item) {
     return props.item.source === 'local' ? props.item.local.title : props.item.spotify.name
   }
+  if ('title' in props.item) {
+    return props.item.title
+  }
   return props.item.spotify.name
 })
 
 const artistsLabel = computed(() => {
-  if ('source' in props.item) {
-    const artists = props.item.source === 'local' ? props.item.local.artists : (props.item.spotify.artists ?? [])
-    return artists.map((a) => a.name).filter(Boolean).join(', ') || 'Artiste inconnu'
+  let artists: any[] = []
+
+  if ('spotify' in props.item && props.item.spotify) {
+    artists = props.item.spotify.artists || []
+  } else if ('artists' in props.item) {
+    artists = props.item.artists || []
   }
-  return props.item.spotify.artists.map((a) => a.name).filter(Boolean).join(', ') || 'Artiste inconnu'
+
+  return artists.map((a) => a.name).filter(Boolean).join(', ') || 'Artiste inconnu'
 })
 
 const picture = computed(() => {
-  if ('source' in props.item) {
-    if (props.item.source === 'local') return props.item.local.picture ?? null
-    return props.item.spotify.album?.images?.[0]?.url ?? null
+  const item = props.item as any;
+
+  if (item.picture) return item.picture;
+
+  if (item.source === 'spotify' && item.spotify?.album?.images?.[0]?.url) {
+    return item.spotify.album.images[0].url;
   }
-  return props.item.spotify.albumPicture ?? null
-})
+
+  if (item.source === 'local' && item.local?.picture) {
+    return item.local.picture;
+  }
+
+  if (item.spotify) {
+    return item.spotify.albumPicture || item.spotify.album?.images?.[0]?.url || null;
+  }
+
+  return null;
+});
 </script>
 
 <template>
   <button type="button" class="row" :disabled="props.busy" @click="emit('select')">
     <div class="row__media" :class="{ 'row__media--empty': !picture }">
-      <img v-if="picture" class="row__img" :src="picture" :alt="title" />
+      <img v-if="picture" class="row__img" :src="picture" :alt="title"/>
       <div v-else class="row__placeholder" aria-hidden="true">♪</div>
     </div>
 
@@ -53,7 +72,7 @@ const picture = computed(() => {
     </div>
 
     <div class="row__right" aria-hidden="true">
-      <span v-if="props.busy" class="spinner" />
+      <span v-if="props.busy" class="spinner"/>
       <span v-else class="chev">›</span>
     </div>
   </button>

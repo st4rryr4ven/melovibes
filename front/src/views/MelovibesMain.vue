@@ -1,17 +1,19 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import {computed, onBeforeUnmount, onMounted, ref, watch} from 'vue'
+import {useRouter} from 'vue-router'
 import MusicSearchBar from '@/components/views/music/MusicSearchBar.vue'
 import MusicList from '@/components/views/music/MusicList.vue'
 import AlbumList from '@/components/views/album/AlbumList.vue'
-import { useDebouncedRef } from '@/composables/useDebouncedRef'
-import { musicApi } from '@/api/musicApi'
-import { albumApi } from '@/api/albumApi'
-import type { MusicSearchItem, NewReleaseAlbumItem } from '@/types'
-import { useFlashStore } from '@/stores/flashStore'
+import {useDebouncedRef} from '@/composables/useDebouncedRef'
+import {musicApi} from '@/api/musicApi'
+import {albumApi} from '@/api/albumApi'
+import type {Music, MusicSearchItem, NewReleaseAlbumItem} from '@/types'
+import {useFlashStore} from '@/stores/flashStore'
+import {useStoreAuthentification} from '@/stores/storeAuthentification'
 
 const router = useRouter()
 const flash = useFlashStore()
+const authStore = useStoreAuthentification()
 
 const query = ref('')
 const debouncedQuery = useDebouncedRef(query, 300)
@@ -36,7 +38,7 @@ async function loadAlbums() {
   albumsLoading.value = true
   albumsError.value = null
   try {
-    const res = await albumApi.getNewReleases({ limit: 20, country: 'FR' })
+    const res = await albumApi.getNewReleases({limit: 20, country: 'FR'})
     albums.value = res.items
   } catch (e) {
     albumsError.value = errorMessage(e, 'Erreur lors du chargement')
@@ -50,7 +52,7 @@ async function loadSearch(q: string) {
   searchLoading.value = true
   searchError.value = null
   try {
-    const res = await musicApi.search({ q, limit: 20, market: 'FR' })
+    const res = await musicApi.search({q, limit: 20, market: 'FR'})
     searchItems.value = res.items
   } catch (e) {
     searchError.value = errorMessage(e, 'Erreur lors de la recherche')
@@ -71,7 +73,7 @@ function onKeydown(e: KeyboardEvent) {
 }
 
 function goToMusicDetail(id: number) {
-  router.push({ name: 'musicDetail', params: { id } })
+  router.push({name: 'musicDetail', params: {id}})
 }
 
 async function onSelectSearchTrack(item: MusicSearchItem) {
@@ -116,7 +118,38 @@ async function onSelectSearchTrack(item: MusicSearchItem) {
 }
 
 function onSelectAlbum(item: NewReleaseAlbumItem) {
-  router.push({ name: 'albumTracks', params: { albumId: item.albumId } })
+  router.push({name: 'albumTracks', params: {albumId: item.albumId}})
+}
+
+const showOnlyFavorites = ref(false)
+const favorites = ref<Music[]>([])
+const favoritesLoading = ref(false)
+
+async function toggleFavorites() {
+  showOnlyFavorites.value = !showOnlyFavorites.value
+
+  if (showOnlyFavorites.value) {
+    const userId = authStore.utilisateurConnecte?.id
+
+    if (!userId) {
+      flash.error("Vous devez être connecté pour voir vos favoris")
+      showOnlyFavorites.value = false
+      return
+    }
+
+    favoritesLoading.value = true
+    try {
+      const data = await musicApi.getUserLibrary(userId)
+
+      favorites.value = data.map(m => musicApi.enrichMusicData(m))
+    } catch (e) {
+      console.error(e)
+      flash.error("Impossible de charger votre bibliothèque")
+      showOnlyFavorites.value = false
+    } finally {
+      favoritesLoading.value = false
+    }
+  }
 }
 
 watch(
@@ -149,12 +182,27 @@ onBeforeUnmount(() => {
     <section class="hero card">
       <div class="hero__row">
         <div class="hero__text">
-          <h1 class="hero__title">Découvrir</h1>
-          <p class="hero__subtitle">Recherche et sélection de musiques.</p>
+          <h1 class="hero__title">{{ showOnlyFavorites ? 'Mes Favoris' : 'Découvrir' }}</h1>
+          <p class="hero__subtitle">
+            {{
+              showOnlyFavorites ? 'Vos musiques enregistrées.' : 'Recherche et sélection de musiques.'
+            }}
+          </p>
+        </div>
+
+        <div v-if="authStore.utilisateurConnecte" class="hero__actions">
+          <button
+            class="btn btn--secondary btn--sm"
+            :class="{ 'btn--active': showOnlyFavorites }"
+            @click="toggleFavorites"
+          >
+            <span class="icon">{{ showOnlyFavorites ? '←' : '♥' }}</span>
+            {{ showOnlyFavorites ? 'Retour' : 'Mes Favoris' }}
+          </button>
         </div>
       </div>
 
-      <div class="hero__search">
+      <div v-if="!showOnlyFavorites" class="hero__search">
         <MusicSearchBar
           v-model="query"
           :loading="isSearchOpen ? searchLoading : albumsLoading"
@@ -165,18 +213,41 @@ onBeforeUnmount(() => {
     </section>
 
     <section class="section">
-      <div class="section__head">
-        <h2 class="section__title">Nouveautés</h2>
-        <span v-if="albumsLoading" class="muted section__meta">Chargement…</span>
-      </div>
+      <template v-if="showOnlyFavorites">
+        <div class="section__head">
+          <h2 class="section__title">Ma Collection</h2>
+        </div>
 
-      <div v-if="albumsError" class="panel notice notice--error">
-        <div class="notice__title">Chargement impossible</div>
-        <div class="notice__text">{{ albumsError }}</div>
-        <button class="btn btn--ghost" type="button" @click="loadAlbums">Réessayer</button>
-      </div>
+        <div v-if="favoritesLoading" class="muted">Chargement de vos favoris...</div>
 
-      <AlbumList :items="albums" @select="onSelectAlbum" />
+        <div v-else-if="favorites.length === 0" class="panel notice">
+          <div class="notice__title">C'est bien vide ici...</div>
+          <div class="notice__text">Vous n'avez pas encore ajouté de musiques à vos favoris.</div>
+        </div>
+
+        <div v-else class="favorites-grid">
+          <MusicList
+            :items="favorites"
+            mode="local"
+            @select="goToMusicDetail"
+          />
+        </div>
+      </template>
+
+      <template v-else>
+        <div class="section__head">
+          <h2 class="section__title">Nouveautés</h2>
+          <span v-if="albumsLoading" class="muted section__meta">Chargement…</span>
+        </div>
+
+        <div v-if="albumsError" class="panel notice notice--error">
+          <div class="notice__title">Chargement impossible</div>
+          <div class="notice__text">{{ albumsError }}</div>
+          <button class="btn btn--ghost" type="button" @click="loadAlbums">Réessayer</button>
+        </div>
+
+        <AlbumList :items="albums" @select="onSelectAlbum"/>
+      </template>
     </section>
 
     <div v-if="isSearchOpen" class="overlay" role="dialog" aria-modal="true">
@@ -187,7 +258,8 @@ onBeforeUnmount(() => {
           <div class="overlay__title">
             Résultats — <span class="overlay__query">“{{ query.trim() }}”</span>
           </div>
-          <button type="button" class="overlay__close" @click="closeSearch" aria-label="Fermer">✕</button>
+          <button type="button" class="overlay__close" @click="closeSearch" aria-label="Fermer">✕
+          </button>
         </div>
 
         <div class="overlay__content">
@@ -380,4 +452,6 @@ onBeforeUnmount(() => {
   display: grid;
   gap: 10px;
 }
+
+
 </style>
