@@ -204,6 +204,20 @@ async function deleteMusic(): Promise<void> {
     adminLoading.value = false
   }
 }
+
+async function deleteReview(review: Review) {
+  if (!review.id) return
+  if (!confirm('Voulez-vous vraiment supprimer cet avis ?')) return
+
+  try {
+    await reviewApi.delete(review.id)
+    flash.success('Avis supprimé.')
+    await loadMusic()
+  } catch (e) {
+    flash.error(errorMessage(e, 'Erreur lors de la suppression de l’avis.'))
+  }
+}
+
 </script>
 
 <template>
@@ -348,6 +362,7 @@ async function deleteMusic(): Promise<void> {
             :reviews="reviews"
             :editable-review-id="authStore.utilisateurConnecte?.id"
             @edit="openEditReview"
+            @delete="deleteReview"
           />
         </div>
       </section>
