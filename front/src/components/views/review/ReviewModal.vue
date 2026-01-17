@@ -28,6 +28,13 @@ const canSubmit = computed(() =>
   rating.value >= 1 && rating.value <= 5 && !loading.value
 )
 
+const criteriaList = computed(() => [
+  {id: 'melody', label: 'Mélodie', val: melodyRating.value},
+  {id: 'lyrics', label: 'Paroles', val: lyricsRating.value},
+  {id: 'vocals', label: 'Vocals', val: vocalsRating.value},
+  {id: 'impact', label: 'Impact', val: impactRating.value},
+])
+
 watch(
   () => [props.musicId, props.review],
   () => {
@@ -69,29 +76,13 @@ async function submit(): Promise<void> {
       flash.success('Avis modifié.')
     } else {
       result = await reviewApi.createForMusicId(props.musicId, payload)
+
+      result = await reviewApi.patch(result.id, payload)
+
       flash.success('Avis envoyé.')
     }
     emit('submitted', result)
   } catch (e: any) {
-    let msg = "Erreur lors de l'envoi de l'avis."
-
-    if (e instanceof Error) {
-      msg = e.message
-
-      if (
-        e.message.includes('deja poste') ||
-        e.message.includes('déjà posté') ||
-        e.message.includes('already')
-      ) {
-        msg = 'Vous avez déjà posté un avis pour cette musique.'
-      } else if ((e as any).status === 401) {
-        msg = 'Vous devez être connecté pour poster un avis.'
-      } else if ((e as any).status === 409) {
-        msg = 'Vous avez déjà posté un avis pour cette musique.'
-      }
-    }
-
-    flash.error(msg)
   } finally {
     loading.value = false
   }
@@ -140,16 +131,18 @@ function setSubRating(id: string, v: number) {
         </div>
 
         <div class="sub-grid">
-          <div v-for="crit in [
-                {id: 'melody', label: 'Mélodie', val: melodyRating},
-                {id: 'lyrics', label: 'Paroles', val: lyricsRating},
-                {id: 'vocals', label: 'Vocals', val: vocalsRating},
-                {id: 'impact', label: 'Impact', val: impactRating},
-              ]" :key="crit.id" class="crit-row">
+          <div v-for="crit in criteriaList" :key="crit.id" class="crit-row">
             <span class="crit-label">{{ crit.label }}</span>
             <div class="mini-stars">
-              <button v-for="n in 5" :key="n" type="button" class="mini-star"
-                      :class="{ 'is-on': n <= crit.val }" @click="setSubRating(crit.id, n)">★
+              <button
+                v-for="n in 5"
+                :key="n"
+                type="button"
+                class="mini-star"
+                :class="{ 'is-on': n <= crit.val }"
+                @click="setSubRating(crit.id, n)"
+              >
+                ★
               </button>
             </div>
           </div>
