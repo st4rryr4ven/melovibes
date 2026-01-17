@@ -3,7 +3,7 @@
 namespace App\Service;
 
 use Symfony\Component\Mailer\MailerInterface;
-use Symfony\Component\Validator\Constraints\Email;
+use Symfony\Component\Mime\Email;
 use Twig\Environment;
 
 class MailerService
@@ -15,7 +15,7 @@ class MailerService
 
     public function sendAccountDeletedEmail(string $toEmail, string $login): void
     {
-        $html = $this->twig->render('emails/account_deleted.html.twig', [
+        $html = $this->twig->render('emails/accounts_deleted.html.twig', [
             'login' => $login,
         ]);
 
