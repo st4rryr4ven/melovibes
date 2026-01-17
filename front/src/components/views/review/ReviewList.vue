@@ -36,6 +36,21 @@ function authorLabel(author: any): string {
   return 'Utilisateur';
 }
 
+function canDeleteReview(review: Review): boolean {
+  const userId = authStore.utilisateurConnecte?.id
+  const isAdmin = authStore.estAdmin
+  const authorId = getAuthorId(review.author)
+
+  return isAdmin || (userId !== undefined && authorId !== null && userId === authorId)
+}
+
+function canEditReview(review: Review): boolean {
+  const userId = authStore.utilisateurConnecte?.id
+  const authorId = getAuthorId(review.author)
+  return userId !== undefined && authorId !== null && userId === authorId
+}
+
+
 function formatDate(value?: string | null): string {
   if (!value) return ''
   const d = new Date(value)
@@ -68,14 +83,15 @@ function stars(rating: number): string {
           <div class="item__rating" :aria-label="`Note ${r.rating}/5`">
             {{ stars(r.rating) }}
           </div>
-          <div
-            v-if="editableReviewId === (r.author?.id ?? r.author)"
-            class="item__actions"
-          >
-            <button class="btn btn--ghost btn--sm" type="button" @click="emit('edit', r)">
+          <div v-if="canEditReview(r) || canDeleteReview(r)" class="item__actions">
+            <button v-if="canEditReview(r)" class="btn btn--ghost btn--sm" type="button" @click="emit('edit', r)">
               Modifier
             </button>
+            <button v-if="canDeleteReview(r)" class="btn btn--ghost btn--sm" type="button" @click="emit('delete', r)">
+              Supprimer
+            </button>
           </div>
+
         </div>
       </header>
 
