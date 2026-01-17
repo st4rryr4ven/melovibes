@@ -11,7 +11,7 @@ export interface User {
 }
 
 export interface UpdateUserPayload {
-  email?: string
+  login?: string
   plainPassword?: string
   currentPlainPassword: string
 }

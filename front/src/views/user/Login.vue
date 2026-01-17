@@ -8,18 +8,18 @@ const authStore = useStoreAuthentification()
 const flash = useFlashStore()
 const router = useRouter()
 
-const connectingUser = ref({ login: '', password: '' })
+const connectingUser = ref({ email: '', password: '' })
 const loading = ref(false)
 
 const canSubmit = computed(() => {
-  return connectingUser.value.login.trim().length > 0 && connectingUser.value.password.length > 0
+  return connectingUser.value.email.trim().length > 0 && connectingUser.value.password.length > 0
 })
 
 async function connect(): Promise<void> {
-  const login = connectingUser.value.login.trim()
+  const email = connectingUser.value.email.trim()
   const password = connectingUser.value.password
 
-  if (!login || !password) {
+  if (!email || !password) {
     flash.error('Connexion échouée.')
     return
   }
@@ -27,7 +27,7 @@ async function connect(): Promise<void> {
   loading.value = true
 
   try {
-    const result = await authStore.login(login, password)
+    const result = await authStore.login(email, password)
     if (result.success) {
       flash.success('Connexion effectuée.')
       await router.push({ name: 'melovibes' })
@@ -35,14 +35,14 @@ async function connect(): Promise<void> {
     }
     const errorMsg = result.error || 'Connexion échouée.'
     if (errorMsg.includes('401') || errorMsg.includes('Invalid') || errorMsg.includes('credentials')) {
-      flash.error('Login ou mot de passe incorrect.')
+      flash.error('Email ou mot de passe incorrect.')
     } else {
       flash.error(errorMsg)
     }
   } catch (e: any) {
     const errorMsg = e?.message || 'Connexion échouée.'
     if (errorMsg.includes('401') || errorMsg.includes('Invalid') || errorMsg.includes('credentials')) {
-      flash.error('Login ou mot de passe incorrect.')
+      flash.error('Email ou mot de passe incorrect.')
     } else {
       flash.error(errorMsg)
     }
@@ -93,13 +93,14 @@ async function connect(): Promise<void> {
 
         <form class="form__body" @submit.prevent="connect">
           <div class="field">
-            <label class="label" for="login">Login</label>
+            <label class="label" for="email">Email</label>
             <input
-              id="login"
-              v-model="connectingUser.login"
+              id="email"
+              v-model="connectingUser.email"
               class="input"
-              autocomplete="username"
-              inputmode="text"
+              type="email"
+              autocomplete="email"
+              inputmode="email"
               spellcheck="false"
             />
           </div>

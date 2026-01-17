@@ -2,10 +2,10 @@ import type { Music, User } from '@/types'
 import { apiCollection, apiJson, apiVoid } from '@/api/httpClient'
 
 export class UserApi {
-  async login(login: string, password: string): Promise<User> {
+  async login(email: string, password: string): Promise<User> {
     return apiJson<User>('auth', {
       method: 'POST',
-      json: { login, password }
+      json: { email, password }
     })
   }
 

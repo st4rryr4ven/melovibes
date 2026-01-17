@@ -7,7 +7,6 @@ import {getProfilePictureUrl} from '@/util/avatar.ts'
 import {reviewApi} from '@/api/reviewApi.ts'
 import ReviewModal from '@/components/views/review/ReviewModal.vue'
 import type {Review} from '@/types'
-import ReviewList from "@/components/views/review/ReviewList.vue";
 
 const router = useRouter()
 const authStore = useStoreAuthentification()
@@ -68,11 +67,7 @@ async function loadReviews(): Promise<void> {
 
   reviewsLoading.value = true
   try {
-    const data = await reviewApi.listByUserId(userId)
-    reviews.value = data.map(r => ({
-      ...r,
-      author: r.author || {id: userId, login: login.value}
-    }))
+    reviews.value = await reviewApi.listByUserId(userId)
 
     reviews.value.sort((a, b) => {
       const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0
@@ -126,7 +121,7 @@ async function update(): Promise<void> {
   loading.value = true
   try {
     const res = await authStore.updateMyProfile({
-      email: email.value,
+      login: login.value,
       plainPassword: plainPassword.value || undefined,
       currentPlainPassword: currentPlainPassword.value
     })
@@ -139,6 +134,10 @@ async function update(): Promise<void> {
         return
       }
       if (msg.includes('422')) {
+        flash.error("Ce nom d'utilisateur est déjà utilisé")
+        return
+      }
+      if (msg.includes('500')) {
         flash.error('Mot de passe incorrect.')
         return
       }
@@ -230,12 +229,13 @@ async function deleteAccount(): Promise<void> {
               <div class="grid">
                 <div class="field">
                   <label class="label" for="login">Login</label>
-                  <input id="login" class="input" type="text" v-model="login" disabled/>
-                  <div class="hint muted">Non modifiable</div>
+                  <input id="login" class="input" type="text" v-model="login" required/>
+                  <div class="hint muted">Modifiable</div>
                 </div>
                 <div class="field">
                   <label class="label" for="email">Email</label>
-                  <input id="email" class="input" type="email" v-model="email" required/>
+                  <input id="email" class="input" type="email" v-model="email" disabled/>
+                  <div class="hint muted">Non modifiable</div>
                 </div>
                 <div class="field">
                   <label class="label" for="plainPassword">Nouveau mot de passe <span
@@ -278,13 +278,39 @@ async function deleteAccount(): Promise<void> {
               <div v-else-if="!reviews.length" class="empty panel">
                 <div class="muted">Vous n'avez pas encore posté d'avis.</div>
               </div>
+              <div v-else class="list">
+                <article v-for="r in reviews" :key="r.id" class="item panel">
+                  <header class="item__head">
+                    <div class="item__left">
+                      <RouterLink
+                        v-if="r.music?.id"
+                        :to="{ name: 'musicDetail', params: { id: r.music?.id } }"
+                        class="item__music"
+                      >
+                        {{ r.music?.title || 'Musique inconnue' }}
+                      </RouterLink>
+                      <div v-else class="item__music">Musique inconnue</div>
 
-              <ReviewList
-                v-else
-                :reviews="reviews"
-                :editable-review-id="myUserId"
-                @edit="openEditReview"
-              />
+                      <div v-if="r.createdAt" class="item__date muted">
+                        {{ formatDate(r.createdAt) }}
+                      </div>
+                    </div>
+
+                    <div class="item__rating" :aria-label="`Note ${r.rating}/5`">
+                      {{ stars(r.rating) }}
+                    </div>
+
+                    <div class="item__right">
+                      <button class="btn btn--ghost btn--sm" type="button"
+                              @click="openEditReview(r)">Modifier
+                      </button>
+                    </div>
+                  </header>
+
+                  <div v-if="r.comment" class="item__comment">{{ r.comment }}</div>
+                  <div v-else class="item__comment muted">(Sans commentaire)</div>
+                </article>
+              </div>
             </div>
           </section>
         </div>
@@ -412,6 +438,61 @@ async function deleteAccount(): Promise<void> {
 
 .reviews__body {
   margin-top: 12px;
+}
+
+.list {
+  display: grid;
+  gap: 10px;
+}
+
+.item {
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.item__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.item__left {
+  display: grid;
+  gap: 4px;
+}
+
+.item__music {
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  color: var(--c-text);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.item__date {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.item__rating {
+  font-size: 14px;
+  letter-spacing: 2px;
+  color: rgba(255, 238, 210, 0.95);
+  user-select: none;
+  white-space: nowrap;
+}
+
+.item__comment {
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.item__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .empty {
