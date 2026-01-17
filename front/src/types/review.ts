@@ -1,5 +1,5 @@
-import type { Music } from './music'
-import type { User } from './user'
+import type {Music} from './music'
+import type {User} from './user'
 
 export interface Review {
   id: number
@@ -8,4 +8,8 @@ export interface Review {
   comment?: string | null
   rating: number
   createdAt?: string | null
+  melodyRating?: number | null;
+  lyricsRating?: number | null;
+  vocalsRating?: number | null;
+  impactRating?: number | null;
 }

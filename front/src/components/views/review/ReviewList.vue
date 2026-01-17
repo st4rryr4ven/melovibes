@@ -21,11 +21,19 @@ const emit = defineEmits<{
   (e: 'delete', review: Review): void
 }>()
 
-function authorLabel(author: Review['author']): string {
-  if (!author) return 'Utilisateur'
-  if (typeof author === 'string') return 'Utilisateur'
-  const u = author as User
-  return u.login || u.email || 'Utilisateur'
+function getAuthorId(author: any): number | null {
+  if (!author) return null;
+  if (typeof author === 'number') return author;
+  if (typeof author === 'object') return author.id;
+  return null;
+}
+
+function authorLabel(author: any): string {
+  if (!author) return 'Utilisateur';
+  if (typeof author === 'object') {
+    return author.login || author.email || 'Utilisateur';
+  }
+  return 'Utilisateur';
 }
 
 function formatDate(value?: string | null): string {
@@ -57,9 +65,13 @@ function stars(rating: number): string {
         </div>
 
         <div class="item__right-group">
-          <div class="item__rating" :aria-label="`Note ${r.rating}/5`">{{ stars(r.rating) }}</div>
-
-          <div v-if="editableReviewId === r.id" class="item__actions">
+          <div class="item__rating" :aria-label="`Note ${r.rating}/5`">
+            {{ stars(r.rating) }}
+          </div>
+          <div
+            v-if="editableReviewId === (r.author?.id ?? r.author)"
+            class="item__actions"
+          >
             <button class="btn btn--ghost btn--sm" type="button" @click="emit('edit', r)">
               Modifier
             </button>
@@ -67,13 +79,29 @@ function stars(rating: number): string {
         </div>
       </header>
 
+      <div class="item__details"
+           v-if="r.melodyRating || r.lyricsRating || r.vocalsRating || r.impactRating">
+        <div class="detail-row" v-if="r.melodyRating">
+          <span class="detail-label">Mélodie</span>
+          <span class="detail-stars">{{ stars(r.melodyRating) }}</span>
+        </div>
+        <div class="detail-row" v-if="r.lyricsRating">
+          <span class="detail-label">Paroles</span>
+          <span class="detail-stars">{{ stars(r.lyricsRating) }}</span>
+        </div>
+        <div class="detail-row" v-if="r.vocalsRating">
+          <span class="detail-label">Vocals</span>
+          <span class="detail-stars">{{ stars(r.vocalsRating) }}</span>
+        </div>
+        <div class="detail-row" v-if="r.impactRating">
+          <span class="detail-label">Impact</span>
+          <span class="detail-stars">{{ stars(r.impactRating) }}</span>
+        </div>
+      </div>
+
       <div v-if="r.comment" class="item__comment">{{ r.comment }}</div>
       <div v-else class="item__comment muted">(Sans commentaire)</div>
     </article>
-
-    <div v-if="!sorted.length" class="empty panel">
-      <div class="muted">{{ emptyText }}</div>
-    </div>
   </div>
 </template>
 
@@ -146,5 +174,36 @@ function stars(rating: number): string {
   padding: 4px 8px;
   font-size: 11px;
   height: auto;
+}
+
+.item__details {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  margin-top: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.detail-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.detail-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: var(--c-text-mute);
+  letter-spacing: 0.5px;
+}
+
+.detail-stars {
+  font-size: 12px;
+  color: #1db954;
+  letter-spacing: 1px;
 }
 </style>
