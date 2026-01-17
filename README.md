@@ -1,93 +1,95 @@
-# Sites de critiques
+# 🎵 Melovibes - Plateforme de Critiques Musicales
+
+## 🌍 Déploiement & Dépôts
+* **URL Frontend :** [INSÉRER LIEN ICI]
+* **URL Backend (API) :** [INSÉRER LIEN ICI]
+* **Dépôt Code Source Frontend :** [INSÉRER LIEN ICI]
+* **Dépôt Code Source Backend :** [INSÉRER LIEN ICI]
+
+---
+
+## 📖 Présentation du Thème
+Melovibes est une plateforme permettant de consulter et de critiquer des œuvres musicales.
+* **Objets critiqués :** Titres musicaux.
+* **Informations présentées :** Titre, artiste, genre, pochette, popularité et lien d'écoute.
+* **Critères de critique :** Les utilisateurs attribuent des notes spécifiques sur la **Mélodie**, les **Paroles**, les **Vocaux** et l'**Impact** et une commentaire.
+
+---
+
+## 👥 L'Équipe & Répartition des Tâches
+L'investissement a été réparti équitablement (33.3% par membre) pour couvrir l'ensemble du cycle de développement.
+
+### 🛡️ Daniele 
+* **Architecture & Initialisation :** Initialisation du projet Symfony/API Platform.
+* **Sécurité (Voters) :** Implémentation de la logique complexe des droits (UserVoter, ReviewVoter, MusicVoter).
+* **Gestion Utilisateur :** Inscription, authentification (JWT), modification et suppression de compte.
+* **Logique Métier :** Création des `Processors` (User et Music) pour le traitement des données.
+* **Fonctionnalités :** 
+    * Système de mise en favoris (API & Front).
+    * Affichage de la liste des musiques favorites (API & Front).
+    * Création et suppression de musique (API & Front).
+    * Intégration du connexion avec **MyAvatar** pour les profils.
+    * Critéres d'avis additionels (et l'edition d'avis)
+    * Affichage de la liste des reviews par utilisateur.
+    * Système de récupération de mot de passe : Envoi automatique d'un e-mail sécurisé lors d'une demande de réinitialisation de mot de passe oublié.
+### 🎨 Yanhis 
+* **Identité Visuelle :** Design global du site, ergonomie et refactorisation du code frontend.
+* **Expérience Utilisateur :** 
+    * Page d'accueil (concept du site) et page de détail d'une musique.
+    * Gestion des messages flash (Success/Failure) et des événements.
+    * Affichage des critiques sur la page d'une musique.
+* **Spotify & Data :** * Création du fichier `utils` pour les méthodes de l'API Spotify.
+    * Gestion de la popularité dynamique des musiques.
+* **Recherche & Listes :** * Barre de recherche et affichage des 20 musiques les plus récentes.
+
+### ⚙️ Andrea 
+* **Modélisation :** Création des entités `Music`, `Artist` et `Review` avec leurs relations.
+* **Administration :** 
+    * Interface de gestion des comptes utilisateurs (Liste/Suppression).
+    * Interface de validation des musiques (Liste des musiques en attente / Validation).
+    * Suppression de n'importe quelle critique.
+* **Critiques (Reviews) :** 
+    * Logique de création, modification et suppression des critiques (API & Front).
+    * Ajout et gestion des critères de notation multiples sur les reviews.
+* **Intégrations :** * Lien avec l'API Spotify pour la récupération et l'import des données.
+    * Système d'envoi de mail automatique lors de la suppression d'un compte.
+---
+
+## 🚀 Installation et Lancement en Local
+TO DO
+---
+
+## 🔐 Comptes de Test
+TO DO
+---
+
+## ⚙️ Fonctionnement technique
+
+### Sécurité & Permissions (Voters)
+Nous avons utilisé des **Voters** pour une gestion fine des droits :
+* **UserVoter :** L'email est l'identifiant unique et immuable. Le login (pseudo) est modifiable. Un admin peut supprimer un compte (modération) mais ne peut pas modifier les informations privées d'un utilisateur.
+* **ReviewVoter :** Seul l'auteur peut modifier sa critique. L'admin possède uniquement un droit de suppression.
+* **MusicVoter :** Seul l'admin peut valider la publication d'une musique suggérée par un utilisateur.
 
 
 
-## Getting started
+### Contrôle des données
+* **Groupes de Sérialisation :** Utilisation de `groups` pour restreindre l'écriture de certains champs (ex: `isValidated`) aux seuls administrateurs.
+* **Processors :** Utilisation de `MusicProcessor` et `UserProcessor` pour traiter les données complexes avant persistance (hachage mot de passe, forçage d'état).
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+### Intégrations
+* **Spotify API :** Récupération dynamique des musiques, artistes et métadonnées.
+* **MyAvatar :** Liaison automatique des photos de profil utilisateur via l'API MyAvatar.
+* **Mailer :** Envoi automatique d'un email lors de la suppression d'un compte ou mot de passe oublié.
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+---
 
-## Add your files
+## 🛠 Utilisation de l'API
+La documentation complète des routes est disponible via Swagger à l'adresse `/api`.
+* `GET /api/music` : Liste des musiques validées.
+* `POST /api/music/import/spotify/{id}` : Importation d'un titre.
+* `PATCH /api/users/{id}/favorites` : Gestion de la liste de favoris.
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+---
 
-```
-cd existing_repo
-git remote add origin https://gitlabinfo.iutmontp.univ-montp2.fr/bussierea/sites-de-critiques.git
-git branch -M main
-git push -uf origin main
-```
-
-## Integrate with your tools
-
-- [ ] [Set up project integrations](https://gitlabinfo.iutmontp.univ-montp2.fr/bussierea/sites-de-critiques/-/settings/integrations)
-
-## Collaborate with your team
-
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+## 💬 Commentaires supplémentaires
