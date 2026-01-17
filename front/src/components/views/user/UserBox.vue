@@ -6,7 +6,15 @@ import { userApi } from '@/api/userApi.ts'
 import { useFlashStore } from '@/stores/flashStore.ts'
 import { getProfilePictureUrl } from '@/util/avatar.ts'
 
-const props = defineProps<{ user: User }>()
+const props = withDefaults(
+  defineProps<{
+    user: User
+    showViewButton?: boolean
+  }>(),
+  {
+    showViewButton: true
+  }
+)
 
 const emit = defineEmits<{
   (e: 'deleted', id: number): void
@@ -88,7 +96,16 @@ watch(
     </div>
 
     <div class="actions">
-      <button class="btn btn--ghost" type="button" :disabled="busy" @click="goUser">Voir</button>
+      <button
+        v-if="props.showViewButton"
+        class="btn btn--ghost"
+        type="button"
+        :disabled="busy"
+        @click="goUser"
+      >
+        Voir
+      </button>
+
       <button v-if="!isAdmin" class="btn btn--danger" type="button" :disabled="busy" @click="deleteUser">
         Supprimer
       </button>
