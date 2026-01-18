@@ -56,7 +56,7 @@ security:
     # Note: Only the *first* access control that matches will be used
     access_control:
         - { path: ^/api/spotify/(login|callback|session)$, roles: PUBLIC_ACCESS }
-        - { path: ^/api/spotify/(link|unlink), roles: IS_AUTHENTICATED_FULLY }
+        - { path: ^/api/spotify/(link|unlink|sync-favorites)$, roles: IS_AUTHENTICATED_FULLY }
         - { path: ^/api/auth, roles: PUBLIC_ACCESS }
         - { path: ^/api/users/register, roles: PUBLIC_ACCESS }
         - { path: ^/api/token/invalidate$, roles: PUBLIC_ACCESS }

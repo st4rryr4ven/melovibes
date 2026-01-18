@@ -1,4 +1,4 @@
-import type { Music, User } from '@/types'
+import type { Music, SpotifySyncFavoritesResponse, User } from '@/types'
 import { API_URL, apiCollection, apiJson, apiVoid } from '@/api/httpClient'
 
 export class UserApi {
@@ -94,6 +94,10 @@ export class UserApi {
 
   async unlinkSpotify(): Promise<void> {
     await apiVoid('spotify/unlink', { method: 'POST' })
+  }
+
+  async syncSpotifyFavorites(): Promise<SpotifySyncFavoritesResponse> {
+    return apiJson<SpotifySyncFavoritesResponse>('spotify/sync-favorites', { method: 'POST' })
   }
 }
 

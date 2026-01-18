@@ -26,11 +26,25 @@ use Symfony\Contracts\Cache\ItemInterface;
 use Throwable;
 
 #[Route('/api/spotify')]
+/**
+ * Handles Spotify OAuth login/link flows and provides utilities for syncing Spotify data.
+ */
 final class SpotifyConnectController extends AbstractController
 {
     private const STATE_TTL_SECONDS = 600;
     private const HANDOFF_TTL_SECONDS = 90;
 
+    /**
+     * @param SpotifyApiClient $spotify Spotify API client.
+     * @param SpotifyCatalogService $catalog Service responsible for importing Spotify data into local database.
+     * @param UserRepository $users User repository.
+     * @param EntityManagerInterface $em Entity manager.
+     * @param CacheInterface $cache Cache for OAuth state/handoff storage.
+     * @param JWTTokenManagerInterface $jwt JWT token manager.
+     * @param UserPasswordHasherInterface $hasher Password hasher.
+     * @param string $frontUrl Frontend base URL.
+     * @param string $defaultMarket Default Spotify market (e.g. FR).
+     */
     public function __construct(
         private readonly SpotifyApiClient $spotify,
         private readonly SpotifyCatalogService $catalog,
@@ -45,6 +59,9 @@ final class SpotifyConnectController extends AbstractController
     }
 
     /**
+     * Starts Spotify OAuth login flow.
+     *
+     * @return RedirectResponse
      * @throws RandomException
      * @throws InvalidArgumentException
      */
@@ -62,6 +79,13 @@ final class SpotifyConnectController extends AbstractController
         return new RedirectResponse($url);
     }
 
+    /**
+     * Starts Spotify OAuth linking flow for the currently authenticated user.
+     *
+     * @return RedirectResponse
+     * @throws RandomException
+     * @throws InvalidArgumentException
+     */
     #[Route('/link', name: 'spotify_link', methods: ['GET'])]
     public function link(): RedirectResponse
     {
@@ -82,6 +106,10 @@ final class SpotifyConnectController extends AbstractController
     }
 
     /**
+     * Handles Spotify OAuth callback and redirects to frontend handoff page.
+     *
+     * @param Request $request
+     * @return RedirectResponse
      * @throws RandomException
      * @throws InvalidArgumentException
      */
@@ -137,6 +165,10 @@ final class SpotifyConnectController extends AbstractController
     }
 
     /**
+     * Finalizes the OAuth handoff by setting auth cookies for the user.
+     *
+     * @param Request $request
+     * @return JsonResponse
      * @throws RandomException
      * @throws InvalidArgumentException
      */
@@ -166,6 +198,11 @@ final class SpotifyConnectController extends AbstractController
         return $response;
     }
 
+    /**
+     * Unlinks Spotify account from the currently authenticated user.
+     *
+     * @return JsonResponse
+     */
     #[Route('/unlink', name: 'spotify_unlink', methods: ['POST'])]
     public function unlink(): JsonResponse
     {
@@ -181,6 +218,48 @@ final class SpotifyConnectController extends AbstractController
     }
 
     /**
+     * Re-syncs the user's Spotify "Liked tracks" into Melovibes favorites.
+     *
+     * @return JsonResponse
+     */
+    #[Route('/sync-favorites', name: 'spotify_sync_favorites', methods: ['POST'])]
+    public function syncFavorites(): JsonResponse
+    {
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            return $this->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        if ($user->getSpotifyId() === null) {
+            return $this->json(['message' => 'Spotify not linked'], 400);
+        }
+
+        $accessToken = $user->getSpotifyAccessToken();
+        if ($accessToken === null || trim($accessToken) === '') {
+            return $this->json(['message' => 'Spotify access token missing'], 400);
+        }
+
+        try {
+            $result = $this->catalog->importUserLikedTracksToFavorites($user, $accessToken, $this->defaultMarket);
+        } catch (Throwable) {
+            return $this->json(['message' => 'Spotify sync failed'], 502);
+        }
+
+        return $this->json([
+            'success' => true,
+            'added' => $result['added'] ?? 0,
+            'scanned' => $result['scanned'] ?? 0,
+        ]);
+    }
+
+    /**
+     * @param array<string, mixed> $ctx
+     * @param string $spotifyId
+     * @param string|null $displayName
+     * @param string $accessToken
+     * @param string|null $refreshToken
+     * @param DateTimeImmutable $expiresAt
+     * @return RedirectResponse
      * @throws RandomException
      * @throws InvalidArgumentException
      */
@@ -205,6 +284,13 @@ final class SpotifyConnectController extends AbstractController
     }
 
     /**
+     * @param string $spotifyId
+     * @param string $spotifyEmail
+     * @param string|null $displayName
+     * @param string $accessToken
+     * @param string|null $refreshToken
+     * @param DateTimeImmutable $expiresAt
+     * @return RedirectResponse
      * @throws RandomException
      * @throws InvalidArgumentException
      */
@@ -251,6 +337,9 @@ final class SpotifyConnectController extends AbstractController
     }
 
     /**
+     * @param Response $response
+     * @param User $user
+     * @return void
      * @throws RandomException
      */
     private function attachSessionCookies(Response $response, User $user): void
@@ -290,6 +379,8 @@ final class SpotifyConnectController extends AbstractController
     }
 
     /**
+     * @param array<string, mixed> $payload
+     * @return string
      * @throws RandomException
      * @throws InvalidArgumentException
      */
@@ -307,6 +398,8 @@ final class SpotifyConnectController extends AbstractController
     }
 
     /**
+     * @param string $state
+     * @return array<string, mixed>|null
      * @throws InvalidArgumentException
      */
     private function consumeState(string $state): ?array
@@ -328,6 +421,8 @@ final class SpotifyConnectController extends AbstractController
     }
 
     /**
+     * @param array<string, mixed> $payload
+     * @return string
      * @throws RandomException
      * @throws InvalidArgumentException
      */
@@ -345,6 +440,8 @@ final class SpotifyConnectController extends AbstractController
     }
 
     /**
+     * @param string $code
+     * @return array<string, mixed>|null
      * @throws InvalidArgumentException
      */
     private function consumeHandoff(string $code): ?array
@@ -370,6 +467,10 @@ final class SpotifyConnectController extends AbstractController
         return $payload;
     }
 
+    /**
+     * @param string $path
+     * @return RedirectResponse
+     */
     private function redirectFront(string $path): RedirectResponse
     {
         $base = rtrim(trim($this->frontUrl), '/');
@@ -385,6 +486,8 @@ final class SpotifyConnectController extends AbstractController
     }
 
     /**
+     * @param string $base
+     * @return string
      * @throws RandomException
      */
     private function generateUniqueLogin(string $base): string

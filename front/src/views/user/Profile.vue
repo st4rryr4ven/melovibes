@@ -17,6 +17,7 @@ const flash = useFlashStore()
 const showReviewModal = ref(false)
 const editingReview = ref<Review | null>(null)
 const loading = ref(false)
+const spotifySyncing = ref(false)
 const reviewsLoading = ref(false)
 
 const login = ref('')
@@ -49,6 +50,20 @@ async function unlinkSpotify(): Promise<void> {
     flash.error(errorMessage(e, 'Erreur lors du déliage Spotify.'))
   } finally {
     loading.value = false
+  }
+}
+
+async function syncSpotifyFavorites(): Promise<void> {
+  if (!spotifyLinked.value) return
+
+  spotifySyncing.value = true
+  try {
+    const res = await userApi.syncSpotifyFavorites()
+    flash.success(`Synchronisation terminée : +${res.added} favoris (${res.scanned} titres analysés).`)
+  } catch (e) {
+    flash.error(errorMessage(e, 'Erreur lors de la synchronisation Spotify.'))
+  } finally {
+    spotifySyncing.value = false
   }
 }
 
@@ -307,12 +322,34 @@ async function deleteAccount(): Promise<void> {
               </div>
 
               <div class="spotify__actions">
-                <button v-if="!spotifyLinked" class="btn btn--primary" type="button" :disabled="loading" @click="linkSpotify">
+                <button
+                  v-if="!spotifyLinked"
+                  class="btn btn--primary"
+                  type="button"
+                  :disabled="loading"
+                  @click="linkSpotify"
+                >
                   Lier Spotify
                 </button>
-                <button v-else class="btn btn--danger" type="button" :disabled="loading" @click="unlinkSpotify">
-                  Délier Spotify
-                </button>
+
+                <template v-else>
+                  <button
+                    class="btn btn--ghost"
+                    type="button"
+                    :disabled="loading || spotifySyncing"
+                    @click="syncSpotifyFavorites"
+                  >
+                    {{ spotifySyncing ? 'Synchronisation…' : 'Resynchroniser mes favoris' }}
+                  </button>
+                  <button
+                    class="btn btn--danger"
+                    type="button"
+                    :disabled="loading"
+                    @click="unlinkSpotify"
+                  >
+                    Délier Spotify
+                  </button>
+                </template>
               </div>
             </div>
           </section>
