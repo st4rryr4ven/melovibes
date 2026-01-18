@@ -103,9 +103,6 @@ export class MusicApi {
     return apiJson<MusicSearchResponse>(`music/search?${usp.toString()}`)
   }
 
-  async listFavorites(): Promise<Music[]> {
-    return this.list({favorites: true});
-  }
   async getUserLibrary(userId: number): Promise<Music[]> {
     return apiJson<Music[]>(`users/${userId}/favorites`);
   }

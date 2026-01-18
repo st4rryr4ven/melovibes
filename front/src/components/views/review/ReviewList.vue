@@ -10,18 +10,20 @@ const props = withDefaults(
     reviews: Review[]
     editableReviewId?: number | null
     emptyText?: string
-    showMusicTitle?: boolean // Added: useful for Profile view
+    showMusicTitle?: boolean,
+    showAuthor?: boolean
   }>(),
   {
     emptyText: 'Aucun avis pour le moment.',
-    showMusicTitle: false
+    showMusicTitle: false,
+    showAuthor: true
   }
 )
 
 const emit = defineEmits<{
   (e: 'edit', review: Review): void
   (e: 'delete', review: Review): void
-  (e: 'selectMusic', musicId: number): void // Added: for navigation
+  (e: 'selectMusic', musicId: number): void
 }>()
 
 function getAuthorId(author: any): number | null {
@@ -33,7 +35,6 @@ function getAuthorId(author: any): number | null {
 
 function authorLabel(author: any): string {
   if (!author) return 'Utilisateur';
-  // Check specifically for login or username
   if (typeof author === 'object') {
     return author.login || author.username || author.email || 'Utilisateur';
   }
@@ -83,7 +84,10 @@ function stars(rating: number): string {
             </button>
           </div>
 
-          <div v-if="!showMusicTitle" class="item__author">{{ authorLabel(r.author) }}</div>
+          <div v-if="showAuthor" class="item__author">
+            <span v-if="showMusicTitle" class="item__by">par </span>
+            {{ authorLabel(r.author) }}
+          </div>
 
           <div v-if="r.createdAt" class="item__date muted">{{ formatDate(r.createdAt) }}</div>
         </div>

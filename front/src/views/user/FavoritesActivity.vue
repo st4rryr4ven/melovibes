@@ -60,6 +60,7 @@ onMounted(loadActivity)
         <ReviewList
           :reviews="reviews"
           :show-music-title="true"
+          :show-author="true"
           @select-music="goToMusic"
         />
       </div>

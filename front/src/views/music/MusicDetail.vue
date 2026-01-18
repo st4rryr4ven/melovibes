@@ -361,6 +361,7 @@ async function deleteReview(review: Review) {
           <ReviewList
             :reviews="reviews"
             :editable-review-id="authStore.utilisateurConnecte?.id"
+            :show-author="true"
             @edit="openEditReview"
             @delete="deleteReview"
           />

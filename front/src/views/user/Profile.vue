@@ -372,7 +372,8 @@ async function deleteAccount(): Promise<void> {
                 v-else
                 :reviews="reviews"
                 :editable-review-id="myUserId"
-                show-music-title
+                :show-music-title="true"
+                :show-author="false"
                 @edit="openEditReview"
                 @delete="handleDeleteReview"
                 @select-music="(id) => router.push({ name: 'musicDetail', params: { id } })"

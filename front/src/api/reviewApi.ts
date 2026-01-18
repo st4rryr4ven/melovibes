@@ -67,8 +67,22 @@ export class ReviewApi {
   }
 
   async listFromFavorites(userId: number): Promise<Review[]> {
-    const res = await apiJson<JsonLdCollection<Review>>(`reviews?music.favoritedBy=${userId}`)
-    return res.member || []
+    const res = await apiJson<JsonLdCollection<any>>(`reviews?music.favoritedBy=${userId}`)
+
+    return (res.member || []).map(r => ({
+      ...r,
+      music: r.music ? {
+        ...r.music,
+        id: typeof r.music === 'string'
+          ? Number(r.music.split('/').pop())
+          : Number(r.music.id)
+      } : undefined,
+
+      author: {
+        ...r.author,
+        login: r.author?.login || 'Utilisateur anonyme'
+      }
+    }))
   }
 
 }
