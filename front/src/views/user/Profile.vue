@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {onMounted, ref, watch, computed} from 'vue'
-import {RouterLink, useRouter} from 'vue-router'
+import {useRouter} from 'vue-router'
 import {useStoreAuthentification} from '@/stores/storeAuthentification.ts'
 import {useFlashStore} from '@/stores/flashStore.ts'
 import {getProfilePictureUrl} from '@/util/avatar.ts'
