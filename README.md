@@ -45,11 +45,11 @@ L'investissement a été réparti équitablement (33.3% par membre) pour couvrir
 ### ⚙️ Andrea 
 * **Modélisation :** Création des entités `Music`, `Artist` et `Review` avec leurs relations.
 * **Administration :** 
-    * Interface de gestion des comptes utilisateurs (Liste/Suppression).
+    * Interface de gestion des comptes utilisateurs (Liste/Suppression/Page détail).
     * Interface de validation des musiques (Liste des musiques en attente / Validation).
     * Suppression de n'importe quelle critique.
 * **Critiques (Reviews) :** 
-    * Logique de création, modification et suppression des critiques (API & Front).
+    * Logique de création et suppression des critiques (API & Front).
     * Ajout et gestion des critères de notation multiples sur les reviews.
 * **Intégrations :** * Lien avec l'API Spotify pour la récupération et l'import des données.
     * Système d'envoi de mail automatique lors de la suppression d'un compte.
