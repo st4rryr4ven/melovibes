@@ -30,6 +30,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiFilter(SearchFilter::class, properties: [
     'author' => 'exact',
     'music' => 'exact',
+    'music.favoritedBy' => 'exact'
 ])]
 #[UniqueEntity(
     fields: ['author', 'music'],
@@ -55,7 +56,8 @@ use Symfony\Component\Validator\Constraints as Assert;
             security: "is_granted('REVIEW_DELETE', object)"
         )
     ],
-    normalizationContext: ['groups' => ['review:read']]
+    normalizationContext: ['groups' => ['review:read']],
+    order: ['createdAt' => 'DESC']
 )]
 class Review
 {

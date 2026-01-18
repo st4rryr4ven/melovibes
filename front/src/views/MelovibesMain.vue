@@ -112,7 +112,7 @@ async function onSelectSearchTrack(item: MusicSearchItem) {
   if (busySpotifyId.value) return
 
   if (item.source === 'local') {
-    if(item.local.musicId)
+    if (item.local.musicId)
       goToMusicDetail(item.local.musicId)
     return
   }
@@ -221,6 +221,15 @@ onBeforeUnmount(() => {
 
         <div v-if="authStore.utilisateurConnecte" class="hero__actions">
           <button
+            v-if="showOnlyFavorites"
+            class="btn btn--primary btn--sm"
+            @click="router.push({ name: 'favoritesActivity' })"
+            style="margin-right: 8px;"
+          >
+            <span class="icon">🔔</span>
+            Voir l'activité
+          </button>
+          <button
             class="btn btn--secondary btn--sm"
             :class="{ 'btn--active': showOnlyFavorites }"
             @click="toggleFavorites"
@@ -300,7 +309,8 @@ onBeforeUnmount(() => {
           <div class="overlay__title">
             Résultats — <span class="overlay__query">“{{ query.trim() }}”</span>
           </div>
-          <button type="button" class="overlay__close" @click="closeSearch" aria-label="Fermer">✕</button>
+          <button type="button" class="overlay__close" @click="closeSearch" aria-label="Fermer">✕
+          </button>
         </div>
 
         <div class="overlay__content">
