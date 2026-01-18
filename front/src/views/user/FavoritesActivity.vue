@@ -4,6 +4,7 @@ import {useRouter} from 'vue-router'
 import {reviewApi} from '@/api/reviewApi'
 import {useStoreAuthentification} from '@/stores/storeAuthentification'
 import type {Review} from '@/types'
+import ReviewList from '@/components/views/review/ReviewList.vue'
 
 const router = useRouter()
 const authStore = useStoreAuthentification()
@@ -22,6 +23,10 @@ async function loadActivity() {
   } finally {
     loading.value = false
   }
+}
+
+function goToMusic(musicId: number) {
+  router.push({name: 'musicDetail', params: {id: musicId}})
 }
 
 onMounted(loadActivity)
@@ -46,69 +51,91 @@ onMounted(loadActivity)
 
       <div v-else-if="reviews.length === 0" class="panel notice">
         <div class="notice__title">Rien à voir ici...</div>
-        <div class="notice__text">Aucune critique n'a encore été postée pour vos musiques mises en
-          favori.
+        <div class="notice__text">
+          Aucune critique n'a encore été postée pour vos musiques mises en favori.
         </div>
       </div>
 
-      <div v-else class="activity-list">
-        <div v-for="review in reviews" :key="review.id" class="review-item card">
-          <div class="review-item__header">
-            <span class="review-item__music"
-                  @click="router.push({name: 'musicDetail', params: {id: review.music?.id}})">
-              {{ review.music?.title }}
-            </span>
-            <span class="review-item__date">
-                  Le {{
-                review.createdAt ? new Date(review.createdAt).toLocaleDateString() : 'Date inconnue'
-              }}
-            </span></div>
-          <div class="review-item__body">
-            <div class="review-item__author">Par <strong>{{ review.author?.login }}</strong></div>
-            <div class="review-item__rating">Note : {{ review.rating }}/5</div>
-            <p v-if="review.comment" class="review-item__comment">"{{ review.comment }}"</p>
-          </div>
-        </div>
+      <div v-else>
+        <ReviewList
+          :reviews="reviews"
+          :show-music-title="true"
+          @select-music="goToMusic"
+        />
       </div>
     </section>
   </div>
 </template>
 
 <style scoped>
-.activity-list {
-  display: grid;
-  gap: 12px;
-}
-
-.review-item {
-  padding: 16px;
-  border-left: 4px solid var(#1db954);
-}
-
-.review-item__header {
+.page {
   display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.hero {
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: radial-gradient(900px 260px at 0% 0%, rgba(29, 185, 84, 0.16), transparent 55%),
+  linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
+}
+
+.hero__row {
+  display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 8px;
+  gap: 10px;
 }
 
-.review-item__music {
-  font-weight: 900;
-  cursor: pointer;
-  color: var(#1db954);
+.hero__title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 950;
 }
 
-.review-item__music:hover {
-  text-decoration: underline;
+.hero__subtitle {
+  margin: 4px 0 0;
+  color: var(--c-text-mute);
+  font-size: 15px;
 }
 
-.review-item__date {
-  font-size: 12px;
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 0 4px;
+}
+
+:deep(.list) {
+  gap: 24px !important;
+}
+
+:deep(.item.panel) {
+  padding: 24px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+:deep(.link-btn) {
+  font-size: 18px !important;
+  margin-bottom: 4px;
+}
+
+.muted {
   color: var(--c-text-mute);
 }
 
-.review-item__comment {
-  margin-top: 8px;
-  font-style: italic;
-  color: var(--c-text-soft);
+.notice {
+  padding: 24px;
+  display: grid;
+  gap: 8px;
+}
+
+.notice__title {
+  font-weight: 900;
+  font-size: 18px;
 }
 </style>
