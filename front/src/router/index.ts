@@ -16,6 +16,7 @@ import AuthSpotify from '@/views/user/AuthSpotify.vue'
 import ResetPassword from "@/views/ResetPassword.vue";
 import ForgotPassword from "@/views/ForgotPassword.vue";
 import FavoritesActivity from "@/views/user/FavoritesActivity.vue";
+import NotFound from '@/views/NotFound.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -84,6 +85,11 @@ const router = createRouter({
       path: '/activite-favoris',
       name: 'favoritesActivity',
       component: FavoritesActivity
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'notFound',
+      component: NotFound
     }
   ]
 })
