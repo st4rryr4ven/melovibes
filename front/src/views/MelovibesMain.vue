@@ -28,11 +28,38 @@ const searchError = ref<string | null>(null)
 const searchItems = ref<MusicSearchItem[]>([])
 const busySpotifyId = ref<string | null>(null)
 
+const showOnlyFavorites = ref(false)
+const favorites = ref<Music[]>([])
+const favoritesLoading = ref(false)
+const favoritesQuery = ref('')
+const debouncedFavoritesQuery = useDebouncedRef(favoritesQuery, 250)
+
 function errorMessage(err: unknown, fallback: string): string {
   if (err instanceof Error && err.message) return err.message
   if (typeof err === 'string' && err) return err
   return fallback
 }
+
+function normalizeText(v: unknown): string {
+  return String(v ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
+const filteredFavorites = computed(() => {
+  const q = normalizeText(debouncedFavoritesQuery.value)
+  if (!q) return favorites.value
+
+  return favorites.value.filter((m) => {
+    const title = normalizeText((m as unknown as { title?: unknown }).title)
+    const artistName = normalizeText((m as unknown as { artist?: { name?: unknown } }).artist?.name)
+    const albumName = normalizeText((m as unknown as { album?: { name?: unknown } }).album?.name)
+
+    return title.includes(q) || artistName.includes(q) || albumName.includes(q)
+  })
+})
 
 async function loadAlbums() {
   albumsLoading.value = true
@@ -68,8 +95,13 @@ function closeSearch() {
   busySpotifyId.value = null
 }
 
+function closeFavoritesSearch() {
+  favoritesQuery.value = ''
+}
+
 function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape' && isSearchOpen.value) closeSearch()
+  if (e.key === 'Escape' && showOnlyFavorites.value && favoritesQuery.value.trim().length > 0) closeFavoritesSearch()
 }
 
 function goToMusicDetail(id: number) {
@@ -80,7 +112,8 @@ async function onSelectSearchTrack(item: MusicSearchItem) {
   if (busySpotifyId.value) return
 
   if (item.source === 'local') {
-    goToMusicDetail(item.local.musicId)
+    if(item.local.musicId)
+      goToMusicDetail(item.local.musicId)
     return
   }
 
@@ -121,12 +154,9 @@ function onSelectAlbum(item: NewReleaseAlbumItem) {
   router.push({name: 'albumTracks', params: {albumId: item.albumId}})
 }
 
-const showOnlyFavorites = ref(false)
-const favorites = ref<Music[]>([])
-const favoritesLoading = ref(false)
-
 async function toggleFavorites() {
   showOnlyFavorites.value = !showOnlyFavorites.value
+  closeFavoritesSearch()
 
   if (showOnlyFavorites.value) {
     const userId = authStore.utilisateurConnecte?.id
@@ -140,8 +170,7 @@ async function toggleFavorites() {
     favoritesLoading.value = true
     try {
       const data = await musicApi.getUserLibrary(userId)
-
-      favorites.value = data.map(m => musicApi.enrichMusicData(m))
+      favorites.value = data.map((m) => musicApi.enrichMusicData(m))
     } catch (e) {
       console.error(e)
       flash.error("Impossible de charger votre bibliothèque")
@@ -210,6 +239,19 @@ onBeforeUnmount(() => {
           @submit="() => query.trim() && loadSearch(query.trim())"
         />
       </div>
+
+      <div v-else class="hero__search">
+        <MusicSearchBar
+          v-model="favoritesQuery"
+          :loading="favoritesLoading"
+          placeholder="Rechercher dans mes favoris…"
+          @submit="() => null"
+        />
+        <div v-if="favoritesQuery.trim().length > 0" class="hero__searchMeta muted">
+          {{ filteredFavorites.length }} résultat{{ filteredFavorites.length > 1 ? 's' : '' }}
+          <button type="button" class="link" @click="closeFavoritesSearch">Effacer</button>
+        </div>
+      </div>
     </section>
 
     <section class="section">
@@ -227,7 +269,7 @@ onBeforeUnmount(() => {
 
         <div v-else class="favorites-grid">
           <MusicList
-            :items="favorites"
+            :items="filteredFavorites"
             mode="local"
             @select="goToMusicDetail"
           />
@@ -258,8 +300,7 @@ onBeforeUnmount(() => {
           <div class="overlay__title">
             Résultats — <span class="overlay__query">“{{ query.trim() }}”</span>
           </div>
-          <button type="button" class="overlay__close" @click="closeSearch" aria-label="Fermer">✕
-          </button>
+          <button type="button" class="overlay__close" @click="closeSearch" aria-label="Fermer">✕</button>
         </div>
 
         <div class="overlay__content">
@@ -323,6 +364,15 @@ onBeforeUnmount(() => {
 
 .hero__search {
   width: 100%;
+  display: grid;
+  gap: 8px;
+}
+
+.hero__searchMeta {
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .section {
@@ -353,22 +403,6 @@ onBeforeUnmount(() => {
   color: var(--c-text-mute);
 }
 
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--c-border);
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--c-text-soft);
-  font-size: 12px;
-}
-
-.chip--soft {
-  color: var(--c-text-mute);
-}
-
 .notice {
   padding: 12px;
   display: grid;
@@ -388,6 +422,20 @@ onBeforeUnmount(() => {
 .notice__text {
   color: var(--c-text-soft);
   font-size: 14px;
+}
+
+.link {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--c-text-soft);
+  text-decoration: underline;
+  font-weight: 700;
+}
+
+.link:hover {
+  color: var(--c-text);
 }
 
 .overlay {
@@ -452,6 +500,4 @@ onBeforeUnmount(() => {
   display: grid;
   gap: 10px;
 }
-
-
 </style>
