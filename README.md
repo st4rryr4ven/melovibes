@@ -60,7 +60,12 @@ TO DO
 ---
 
 ## 🔐 Comptes de Test
-TO DO
+Utilisateur admin : 
+- email : admin@gmail.com
+- mdp : MDPadmin
+Utilisateur basique :
+- email : basicuser@gmail.com
+- mdp : MDPbasicuser
 ---
 
 ## ⚙️ Fonctionnement technique
