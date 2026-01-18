@@ -4,8 +4,10 @@ namespace App\Service\Spotify;
 
 use App\Entity\Artist;
 use App\Entity\Music;
+use App\Entity\User;
 use App\Repository\ArtistRepository;
 use App\Repository\MusicRepository;
+use DateInterval;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -525,4 +527,142 @@ readonly class SpotifyCatalogService
 
         return $genres;
     }
+
+    /**
+     * @return array{added:int, scanned:int}
+     */
+    public function importUserLikedTracksToFavorites(User $user, string $userAccessToken, string $market = 'FR', int $maxTracks = 2000, bool $updateExisting = true): array
+    {
+        $added = 0;
+        $scanned = 0;
+
+        $offset = 0;
+        $limit = 50;
+
+        while (true) {
+            if ($scanned >= $maxTracks) {
+                break;
+            }
+
+            $accessToken = $this->getFreshSpotifyUserAccessToken($user, $userAccessToken);
+
+            $page = $this->spotify->userGetSavedTracks($accessToken, $limit, $offset, $market);
+            $items = $page['items'] ?? [];
+
+            if (!is_array($items) || count($items) === 0) {
+                break;
+            }
+
+            $trackIds = [];
+
+            foreach ($items as $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+                $track = $item['track'] ?? null;
+                if (is_array($track) && isset($track['id'])) {
+                    $id = trim((string) $track['id']);
+                    if ($id !== '') {
+                        $trackIds[] = $id;
+                    }
+                }
+            }
+
+            $trackIds = array_values(array_unique($trackIds));
+            if (count($trackIds) === 0) {
+                $offset += $limit;
+                continue;
+            }
+
+            $existing = $this->musicRepository->findBySpotifyIds($trackIds);
+            $existingBySpotifyId = [];
+
+            foreach ($existing as $m) {
+                if ($m->getSpotifyId() !== null) {
+                    $existingBySpotifyId[$m->getSpotifyId()] = $m;
+                }
+            }
+
+            foreach ($trackIds as $spotifyId) {
+                $scanned++;
+                if ($scanned > $maxTracks) {
+                    break 2;
+                }
+
+                $music = $existingBySpotifyId[$spotifyId] ?? null;
+
+                if ($music === null) {
+                    $music = $this->importTrackById($spotifyId, $market, $updateExisting);
+                }
+
+                $before = $user->getFavoriteMusic()->contains($music);
+                $user->addFavoriteMusic($music);
+
+                if (!$before) {
+                    $added++;
+                }
+            }
+
+            $offset += $limit;
+
+            $next = $page['next'] ?? null;
+            if (!is_string($next) || $next === '') {
+                break;
+            }
+        }
+
+        $this->entityManager->flush();
+
+        return ['added' => $added, 'scanned' => $scanned];
+    }
+
+    private function getFreshSpotifyUserAccessToken(User $user, string $fallbackAccessToken): string
+    {
+        $storedAccess = $user->getSpotifyAccessToken();
+        $storedExpiresAt = $user->getSpotifyAccessTokenExpiresAt();
+
+        $accessToken = $storedAccess ?: $fallbackAccessToken;
+
+        if ($accessToken === '') {
+            throw new SpotifyApiException('Spotify user access token missing');
+        }
+
+        if ($storedExpiresAt === null) {
+            return $accessToken;
+        }
+
+        $now = new DateTimeImmutable();
+        $needsRefresh = $storedExpiresAt <= $now->add(new DateInterval('PT60S'));
+
+        if (!$needsRefresh) {
+            return $accessToken;
+        }
+
+        $refreshToken = $user->getSpotifyRefreshToken();
+        if ($refreshToken === null || trim($refreshToken) === '') {
+            throw new SpotifyApiException('Spotify refresh token missing (user must relink Spotify)');
+        }
+
+        $payload = $this->spotify->refreshUserAccessToken($refreshToken);
+
+        $newAccess = (string) ($payload['access_token'] ?? '');
+        $expiresIn = (int) ($payload['expires_in'] ?? 0);
+        $newRefresh = isset($payload['refresh_token']) ? (string) $payload['refresh_token'] : null;
+
+        if ($newAccess === '' || $expiresIn <= 0) {
+            throw new SpotifyApiException('Spotify refresh failed');
+        }
+
+        $user->setSpotifyAccessToken($newAccess);
+        $user->setSpotifyAccessTokenExpiresAt($now->modify(sprintf('+%d seconds', max(1, $expiresIn))));
+
+        if ($newRefresh !== null && trim($newRefresh) !== '') {
+            $user->setSpotifyRefreshToken($newRefresh);
+        }
+
+        $this->entityManager->flush();
+
+        return $newAccess;
+    }
+
 }

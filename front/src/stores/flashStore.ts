@@ -22,6 +22,7 @@ export const useFlashStore = defineStore('flash', {
     push(type: FlashType, text: string, ttlMs = 4500): string {
       const id = uid()
       this.messages.push({ id, type, text, createdAt: Date.now() })
+      if(ttlMs === 0) return id;
       window.setTimeout(() => this.remove(id), ttlMs)
       return id
     },

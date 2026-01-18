@@ -23,6 +23,8 @@ final class MeController extends AbstractController
             'email' => $user->getEmail(),
             'roles' => $user->getRoles(),
             'favoriteMusic' => $user->getFavoriteMusic(),
+            'spotifyLinked' => $user->getSpotifyId() !== null,
+            'spotifyDisplayName' => $user->getSpotifyDisplayName(),
         ]);
     }
 }

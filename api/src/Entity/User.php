@@ -11,6 +11,7 @@ use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use App\Repository\UserRepository;
 use App\State\UserProcessor;
+use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
@@ -30,8 +31,10 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\Table(name: 'user')]
 #[ORM\UniqueConstraint(name: 'UNIQ_LOGIN', columns: ['login'])]
 #[ORM\UniqueConstraint(name: 'UNIQ_EMAIL', columns: ['email'])]
+#[ORM\UniqueConstraint(name: 'UNIQ_USER_SPOTIFY_ID', columns: ['spotify_id'])]
 #[UniqueEntity(fields: ['login'], message: "Ce nom d'utilisateur est déjà utilisé.")]
 #[UniqueEntity(fields: ['email'], message: "Cet e-mail est déjà utilisé.")]
+#[UniqueEntity(fields: ['spotifyId'], message: "Ce compte spotify est déjà lié.")]
 #[ApiResource(
     operations: [
         new GetCollection(security: "is_granted('ROLE_ADMIN')"),
@@ -144,6 +147,38 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[Groups(['user:read'])]
     #[ApiProperty(readableLink: true)]
     private Collection $favoriteMusic;
+
+    /**
+     * Linked Spotify account ID (unique across users).
+     */
+    #[ORM\Column(length: 64, unique: true, nullable: true)]
+    #[Groups(['user:read', 'me:read'])]
+    private ?string $spotifyId = null;
+
+    /**
+     * Spotify OAuth access token (encrypted storage is recommended for production).
+     */
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $spotifyAccessToken = null;
+
+    /**
+     * Spotify OAuth refresh token.
+     */
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $spotifyRefreshToken = null;
+
+    /**
+     * Spotify access token expiration.
+     */
+    #[ORM\Column(type: 'datetime_immutable', nullable: true)]
+    private ?DateTimeImmutable $spotifyAccessTokenExpiresAt = null;
+
+    /**
+     * Spotify display name snapshot.
+     */
+    #[ORM\Column(length: 120, nullable: true)]
+    #[Groups(['user:read', 'me:read'])]
+    private ?string $spotifyDisplayName = null;
 
     /**
      * Create a new user instance.
@@ -378,6 +413,79 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function removeFavoriteMusic(Music $music): self
     {
         $this->favoriteMusic->removeElement($music);
+
+        return $this;
+    }
+
+    public function getSpotifyId(): ?string
+    {
+        return $this->spotifyId;
+    }
+
+    public function setSpotifyId(?string $spotifyId): self
+    {
+        $spotifyId = $spotifyId !== null ? trim($spotifyId) : null;
+        $this->spotifyId = $spotifyId !== '' ? $spotifyId : null;
+
+        return $this;
+    }
+
+    public function getSpotifyAccessToken(): ?string
+    {
+        return $this->spotifyAccessToken;
+    }
+
+    public function setSpotifyAccessToken(?string $spotifyAccessToken): self
+    {
+        $this->spotifyAccessToken = $spotifyAccessToken !== null ? trim($spotifyAccessToken) : null;
+
+        return $this;
+    }
+
+    public function getSpotifyRefreshToken(): ?string
+    {
+        return $this->spotifyRefreshToken;
+    }
+
+    public function setSpotifyRefreshToken(?string $spotifyRefreshToken): self
+    {
+        $this->spotifyRefreshToken = $spotifyRefreshToken !== null ? trim($spotifyRefreshToken) : null;
+
+        return $this;
+    }
+
+    public function getSpotifyAccessTokenExpiresAt(): ?DateTimeImmutable
+    {
+        return $this->spotifyAccessTokenExpiresAt;
+    }
+
+    public function setSpotifyAccessTokenExpiresAt(?DateTimeImmutable $spotifyAccessTokenExpiresAt): self
+    {
+        $this->spotifyAccessTokenExpiresAt = $spotifyAccessTokenExpiresAt;
+
+        return $this;
+    }
+
+    public function getSpotifyDisplayName(): ?string
+    {
+        return $this->spotifyDisplayName;
+    }
+
+    public function setSpotifyDisplayName(?string $spotifyDisplayName): self
+    {
+        $spotifyDisplayName = $spotifyDisplayName !== null ? trim($spotifyDisplayName) : null;
+        $this->spotifyDisplayName = $spotifyDisplayName !== '' ? $spotifyDisplayName : null;
+
+        return $this;
+    }
+
+    public function clearSpotifyLink(): self
+    {
+        $this->spotifyId = null;
+        $this->spotifyAccessToken = null;
+        $this->spotifyRefreshToken = null;
+        $this->spotifyAccessTokenExpiresAt = null;
+        $this->spotifyDisplayName = null;
 
         return $this;
     }

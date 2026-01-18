@@ -10,8 +10,9 @@ import AlbumTracks from '@/views/AlbumTracks.vue'
 import Login from '@/views/user/Login.vue'
 import Register from '@/views/user/Register.vue'
 import Profile from '@/views/user/Profile.vue'
-import MusicEdit from "@/views/music/MusicEdit.vue";
-import MusicCreate from "@/views/music/MusicCreate.vue";
+import MusicEdit from '@/views/music/MusicEdit.vue'
+import MusicCreate from '@/views/music/MusicCreate.vue'
+import AuthSpotify from '@/views/user/AuthSpotify.vue'
 import ResetPassword from "@/views/ResetPassword.vue";
 import ForgotPassword from "@/views/ForgotPassword.vue";
 
@@ -23,6 +24,7 @@ const router = createRouter({
 
     { path: '/register', name: 'register', component: Register },
     { path: '/login', name: 'login', component: Login },
+    { path: '/auth/spotify', name: 'authSpotify', component: AuthSpotify },
 
     {
       path: '/users',

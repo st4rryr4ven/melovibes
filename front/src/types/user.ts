@@ -8,6 +8,8 @@ export interface User {
   roles: string[]
   favoriteMusic?: Music[]
   reviews?: Review[]
+  spotifyLinked?: boolean
+  spotifyDisplayName?: string | null
 }
 
 export interface UpdateUserPayload {

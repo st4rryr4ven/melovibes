@@ -13,7 +13,9 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
- * Spotify Web API client using Client Credentials flow for catalog access.
+ * Spotify Web API client.
+ * - Client Credentials flow for catalog access
+ * - Authorization Code flow helpers for user account linking (me, saved tracks)
  */
 class SpotifyApiClient
 {
@@ -25,7 +27,11 @@ class SpotifyApiClient
 
     private string $defaultMarket;
 
+    private string $redirectUri;
+
     private string $apiBaseUrl = 'https://api.spotify.com/v1';
+
+    private string $accountsAuthorizeUrl = 'https://accounts.spotify.com/authorize';
 
     private string $accountsTokenUrl = 'https://accounts.spotify.com/api/token';
 
@@ -35,10 +41,12 @@ class SpotifyApiClient
         #[Autowire('%env(CLIENT_ID)%')] string $clientId,
         #[Autowire('%env(CLIENT_SECRET)%')] string $clientSecret,
         #[Autowire('%env(SPOTIFY_DEFAULT_MARKET)%')] string $defaultMarket = 'FR',
+        #[Autowire('%env(SPOTIFY_REDIRECT_URI)%')] string $redirectUri = '',
     ) {
         $this->clientId = $clientId;
         $this->clientSecret = $clientSecret;
         $this->defaultMarket = $defaultMarket;
+        $this->redirectUri = $redirectUri;
         $this->apiBaseUrl = rtrim($this->apiBaseUrl, '/');
     }
 
@@ -51,6 +59,62 @@ class SpotifyApiClient
 
             return (string) $token['access_token'];
         });
+    }
+
+    /**
+     * @param string[] $scopes
+     */
+    public function buildUserAuthorizeUrl(string $state, array $scopes, bool $showDialog = false): string
+    {
+        if (trim($this->redirectUri) === '') {
+            throw new SpotifyApiException('SPOTIFY_REDIRECT_URI is missing');
+        }
+
+        $query = http_build_query([
+            'response_type' => 'code',
+            'client_id' => $this->clientId,
+            'redirect_uri' => $this->redirectUri,
+            'scope' => implode(' ', array_values(array_unique($scopes))),
+            'state' => $state,
+            'show_dialog' => $showDialog ? 'true' : 'false',
+        ]);
+
+        return $this->accountsAuthorizeUrl . '?' . $query;
+    }
+
+    public function exchangeUserAuthorizationCode(string $code): array
+    {
+        if (trim($this->redirectUri) === '') {
+            throw new SpotifyApiException('SPOTIFY_REDIRECT_URI is missing');
+        }
+
+        return $this->requestAccountsToken([
+            'grant_type' => 'authorization_code',
+            'code' => $code,
+            'redirect_uri' => $this->redirectUri,
+        ]);
+    }
+
+    public function refreshUserAccessToken(string $refreshToken): array
+    {
+        return $this->requestAccountsToken([
+            'grant_type' => 'refresh_token',
+            'refresh_token' => $refreshToken,
+        ]);
+    }
+
+    public function userGetMe(string $accessToken): array
+    {
+        return $this->requestJson('GET', $this->apiBaseUrl . '/me', [], null, $accessToken, []);
+    }
+
+    public function userGetSavedTracks(string $accessToken, int $limit = 50, int $offset = 0, ?string $market = null): array
+    {
+        return $this->requestJson('GET', $this->apiBaseUrl . '/me/tracks', [
+            'limit' => max(1, min(50, $limit)),
+            'offset' => max(0, $offset),
+            'market' => $market ?? $this->defaultMarket,
+        ], null, $accessToken, []);
     }
 
     /**
@@ -200,6 +264,12 @@ class SpotifyApiClient
         }
     }
 
+    /**
+     * @throws TransportExceptionInterface
+     * @throws ServerExceptionInterface
+     * @throws RedirectionExceptionInterface
+     * @throws ClientExceptionInterface
+     */
     private function decodeJsonResponse(ResponseInterface $response): array
     {
         $status = $response->getStatusCode();
@@ -222,6 +292,12 @@ class SpotifyApiClient
         return is_array($data) ? $data : [];
     }
 
+    /**
+     * @throws TransportExceptionInterface
+     * @throws ServerExceptionInterface
+     * @throws RedirectionExceptionInterface
+     * @throws ClientExceptionInterface
+     */
     private function getRetryAfterSeconds(ResponseInterface $response): int
     {
         $headers = $response->getHeaders(false);

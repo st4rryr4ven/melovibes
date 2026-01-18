@@ -8,6 +8,7 @@ import {reviewApi} from '@/api/reviewApi.ts'
 import ReviewModal from '@/components/views/review/ReviewModal.vue'
 import type {Review} from '@/types'
 import ReviewList from "@/components/views/review/ReviewList.vue";
+import {userApi} from "@/api/userApi.ts";
 
 const router = useRouter()
 const authStore = useStoreAuthentification()
@@ -27,6 +28,29 @@ const reviews = ref<Review[]>([])
 
 const hasUser = computed(() => !!authStore.utilisateurConnecte)
 const myUserId = computed(() => authStore.utilisateurConnecte?.id)
+
+const spotifyLinked = computed(() => authStore.utilisateurConnecte?.spotifyLinked ?? false)
+const spotifyDisplayName = computed(() => authStore.utilisateurConnecte?.spotifyDisplayName ?? null)
+
+function linkSpotify(): void {
+  window.location.href = userApi.getSpotifyLinkUrl()
+}
+
+async function unlinkSpotify(): Promise<void> {
+  if (!spotifyLinked.value) return
+  if (!confirm('Délier votre compte Spotify ? Vos favoris Melovibes restent inchangés.')) return
+
+  loading.value = true
+  try {
+    await userApi.unlinkSpotify()
+    await authStore.refresh()
+    flash.success('Compte Spotify délié.')
+  } catch (e) {
+    flash.error(errorMessage(e, 'Erreur lors du déliage Spotify.'))
+  } finally {
+    loading.value = false
+  }
+}
 
 function errorMessage(err: unknown, fallback: string): string {
   if (err instanceof Error && err.message) return err.message
@@ -266,6 +290,33 @@ async function deleteAccount(): Promise<void> {
             </form>
           </section>
 
+          <section class="card spotify">
+            <div class="spotify__content">
+              <div>
+                <div class="spotify__title">Spotify</div>
+                <div class="muted spotify__meta">
+                  <template v-if="spotifyLinked">
+                    Compte lié<span v-if="spotifyDisplayName"> : {{ spotifyDisplayName }}</span>.
+                    <br>
+                    Vos "J'aime" Spotify sont importés en favoris Melovibes lors de la liaison.
+                  </template>
+                  <template v-else>
+                    Aucun compte Spotify lié.
+                  </template>
+                </div>
+              </div>
+
+              <div class="spotify__actions">
+                <button v-if="!spotifyLinked" class="btn btn--primary" type="button" :disabled="loading" @click="linkSpotify">
+                  Lier Spotify
+                </button>
+                <button v-else class="btn btn--danger" type="button" :disabled="loading" @click="unlinkSpotify">
+                  Délier Spotify
+                </button>
+              </div>
+            </div>
+          </section>
+
           <section class="reviews card">
             <header class="reviews__head">
               <div class="reviews__title">Mes avis</div>
@@ -336,6 +387,8 @@ async function deleteAccount(): Promise<void> {
   padding: 14px;
   display: grid;
   gap: 12px;
+  position: sticky;
+  top: 75px;
 }
 
 .side__header {
@@ -517,6 +570,36 @@ async function deleteAccount(): Promise<void> {
 .muted {
   color: var(--c-text-mute);
   font-weight: 650;
+}
+
+.spotify {
+  padding: 14px;
+}
+
+.spotify__content {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.spotify__title {
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+}
+
+.spotify__meta {
+  margin-top: 6px;
+  font-size: 13px;
+  max-width: 70ch;
+}
+
+.spotify__actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 @media (max-width: 900px) {

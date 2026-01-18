@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import {computed, ref} from 'vue'
-import {useRouter} from 'vue-router'
-import {useStoreAuthentification} from '@/stores/storeAuthentification.ts'
-import {useFlashStore} from '@/stores/flashStore.ts'
+import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useStoreAuthentification } from '@/stores/storeAuthentification.ts'
+import { useFlashStore } from '@/stores/flashStore.ts'
+import { userApi } from '@/api/userApi'
 
 const authStore = useStoreAuthentification()
 const flash = useFlashStore()
@@ -49,6 +50,10 @@ async function connect(): Promise<void> {
   } finally {
     loading.value = false
   }
+}
+
+function connectWithSpotify(): void {
+  window.location.href = userApi.getSpotifyLoginUrl()
 }
 </script>
 
@@ -128,6 +133,13 @@ async function connect(): Promise<void> {
               {{ loading ? 'Connexion…' : 'Se connecter' }}
             </button>
             <RouterLink class="btn btn--ghost" :to="{ name: 'melovibes' }">Retour</RouterLink>
+          </div>
+
+          <div class="oauth">
+            <div class="divider" aria-hidden="true" />
+            <button class="btn btn--primary btn--full" type="button" :disabled="loading" @click="connectWithSpotify">
+              Se connecter avec Spotify
+            </button>
           </div>
         </form>
       </div>
@@ -277,6 +289,22 @@ async function connect(): Promise<void> {
   gap: 10px;
   flex-wrap: wrap;
   margin-top: 4px;
+}
+
+.oauth {
+  display: grid;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.divider {
+  height: 1px;
+  background: var(--c-border);
+  opacity: 0.8;
+}
+
+.btn--full {
+  width: 100%;
 }
 
 .muted {
