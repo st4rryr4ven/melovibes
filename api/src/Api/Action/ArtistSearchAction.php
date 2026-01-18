@@ -10,26 +10,32 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
- * API Platform custom operation controller for /api/artist/search.
+ * API Platform custom operation controller for searching artists.
+ *
+ * This action is wired to a custom API Platform operation (typically /api/artist/search). It delegates the search
+ * implementation to {@see ArtistActionsService::search()}, which merges local database results with Spotify catalog
+ * results and returns a unified payload.
  */
-final  class ArtistSearchAction extends AbstractController
+final class ArtistSearchAction extends AbstractController
 {
     /**
-     * @param ArtistActionsService $service
-     * @param SpotifyApiClient $spotify
-     * @param ArtistRepository $artistRepository
+     * @param ArtistActionsService $service Application service that implements the operation.
+     * @param SpotifyApiClient $spotify Spotify API client used for remote catalog searches.
+     * @param ArtistRepository $artistRepository Repository used for local searches.
      */
     public function __construct(
         private readonly ArtistActionsService $service,
         private readonly SpotifyApiClient $spotify,
         private readonly ArtistRepository $artistRepository
-    )
-    {
+    ) {
     }
 
     /**
-     * @param Request $request
-     * @return JsonResponse
+     * Invokes the operation.
+     *
+     * @param Request $request Current HTTP request (query parameters: q, limit, offset, market...).
+     *
+     * @return JsonResponse Operation response.
      */
     public function __invoke(Request $request): JsonResponse
     {

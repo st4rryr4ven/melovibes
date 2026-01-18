@@ -10,9 +10,19 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 
+/**
+ * Creates or updates a review for a given music.
+ *
+ * This controller implements an upsert semantic: a user can have at most one review per music. If a review exists for
+ * the (author, music) pair, it is updated; otherwise a new review is created.
+ */
 #[Route('/api/reviews')]
 class ReviewCreateController extends AbstractController
 {
+    /**
+     * @param EntityManagerInterface $em Doctrine entity manager.
+     * @param MusicRepository $musicRepo Repository used to resolve the target music.
+     */
     public function __construct(
         private EntityManagerInterface $em,
         private MusicRepository        $musicRepo
@@ -20,6 +30,18 @@ class ReviewCreateController extends AbstractController
     {
     }
 
+    /**
+     * Creates or updates the authenticated user's review for a music.
+     *
+     * Request body:
+     * - music: string IRI (e.g. "/api/music/12")
+     * - rating: int (0..5)
+     * - comment: string|null (optional)
+     *
+     * @param Request $request Incoming HTTP request.
+     *
+     * @return JsonResponse 200 with the review payload, or an error response.
+     */
     #[Route('', methods: ['POST'])]
     public function __invoke(Request $request): JsonResponse
     {
@@ -34,7 +56,6 @@ class ReviewCreateController extends AbstractController
             return $this->json(['error' => 'Données manquantes'], 400);
         }
 
-        // Extract music ID from IRI
         preg_match('/\/api\/music\/(\d+)/', $data['music'], $matches);
         $musicId = $matches[1] ?? null;
 
@@ -51,13 +72,11 @@ class ReviewCreateController extends AbstractController
             return $this->json(['error' => 'Note invalide'], 400);
         }
 
-        // 🔑 FIND EXISTING REVIEW
         $review = $this->em->getRepository(Review::class)->findOneBy([
             'author' => $user,
             'music' => $music,
         ]);
 
-        // 🆕 CREATE IF NOT EXISTS
         if (!$review) {
             $review = new Review();
             $review
@@ -67,7 +86,6 @@ class ReviewCreateController extends AbstractController
             $this->em->persist($review);
         }
 
-        // ✏️ UPDATE FIELDS (CREATE OR EDIT)
         $review
             ->setRating((int)$data['rating'])
             ->setComment($data['comment'] ?? null);

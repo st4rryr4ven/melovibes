@@ -10,12 +10,22 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
+/**
+ * Console command that imports Spotify "new releases" into the local database.
+ *
+ * The command delegates the heavy lifting to {@see SpotifyCatalogService::syncNewReleases()} and mainly exists to
+ * expose the synchronization as a CLI entrypoint for cron or manual runs.
+ */
 #[AsCommand(
     name: 'app:spotify:sync:new-releases',
     description: 'Synchronize Spotify new releases into the local database.'
 )]
 class SpotifySyncNewReleasesCommand extends Command
 {
+    /**
+     * @param SpotifyCatalogService $catalog Catalog synchronization service.
+     * @param string $defaultCountry Default country used when the --country option is not provided.
+     */
     public function __construct(
         private readonly SpotifyCatalogService $catalog,
         #[Autowire('%env(default:FR:SPOTIFY_NEW_RELEASES_COUNTRY)%')] private readonly string $defaultCountry = 'FR',
@@ -23,6 +33,11 @@ class SpotifySyncNewReleasesCommand extends Command
         parent::__construct();
     }
 
+    /**
+     * Configures CLI options.
+     *
+     * @return void
+     */
     protected function configure(): void
     {
         $this
@@ -34,6 +49,14 @@ class SpotifySyncNewReleasesCommand extends Command
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Run without writing to the database');
     }
 
+    /**
+     * Executes the synchronization.
+     *
+     * @param InputInterface $input Console input.
+     * @param OutputInterface $output Console output.
+     *
+     * @return int Exit code.
+     */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $country = (string) $input->getOption('country');

@@ -9,13 +9,42 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
+use Twig\Error\LoaderError;
+use Twig\Error\RuntimeError;
+use Twig\Error\SyntaxError;
 
+/**
+ * Password reset endpoints.
+ *
+ * The reset flow is split in two steps:
+ * - request: generates a signed one-hour token and sends it by email;
+ * - finish: verifies the token integrity and expiration and sets the new password.
+ */
 #[Route('/api')]
 class PasswordResetController extends AbstractController
 {
     #[Route('/forgot-password-request', name: 'api_forgot_password_request', methods: ['POST'])]
+    /**
+     * Sends a password reset email if the account exists.
+     *
+     * For privacy reasons, this endpoint always returns a generic success message even when the email is unknown.
+     *
+     * Request body:
+     * - email: string
+     *
+     * @param Request $request Current HTTP request.
+     * @param EntityManagerInterface $em Doctrine entity manager.
+     * @param MailerService $mailer Mailer used to send the reset email.
+     *
+     * @return JsonResponse Generic response indicating that the user should check their inbox.
+     * @throws TransportExceptionInterface
+     * @throws LoaderError
+     * @throws RuntimeError
+     * @throws SyntaxError
+     */
     public function request(Request $request, EntityManagerInterface $em, MailerService $mailer): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
@@ -36,6 +65,19 @@ class PasswordResetController extends AbstractController
     }
 
     #[Route('/reset-password-finish', name: 'api_reset_password_finish', methods: ['POST'])]
+    /**
+     * Finishes a password reset using a signed token.
+     *
+     * Request body:
+     * - token: string (base64 encoded)
+     * - password: string (new password)
+     *
+     * @param Request $request Current HTTP request.
+     * @param EntityManagerInterface $em Doctrine entity manager.
+     * @param UserPasswordHasherInterface $hasher Password hasher.
+     *
+     * @return JsonResponse Success response or a 400 error if the token is invalid/expired.
+     */
     public function finish(Request $request, EntityManagerInterface $em, UserPasswordHasherInterface $hasher): JsonResponse
     {
         $data = json_decode($request->getContent(), true);

@@ -7,15 +7,32 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
+ * Repository for {@see Music} entities.
+ *
+ * This repository provides:
+ * - Lookup helpers for Spotify-linked tracks (spotifyId or public Spotify URL).
+ * - Lightweight search used by merged local+Spotify search endpoints.
+ * - Helpers used by artist-related endpoints (count/list musics per artist).
+ *
  * @extends ServiceEntityRepository<Music>
  */
 class MusicRepository extends ServiceEntityRepository
 {
+    /**
+     * @param ManagerRegistry $registry Doctrine manager registry.
+     */
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Music::class);
     }
 
+    /**
+     * Finds a music by Spotify identifier.
+     *
+     * @param string $spotifyId Spotify track id.
+     *
+     * @return Music|null The music if found, otherwise null.
+     */
     public function findOneBySpotifyId(string $spotifyId): ?Music
     {
         $spotifyId = trim($spotifyId);
@@ -32,8 +49,11 @@ class MusicRepository extends ServiceEntityRepository
     }
 
     /**
-     * @param string[] $spotifyIds
-     * @return Music[]
+     * Finds musics by a list of Spotify identifiers.
+     *
+     * @param string[] $spotifyIds Spotify track ids.
+     *
+     * @return Music[] Matching musics.
      */
     public function findBySpotifyIds(array $spotifyIds): array
     {
@@ -49,6 +69,15 @@ class MusicRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    /**
+     * Finds a music by its public Spotify URL.
+     *
+     * This is used as a fallback match strategy when spotifyId is not present.
+     *
+     * @param string $link Public Spotify URL.
+     *
+     * @return Music|null The music if found, otherwise null.
+     */
     public function findOneByLink(string $link): ?Music
     {
         $link = trim($link);
@@ -64,6 +93,13 @@ class MusicRepository extends ServiceEntityRepository
             ->getOneOrNullResult();
     }
 
+    /**
+     * Counts local musics matching a case-insensitive LIKE search on title or artist name.
+     *
+     * @param string $query User query.
+     *
+     * @return int Number of matching musics.
+     */
     public function countLocalSearch(string $query): int
     {
         $q = trim($query);
@@ -81,7 +117,13 @@ class MusicRepository extends ServiceEntityRepository
     }
 
     /**
-     * @return Music[]
+     * Searches local musics using a case-insensitive LIKE filter on title or artist name.
+     *
+     * @param string $query User query.
+     * @param int $limit Max results (clamped to 1..50).
+     * @param int $offset Offset.
+     *
+     * @return Music[] Matching musics ordered by popularity and id.
      */
     public function searchLocal(string $query, int $limit, int $offset): array
     {
@@ -103,6 +145,13 @@ class MusicRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    /**
+     * Counts musics imported under a specific import source.
+     *
+     * @param string $source Import source tag stored in the entity.
+     *
+     * @return int Number of matching musics.
+     */
     public function countNewReleases(string $source = 'spotify:new_releases'): int
     {
         return (int) $this->createQueryBuilder('m')
@@ -114,7 +163,13 @@ class MusicRepository extends ServiceEntityRepository
     }
 
     /**
-     * @return Music[]
+     * Returns musics imported under a specific import source.
+     *
+     * @param string $source Import source tag stored in the entity.
+     * @param int $limit Max results (clamped to 1..50).
+     * @param int $offset Offset.
+     *
+     * @return Music[] Matching musics ordered by importedAt, popularity and id.
      */
     public function findNewReleases(string $source, int $limit, int $offset): array
     {
@@ -133,7 +188,11 @@ class MusicRepository extends ServiceEntityRepository
     }
 
     /**
-     * Counts music linked to a given artist (local database).
+     * Counts musics linked to a given artist (local database).
+     *
+     * @param int $artistId Local artist id.
+     *
+     * @return int Number of linked musics.
      */
     public function countByArtistId(int $artistId): int
     {
@@ -149,7 +208,11 @@ class MusicRepository extends ServiceEntityRepository
     /**
      * Returns musics linked to a given artist (local database).
      *
-     * @return Music[]
+     * @param int $artistId Local artist id.
+     * @param int $limit Max results (clamped to 1..50).
+     * @param int $offset Offset.
+     *
+     * @return Music[] Linked musics ordered by popularity and id.
      */
     public function findByArtistId(int $artistId, int $limit, int $offset): array
     {

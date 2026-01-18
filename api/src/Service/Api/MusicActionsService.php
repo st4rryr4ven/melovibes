@@ -9,10 +9,31 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
- * Stateless service holding custom API operations payload builders.
+ * Builds JSON payloads for custom "music" API operations.
+ *
+ * These operations are exposed through API Platform custom controllers (Actions). The main goal of
+ * this service is to keep those controllers thin and to centralize payload shaping.
  */
 final class MusicActionsService
 {
+    /**
+     * Searches musics in the local database and then completes results with Spotify search.
+     *
+     * The returned list is always limited by the requested limit. If local results already fill the page,
+     * Spotify is not called.
+     *
+     * Query parameters:
+     * - q: search string (required)
+     * - limit: 1..50
+     * - offset: 0..
+     * - market: Spotify market code (default FR)
+     *
+     * @param Request $request Current HTTP request.
+     * @param SpotifyApiClient $spotify Spotify API client.
+     * @param MusicRepository $musicRepository Local music repository.
+     *
+     * @return JsonResponse Search response containing items and meta.
+     */
     public function search(Request $request, SpotifyApiClient $spotify, MusicRepository $musicRepository): JsonResponse
     {
         $q = trim((string) $request->query->get('q', ''));
@@ -135,6 +156,19 @@ final class MusicActionsService
         ]);
     }
 
+    /**
+     * Returns Spotify "new releases" albums.
+     *
+     * Query parameters:
+     * - limit: 1..50
+     * - offset: 0..
+     * - country: ISO 3166-1 alpha-2 country code (default FR)
+     *
+     * @param Request $request Current HTTP request.
+     * @param SpotifyApiClient $spotify Spotify API client.
+     *
+     * @return JsonResponse List of albums with lightweight metadata.
+     */
     public function newReleases(Request $request, SpotifyApiClient $spotify): JsonResponse
     {
         $limit = max(1, min(50, (int) $request->query->get('limit', 20)));
@@ -194,6 +228,19 @@ final class MusicActionsService
         ]);
     }
 
+    /**
+     * Lists all tracks for a Spotify album and indicates which ones are already imported locally.
+     *
+     * Query parameters:
+     * - market: Spotify market code (default FR)
+     *
+     * @param string $spotifyAlbumId Spotify album id.
+     * @param Request $request Current HTTP request.
+     * @param SpotifyApiClient $spotify Spotify API client.
+     * @param MusicRepository $musicRepository Local music repository.
+     *
+     * @return JsonResponse Album metadata and track list.
+     */
     public function albumTracks(string $spotifyAlbumId, Request $request, SpotifyApiClient $spotify, MusicRepository $musicRepository): JsonResponse
     {
         $market = (string) $request->query->get('market', 'FR');
@@ -333,6 +380,18 @@ final class MusicActionsService
         ]);
     }
 
+    /**
+     * Imports a Spotify track as a local music and returns the created/updated resource payload.
+     *
+     * Query parameters:
+     * - market: Spotify market code (default FR)
+     *
+     * @param string $spotifyTrackId Spotify track id.
+     * @param Request $request Current HTTP request.
+     * @param SpotifyCatalogService $catalog Catalog service responsible for the upsert.
+     *
+     * @return JsonResponse 201 response containing the local music fields.
+     */
     public function importSpotifyTrack(string $spotifyTrackId, Request $request, SpotifyCatalogService $catalog): JsonResponse
     {
         $market = (string) $request->query->get('market', 'FR');

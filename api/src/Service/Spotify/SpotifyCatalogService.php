@@ -12,10 +12,27 @@ use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * Synchronizes Spotify catalog data into the local database and supports on-demand imports.
+ * Imports and synchronizes Spotify catalog data into the local database.
+ *
+ * This service provides two categories of operations:
+ * - Batch synchronization (for example importing Spotify "new releases").
+ * - On-demand imports triggered by API requests (track import, album import, artist import).
+ *
+ * The import logic attempts to be idempotent:
+ * - When a Spotify identifier is known, entities are matched by spotify_id.
+ * - As a fallback for tracks, entities can also be matched by the Spotify public URL.
+ *
+ * Imported entities are persisted using Doctrine and can be enriched with import metadata
+ * (import source, import timestamp, raw request JSON).
  */
 readonly class SpotifyCatalogService
 {
+    /**
+     * @param SpotifyApiClient $spotify Low-level Spotify HTTP client.
+     * @param MusicRepository $musicRepository Repository used to find and upsert musics.
+     * @param ArtistRepository $artistRepository Repository used to find and upsert artists.
+     * @param EntityManagerInterface $entityManager Doctrine entity manager.
+     */
     public function __construct(
         private SpotifyApiClient       $spotify,
         private MusicRepository        $musicRepository,
@@ -25,6 +42,21 @@ readonly class SpotifyCatalogService
     {
     }
 
+    /**
+     * Imports Spotify "new releases" into the local database.
+     *
+     * The method fetches new release albums, then fetches album tracks and their full track payloads,
+     * and finally upserts each track as a local {@see Music} entity.
+     *
+     * @param string $country Market/country code used by Spotify (ISO 3166-1 alpha-2).
+     * @param int $albumLimit Page size for the Spotify new releases endpoint (max 50).
+     * @param int $albumOffset Offset for the Spotify new releases endpoint.
+     * @param int $maxTracksPerAlbum Maximum number of tracks processed per album.
+     * @param bool $updateExisting Whether existing rows matched by spotify_id/link should be updated.
+     * @param bool $dryRun When true, no database writes are performed.
+     *
+     * @return int Number of tracks imported/updated.
+     */
     public function syncNewReleases(
         string $country = 'FR',
         int    $albumLimit = 20,
@@ -100,6 +132,18 @@ readonly class SpotifyCatalogService
         return $count;
     }
 
+    /**
+     * Imports a Spotify track by its identifier.
+     *
+     * This method fetches the full track payload from Spotify and upserts it into the local database.
+     * When the music is first imported, default import metadata is set.
+     *
+     * @param string $trackId Spotify track id.
+     * @param string $market Spotify market code used to localize the response.
+     * @param bool $updateExisting Whether to update an existing row when the track is already present locally.
+     *
+     * @return Music The upserted local music entity.
+     */
     public function importTrackById(string $trackId, string $market = 'FR', bool $updateExisting = true): Music
     {
         $track = $this->spotify->getTrack($trackId, $market);
@@ -119,7 +163,16 @@ readonly class SpotifyCatalogService
     }
 
     /**
-     * @return Music[]
+     * Imports all tracks of a Spotify album.
+     *
+     * The method paginates through album tracks to collect track ids, then fetches full track payloads in batches
+     * and upserts each track locally.
+     *
+     * @param string $albumId Spotify album id.
+     * @param string $market Spotify market code used to localize the response.
+     * @param bool $updateExisting Whether to update existing rows when tracks are already present locally.
+     *
+     * @return Music[] List of imported/upserted local music entities.
      */
     public function importAlbumById(string $albumId, string $market = 'FR', bool $updateExisting = true): array
     {
@@ -195,13 +248,24 @@ readonly class SpotifyCatalogService
         return $imported;
     }
 
+    /**
+     * Imports a Spotify artist and optionally imports their top tracks.
+     *
+     * The artist is upserted locally. When requested, the Spotify "top tracks" endpoint is queried and each track
+     * is upserted as a local {@see Music} entity.
+     *
+     * @param string $artistId Spotify artist id.
+     * @param string $market Spotify market code used to localize the response.
+     * @param bool $updateExisting Whether to update existing rows when already present locally.
+     * @param bool $importTopTracks Whether to import the artist top tracks as local musics.
+     *
+     * @return Artist The upserted local artist entity.
+     */
     public function importArtistById(string $artistId, string $market = 'FR', bool $updateExisting = true, bool $importTopTracks = true): Artist
     {
         $artistPayload = $this->spotify->getArtist($artistId);
         $artist = $this->upsertArtistFromSpotify($artistPayload, $updateExisting);
 
-        // Flush the artist if it's new (has no ID yet) to avoid duplicate key errors
-        // when importing top tracks that might reference the same artist
         if ($artist->getId() === null) {
             $this->entityManager->flush();
         }
@@ -421,7 +485,6 @@ readonly class SpotifyCatalogService
 
             $artist = null;
 
-            // First check if there's a pending artist with the same Spotify ID in the unit of work
             if ($artistSpotifyId !== '') {
                 foreach ($scheduledInserts as $entity) {
                     if ($entity instanceof Artist && $entity->getSpotifyId() === $artistSpotifyId) {
@@ -431,16 +494,13 @@ readonly class SpotifyCatalogService
                 }
             }
 
-            // If not found in unit of work, check the database
             if ($artist === null && $artistSpotifyId !== '') {
                 $artist = $this->artistRepository->findOneBySpotifyId($artistSpotifyId);
             }
 
-            // Also check by name in unit of work if still not found
             if ($artist === null) {
                 foreach ($scheduledInserts as $entity) {
                     if ($entity instanceof Artist && strtolower($entity->getName()) === strtolower($name)) {
-                        // If the pending artist has no Spotify ID but we have one, update it
                         if ($entity->getSpotifyId() === null && $artistSpotifyId !== '') {
                             $entity->setSpotifyId($artistSpotifyId);
                         }
@@ -450,7 +510,6 @@ readonly class SpotifyCatalogService
                 }
             }
 
-            // If still not found, check database by name
             if ($artist === null) {
                 $artist = $this->artistRepository->findOneByName($name);
                 if ($artist !== null && $artistSpotifyId !== '' && $artist->getSpotifyId() === null) {
@@ -458,7 +517,6 @@ readonly class SpotifyCatalogService
                 }
             }
 
-            // Create new artist only if not found anywhere
             if ($artist === null) {
                 $artist = new Artist();
                 $artist->setName($name);

@@ -13,13 +13,26 @@ use Symfony\Component\HttpKernel\KernelEvents;
 /**
  * Clears authentication cookies when the currently authenticated user deletes their own account.
  *
- * This prevents the browser from continuing to send a JWT/refresh cookie that references a deleted user,
- * which would otherwise cause repeated "Invalid credentials" responses on subsequent requests.
+ * Context:
+ * - The frontend relies on HTTP-only cookies (e.g. "BEARER" JWT and "refresh_token") for authentication.
+ * - When a user deletes their account, those cookies may remain in the browser.
+ * - Subsequent requests would keep sending cookies referencing a deleted user, which typically produces repeated
+ *   "Invalid credentials" responses and a confusing UX (appears "still logged in" but unauthorized).
+ *
+ * Behavior:
+ * - Listens on the kernel.response event and checks for a successful DELETE /api/users/{id} response.
+ * - If the deleted {id} matches the currently authenticated user, it issues Set-Cookie headers to expire
+ *   the authentication cookies immediately.
+ *
+ * Notes:
+ * - This subscriber is intentionally conservative and will do nothing for non-main requests, non-DELETE methods,
+ *   non-user routes, error responses (>= 400), unauthenticated requests, or when the deleted id does not match
+ *   the current user.
  */
 final readonly class ClearAuthCookiesOnUserDeleteSubscriber implements EventSubscriberInterface
 {
     /**
-     * @param Security $security Symfony security helper.
+     * @param Security $security Security helper used to resolve the currently authenticated user.
      */
     public function __construct(
         private Security $security
@@ -27,9 +40,12 @@ final readonly class ClearAuthCookiesOnUserDeleteSubscriber implements EventSubs
     }
 
     /**
-     * {@inheritDoc}
+     * Declares the events this subscriber listens to.
      *
-     * @return array<string, string>
+     * The subscriber runs on {@see KernelEvents::RESPONSE} so it can safely modify the outgoing HTTP response
+     * after the delete operation is processed by API Platform / Symfony.
+     *
+     * @return array<string, string> Event map in the form [eventName => methodName].
      */
     public static function getSubscribedEvents(): array
     {
@@ -39,9 +55,23 @@ final readonly class ClearAuthCookiesOnUserDeleteSubscriber implements EventSubs
     }
 
     /**
-     * Adds Set-Cookie headers to remove auth cookies after a successful self user deletion.
+     * Adds Set-Cookie headers that expire authentication cookies after a successful self-account deletion.
      *
-     * @param ResponseEvent $event Symfony response event.
+     * Matching criteria:
+     * - Main request only.
+     * - HTTP method is DELETE.
+     * - Path starts with "/api/users/".
+     * - Response status code is < 400.
+     * - Current authenticated user is a {@see User}.
+     * - Deleted user id equals authenticated user id.
+     *
+     * Cookies expired:
+     * - "BEARER"
+     * - "refresh_token"
+     *
+     * @param ResponseEvent $event Kernel response event.
+     *
+     * @return void
      */
     public function onKernelResponse(ResponseEvent $event): void
     {

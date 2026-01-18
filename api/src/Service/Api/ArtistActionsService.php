@@ -9,13 +9,32 @@ use App\Service\Spotify\SpotifyCatalogService;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 
+/**
+ * Stateless service that builds JSON payloads for artist-related custom API operations.
+ *
+ * The application exposes a few non-CRUD endpoints around artists (search, Spotify import, listing an artist's music,
+ * and fetching top tracks from Spotify). This service keeps the controller/actions thin by encapsulating the request
+ * parsing, data aggregation, and payload shaping logic.
+ */
 final class ArtistActionsService
 {
     /**
-     * @param Request $request
-     * @param SpotifyApiClient $spotify
-     * @param ArtistRepository $artistRepository
-     * @return JsonResponse
+     * Searches artists across the local database and Spotify catalog.
+     *
+     * The response is a merged list: local results first, then Spotify results (excluding Spotify artists already
+     * present locally). Pagination parameters apply to the merged result set.
+     *
+     * Expected query parameters:
+     * - q (string, required): search query.
+     * - limit (int, optional, 1..50): max items to return.
+     * - offset (int, optional, >=0): offset in the merged result set.
+     * - market (string, optional): Spotify market code.
+     *
+     * @param Request $request Incoming HTTP request.
+     * @param SpotifyApiClient $spotify Spotify API client used for catalog searches.
+     * @param ArtistRepository $artistRepository Repository used to search locally persisted artists.
+     *
+     * @return JsonResponse JSON payload: { items: [...], meta: { limit, offset, localTotal, spotify: {...} } }.
      */
     public function search(Request $request, SpotifyApiClient $spotify, ArtistRepository $artistRepository): JsonResponse
     {
@@ -124,50 +143,65 @@ final class ArtistActionsService
         ]);
     }
 
-   /**
-    * @param string $spotifyArtistId
-    * @param Request $request
-    * @param SpotifyCatalogService $catalog
-    * @param ArtistRepository $artistRepository
-    * @return JsonResponse
-    */
-   public function importSpotifyArtist(
-       string $spotifyArtistId,
-       Request $request,
-       SpotifyCatalogService $catalog,
-       ArtistRepository $artistRepository
-   ): JsonResponse {
-       $spotifyArtistId = trim($spotifyArtistId);
-       if ($spotifyArtistId === '') {
-           return new JsonResponse(['message' => 'Spotify ID is missing'], 400);
-       }
+    /**
+     * Imports a Spotify artist into the local database.
+     *
+     * If the artist already exists locally (same spotify_id), it is returned as-is.
+     *
+     * Expected query parameters:
+     * - market (string, optional): Spotify market code.
+     *
+     * @param string $spotifyArtistId Spotify artist id.
+     * @param Request $request Incoming HTTP request.
+     * @param SpotifyCatalogService $catalog Domain service responsible for translating Spotify catalog objects into
+     *                                      local entities.
+     * @param ArtistRepository $artistRepository Repository used to check for an existing import.
+     *
+     * @return JsonResponse JSON payload containing the persisted artist.
+     */
+    public function importSpotifyArtist(
+        string $spotifyArtistId,
+        Request $request,
+        SpotifyCatalogService $catalog,
+        ArtistRepository $artistRepository
+    ): JsonResponse {
+        $spotifyArtistId = trim($spotifyArtistId);
+        if ($spotifyArtistId === '') {
+            return new JsonResponse(['message' => 'Spotify ID is missing'], 400);
+        }
 
-       $existing = $artistRepository->findOneBySpotifyId($spotifyArtistId);
-       if ($existing !== null) {
-           return new JsonResponse([
-               'artistId' => $existing->getId(),
-               'spotifyId' => $existing->getSpotifyId(),
-               'name' => $existing->getName(),
-           ], 200);
-       }
+        $existing = $artistRepository->findOneBySpotifyId($spotifyArtistId);
+        if ($existing !== null) {
+            return new JsonResponse([
+                'artistId' => $existing->getId(),
+                'spotifyId' => $existing->getSpotifyId(),
+                'name' => $existing->getName(),
+            ], 200);
+        }
 
-       $market = (string) $request->query->get('market', 'FR');
-       $artist = $catalog->importArtistById($spotifyArtistId, $market, true, true);
+        $market = (string) $request->query->get('market', 'FR');
+        $artist = $catalog->importArtistById($spotifyArtistId, $market, true, true);
 
-       return new JsonResponse([
-           'artistId' => $artist->getId(),
-           'spotifyId' => $artist->getSpotifyId(),
-           'name' => $artist->getName(),
-       ], 201);
-   }
-
+        return new JsonResponse([
+            'artistId' => $artist->getId(),
+            'spotifyId' => $artist->getSpotifyId(),
+            'name' => $artist->getName(),
+        ], 201);
+    }
 
     /**
-     * @param int $artistId
-     * @param Request $request
-     * @param ArtistRepository $artistRepository
-     * @param MusicRepository $musicRepository
-     * @return JsonResponse
+     * Lists the musics linked to a local artist.
+     *
+     * Expected query parameters:
+     * - limit (int, optional, 1..50): max items to return.
+     * - offset (int, optional, >=0): offset in the artist's music list.
+     *
+     * @param int $artistId Local artist id.
+     * @param Request $request Incoming HTTP request.
+     * @param ArtistRepository $artistRepository Repository used to load the artist.
+     * @param MusicRepository $musicRepository Repository used to query musics.
+     *
+     * @return JsonResponse JSON payload: { artist: {...}, items: [...], meta: {...} }.
      */
     public function music(int $artistId, Request $request, ArtistRepository $artistRepository, MusicRepository $musicRepository): JsonResponse
     {
@@ -222,12 +256,22 @@ final class ArtistActionsService
     }
 
     /**
-     * @param int $artistId
-     * @param Request $request
-     * @param ArtistRepository $artistRepository
-     * @param MusicRepository $musicRepository
-     * @param SpotifyApiClient $spotify
-     * @return JsonResponse
+     * Returns Spotify top tracks for a local artist.
+     *
+     * The returned list includes import metadata for each track (whether it already exists locally and the local id
+     * if available).
+     *
+     * Expected query parameters:
+     * - market (string, optional): Spotify market code.
+     * - limit (int, optional, 1..50): max items to return.
+     *
+     * @param int $artistId Local artist id.
+     * @param Request $request Incoming HTTP request.
+     * @param ArtistRepository $artistRepository Repository used to load the artist.
+     * @param MusicRepository $musicRepository Repository used to detect existing imported tracks.
+     * @param SpotifyApiClient $spotify Spotify API client.
+     *
+     * @return JsonResponse JSON payload: { artist: {...}, items: [...], meta: {...} }.
      */
     public function topTracks(int $artistId, Request $request, ArtistRepository $artistRepository, MusicRepository $musicRepository, SpotifyApiClient $spotify): JsonResponse
     {

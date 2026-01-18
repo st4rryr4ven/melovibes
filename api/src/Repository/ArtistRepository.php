@@ -7,15 +7,31 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
+ * Repository for {@see Artist} entities.
+ *
+ * This repository provides:
+ * - Lookup helpers for Spotify-linked artists.
+ * - Lightweight, case-insensitive local search used by merged local+Spotify search endpoints.
+ *
  * @extends ServiceEntityRepository<Artist>
  */
 class ArtistRepository extends ServiceEntityRepository
 {
+    /**
+     * @param ManagerRegistry $registry Doctrine manager registry.
+     */
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Artist::class);
     }
 
+    /**
+     * Finds an artist by Spotify identifier.
+     *
+     * @param string $spotifyId Spotify artist id.
+     *
+     * @return Artist|null The artist if found, otherwise null.
+     */
     public function findOneBySpotifyId(string $spotifyId): ?Artist
     {
         $spotifyId = trim($spotifyId);
@@ -32,8 +48,11 @@ class ArtistRepository extends ServiceEntityRepository
     }
 
     /**
-     * @param string[] $spotifyIds
-     * @return Artist[]
+     * Finds artists by a list of Spotify identifiers.
+     *
+     * @param string[] $spotifyIds Spotify artist ids.
+     *
+     * @return Artist[] Matching artists.
      */
     public function findBySpotifyIds(array $spotifyIds): array
     {
@@ -49,6 +68,13 @@ class ArtistRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    /**
+     * Finds an artist by name (case-insensitive exact match).
+     *
+     * @param string $name Artist name.
+     *
+     * @return Artist|null The artist if found, otherwise null.
+     */
     public function findOneByName(string $name): ?Artist
     {
         $name = trim($name);
@@ -64,6 +90,13 @@ class ArtistRepository extends ServiceEntityRepository
             ->getOneOrNullResult();
     }
 
+    /**
+     * Counts local artists matching a case-insensitive LIKE search.
+     *
+     * @param string $query User query.
+     *
+     * @return int Number of matching artists.
+     */
     public function countLocalSearch(string $query): int
     {
         $q = trim($query);
@@ -80,7 +113,13 @@ class ArtistRepository extends ServiceEntityRepository
     }
 
     /**
-     * @return Artist[]
+     * Searches local artists by name using a case-insensitive LIKE filter.
+     *
+     * @param string $query User query.
+     * @param int $limit Max results (clamped to 1..50).
+     * @param int $offset Offset.
+     *
+     * @return Artist[] Matching artists ordered by name and id.
      */
     public function searchLocal(string $query, int $limit, int $offset): array
     {

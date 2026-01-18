@@ -25,10 +25,15 @@ use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Throwable;
 
-#[Route('/api/spotify')]
 /**
- * Handles Spotify OAuth login/link flows and provides utilities for syncing Spotify data.
+ * Spotify OAuth endpoints (login, link/unlink) and Spotify-to-Melovibes synchronization utilities.
+ *
+ * This controller implements an Authorization Code flow with a short-lived server-side "state" entry
+ * to protect against CSRF and a short-lived "handoff" code to safely transfer the result back to the frontend.
+ *
+ * The session endpoint exchanges the handoff code for HTTP-only cookies (BEARER JWT and refresh_token) used by the app.
  */
+#[Route('/api/spotify')]
 final class SpotifyConnectController extends AbstractController
 {
     private const STATE_TTL_SECONDS = 600;
