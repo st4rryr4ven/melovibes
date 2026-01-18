@@ -3,8 +3,7 @@
 ## 🌍 Déploiement & Dépôts
 * **URL Frontend :** [INSÉRER LIEN ICI]
 * **URL Backend (API) :** [INSÉRER LIEN ICI]
-* **Dépôt Code Source Frontend :** [INSÉRER LIEN ICI]
-* **Dépôt Code Source Backend :** [INSÉRER LIEN ICI]
+* **Dépôt Code Source :** https://gitlabinfo.iutmontp.univ-montp2.fr/bussierea/sites-de-critiques
 
 ---
 
