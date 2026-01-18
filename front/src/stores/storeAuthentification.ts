@@ -117,6 +117,7 @@ export const useStoreAuthentification = defineStore('auth', {
 
       try {
         await userApi.delete(me.id)
+        await this.logout()
         this.setGuest()
         return {success: true}
       } catch (err: any) {

@@ -1,5 +1,5 @@
-import type {Music, User} from '@/types'
-import {apiCollection, apiJson, apiVoid} from '@/api/httpClient'
+import type { Music, SpotifySyncFavoritesResponse, User } from '@/types'
+import { API_URL, apiCollection, apiJson, apiVoid } from '@/api/httpClient'
 
 export class UserApi {
   async login(email: string, password: string): Promise<User> {
@@ -80,6 +80,24 @@ export class UserApi {
         password: password
       }
     })
+  }
+
+  getSpotifyLoginUrl(): string {
+    const base = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL
+    return `${base}/spotify/login`
+  }
+
+  getSpotifyLinkUrl(): string {
+    const base = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL
+    return `${base}/spotify/link`
+  }
+
+  async unlinkSpotify(): Promise<void> {
+    await apiVoid('spotify/unlink', { method: 'POST' })
+  }
+
+  async syncSpotifyFavorites(): Promise<SpotifySyncFavoritesResponse> {
+    return apiJson<SpotifySyncFavoritesResponse>('spotify/sync-favorites', { method: 'POST' })
   }
 }
 
