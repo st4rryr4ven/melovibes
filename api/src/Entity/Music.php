@@ -155,11 +155,15 @@ class Music
     #[ApiProperty(readableLink: true)]
     private Collection $reviews;
 
+    #[ORM\ManyToMany(targetEntity: User::class, mappedBy: 'favoriteMusic')]
+    private Collection $favoritedBy;
+
     public function __construct()
     {
         $this->artists = new ArrayCollection();
         $this->isValidated = false;
         $this->reviews = new ArrayCollection();
+        $this->favoritedBy = new ArrayCollection();
     }
 
     public function getId(): ?int

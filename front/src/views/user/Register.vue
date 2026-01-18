@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { useStoreAuthentification } from '@/stores/storeAuthentification.ts'
-import { useFlashStore } from '@/stores/flashStore.ts'
+import {computed, ref} from 'vue'
+import {useRouter} from 'vue-router'
+import {useStoreAuthentification} from '@/stores/storeAuthentification.ts'
+import {useFlashStore} from '@/stores/flashStore.ts'
 
 const authStore = useStoreAuthentification()
 const flash = useFlashStore()
@@ -46,10 +46,10 @@ async function register(): Promise<void> {
   loading.value = true
 
   try {
-    const result = await authStore.register( login, email, password )
+    const result = await authStore.register(login, email, password)
     if (result?.success) {
       flash.success('Compte créé.')
-      await router.push({ name: 'login' })
+      await router.push({name: 'login'})
       return
     }
     flash.error("Inscription échouée.")
@@ -65,8 +65,8 @@ async function register(): Promise<void> {
   <div class="page">
     <section class="card shell">
       <div class="poster">
-        <div class="poster__bg" aria-hidden="true" />
-        <div class="poster__shade" aria-hidden="true" />
+        <div class="poster__bg" aria-hidden="true"/>
+        <div class="poster__shade" aria-hidden="true"/>
         <div class="poster__content">
           <div class="poster__mark">M</div>
           <div class="poster__title">Créer un compte</div>
@@ -76,15 +76,15 @@ async function register(): Promise<void> {
 
           <div class="poster__bullets">
             <div class="bullet">
-              <span class="bullet__dot" aria-hidden="true" />
+              <span class="bullet__dot" aria-hidden="true"/>
               <span>Ajoute des musiques à ta collection</span>
             </div>
             <div class="bullet">
-              <span class="bullet__dot" aria-hidden="true" />
+              <span class="bullet__dot" aria-hidden="true"/>
               <span>Découvre les avis des autres</span>
             </div>
             <div class="bullet">
-              <span class="bullet__dot" aria-hidden="true" />
+              <span class="bullet__dot" aria-hidden="true"/>
               <span>Partage tes coups de cœur</span>
             </div>
           </div>
@@ -102,7 +102,7 @@ async function register(): Promise<void> {
 
         <form class="form__body" @submit.prevent="register">
           <div class="field">
-            <label class="label" for="login">Login</label>
+            <label class="label" for="login">Pseudo</label>
             <input
               id="login"
               v-model="form.login"

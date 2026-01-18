@@ -66,6 +66,11 @@ export class ReviewApi {
     await apiVoid(`reviews/${id}`, {method: 'DELETE'})
   }
 
+  async listFromFavorites(userId: number): Promise<Review[]> {
+    const res = await apiJson<JsonLdCollection<Review>>(`reviews?music.favoritedBy=${userId}`)
+    return res.member || []
+  }
+
 }
 
 export const reviewApi = new ReviewApi()
