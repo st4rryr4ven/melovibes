@@ -1,5 +1,5 @@
 import type {Review} from '@/types'
-import {apiJson} from '@/api/httpClient'
+import {apiJson, apiVoid} from '@/api/httpClient'
 
 interface JsonLdCollection<T> {
   '@context': string
