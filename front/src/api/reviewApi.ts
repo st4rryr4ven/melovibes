@@ -73,13 +73,14 @@ export class ReviewApi {
       ...r,
       music: r.music ? {
         ...r.music,
-        id: typeof r.music === 'string'
+        id: r.musicId || (typeof r.music === 'string'
           ? Number(r.music.split('/').pop())
-          : Number(r.music.id)
+          : Number(r.music.id))
       } : undefined,
 
       author: {
         ...r.author,
+        id: r.author?.id || (r.author?.['@id'] ? Number(r.author['@id'].split('/').pop()) : undefined),
         login: r.author?.login || 'Utilisateur anonyme'
       }
     }))
