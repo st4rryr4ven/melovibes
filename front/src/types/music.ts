@@ -1,6 +1,9 @@
 import type { Artist } from './artist'
 import type { Review } from './review'
 
+/**
+ * Local music representation.
+ */
 export interface Music {
   id: number
   musicId?: number
@@ -15,11 +18,17 @@ export interface Music {
   reviews?: Review[]
 }
 
+/**
+ * Minimal response returned after importing a Spotify track.
+ */
 export interface ImportedMusic {
   id: number
   title: string
 }
 
+/**
+ * Minimal Spotify track structure used by the UI.
+ */
 export interface SpotifyTrack {
   id: string
   name: string
@@ -34,6 +43,9 @@ export interface SpotifyTrack {
   artists?: Artist[]
 }
 
+/**
+ * Single item in a merged local + Spotify search result list.
+ */
 export type MusicSearchItem =
   | {
   source: 'local'
@@ -49,6 +61,9 @@ export type MusicSearchItem =
   spotify: SpotifyTrack
 }
 
+/**
+ * Response payload for merged local + Spotify music search.
+ */
 export interface MusicSearchResponse {
   items: MusicSearchItem[]
   meta: {

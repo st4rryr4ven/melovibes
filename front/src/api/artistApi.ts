@@ -1,9 +1,23 @@
 import type { Artist, ArtistSearchResponse } from '@/types'
 import { apiJson } from '@/api/httpClient'
 
+/**
+ * Query parameters for the merged local + Spotify artist search endpoint.
+ */
 export interface ArtistSearchParams {
+  /**
+   * Search query string.
+   */
   q: string
+
+  /**
+   * Page size.
+   */
   limit?: number
+
+  /**
+   * Offset within the merged result set.
+   */
   offset?: number
 }
 
@@ -89,7 +103,15 @@ function normalize(raw: unknown): ArtistSearchResponse {
   return { items, meta }
 }
 
+/**
+ * Artist-related API endpoints.
+ */
 export class ArtistApi {
+  /**
+   * Performs merged local + Spotify search for artists.
+   *
+   * @param params Search parameters.
+   */
   async search(params: ArtistSearchParams): Promise<ArtistSearchResponse> {
     const usp = new URLSearchParams()
     usp.set('q', params.q)
@@ -100,6 +122,11 @@ export class ArtistApi {
     return normalize(raw)
   }
 
+  /**
+   * Creates a local artist.
+   *
+   * @param payload Artist payload.
+   */
   async create(payload: { name: string; spotifyId?: string }): Promise<Artist> {
     return apiJson<Artist>('artists', {
       method: 'POST',
@@ -107,6 +134,11 @@ export class ArtistApi {
     })
   }
 
+  /**
+   * Imports an artist from Spotify and returns its local representation.
+   *
+   * @param spotifyArtistId Spotify artist id.
+   */
   async importFromSpotify(spotifyArtistId: string): Promise<Artist> {
     const res = await apiJson<{ artistId: number; name: string; spotifyId: string | null }>(
       `artist/import/spotify/${encodeURIComponent(spotifyArtistId)}`,

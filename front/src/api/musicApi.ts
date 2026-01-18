@@ -1,51 +1,98 @@
-import type {ImportedMusic, Music, MusicSearchResponse} from '@/types'
-import {apiCollection, apiJson, apiVoid} from '@/api/httpClient'
+import type { ImportedMusic, Music, MusicSearchResponse, Review, User } from '@/types'
+import { apiCollection, apiJson, apiVoid } from '@/api/httpClient'
+import {iriToId, isRecord} from "@/api/utilsApi.ts";
 
+/**
+ * Query parameters for the merged local + Spotify music search endpoint.
+ */
 export interface MusicSearchParams {
+  /**
+   * Search query string.
+   */
   q: string
+
+  /**
+   * Page size.
+   */
   limit?: number
+
+  /**
+   * Offset within the merged result set.
+   */
   offset?: number
+
+  /**
+   * Spotify market (e.g. FR).
+   */
   market?: string
 }
 
+function extractJsonLdId(v: unknown): number | null {
+  if (typeof v === 'string' && v.trim() !== '') return iriToId(v)
+
+  if (isRecord(v)) {
+    const iri = v['@id']
+    if (typeof iri === 'string' && iri.trim() !== '') return iriToId(iri)
+  }
+
+  return null
+}
+
+/**
+ * Music-related API endpoints and normalization helpers.
+ *
+ * Notes:
+ * - API Platform resources may include JSON-LD fields like "@id".
+ * - Some nested resources may omit "id" while still providing "@id".
+ * - {@link enrichMusicData} normalizes embedded reviews and authors to ensure ids are present.
+ */
 export class MusicApi {
+  /**
+   * Retrieves a music by id.
+   *
+   * @param id Music id.
+   */
   async get(id: number): Promise<Music> {
     return apiJson<Music>(`music/${id}`)
   }
 
+  /**
+   * Normalizes music payload for frontend usage.
+   *
+   * Ensures:
+   * - Review id is present (from "id" or "@id").
+   * - Author id is present (from "id" or "@id").
+   *
+   * @param music Raw music payload.
+   * @returns A normalized music payload.
+   */
   enrichMusicData(music: Music): Music {
-    if (!music.reviews) return music
+    if (!music.reviews || music.reviews.length === 0) return music
 
-    return {
-      ...music,
-      reviews: music.reviews.map((r) => {
-        const rawReviewIri = (r as any)['@id'] as string | undefined
-        const reviewId = r.id || this.extractIdFromIri(rawReviewIri)
+    const reviews = music.reviews.map((r: Review) => {
+      const rawReviewId = extractJsonLdId(r as unknown)
+      const reviewId = r.id || rawReviewId || 0
 
-        const rawAuthorIri = (r.author as any)?.['@id'] as string | undefined
-        const authorId = r.author?.id || this.extractIdFromIri(rawAuthorIri)
+      const author = r.author as unknown
+      const rawAuthorId = extractJsonLdId(author)
+      const authorObj = (isRecord(author) ? (author as unknown as User) : r.author) as User
+      const authorId = authorObj?.id || rawAuthorId || 0
 
-        return {
-          ...r,
-          id: reviewId,
-          author: r.author ? {...r.author, id: authorId} : r.author
-        }
-      })
-    }
+      return {
+        ...r,
+        id: reviewId,
+        author: authorObj ? { ...authorObj, id: authorId } : (r.author as User)
+      }
+    })
+
+    return { ...music, reviews }
   }
 
-  private extractIdFromIri(iri: string | undefined): number {
-    if (!iri || typeof iri !== 'string') return 0
-
-    const parts = iri.split('/')
-    const lastPart = parts[parts.length - 1]
-
-    if (!lastPart) return 0
-
-    const id = parseInt(lastPart, 10)
-    return isNaN(id) ? 0 : id
-  }
-
+  /**
+   * Lists musics using standard collection endpoints.
+   *
+   * @param filters Query filters mapped to URLSearchParams.
+   */
   async list(filters: Record<string, unknown> = {}): Promise<Music[]> {
     const usp = new URLSearchParams()
     Object.entries(filters).forEach(([key, value]) => {
@@ -55,6 +102,11 @@ export class MusicApi {
     return apiCollection<Music>(`music${q ? `?${q}` : ''}`)
   }
 
+  /**
+   * Creates a new music (local).
+   *
+   * @param payload Creation payload.
+   */
   async create(payload: Record<string, unknown>): Promise<Music> {
     return apiJson<Music>('music', {
       method: 'POST',
@@ -62,10 +114,21 @@ export class MusicApi {
     })
   }
 
+  /**
+   * Deletes a music.
+   *
+   * @param id Music id.
+   */
   async delete(id: number): Promise<void> {
-    await apiVoid(`music/${id}`, {method: 'DELETE'})
+    await apiVoid(`music/${id}`, { method: 'DELETE' })
   }
 
+  /**
+   * Applies a JSON merge patch to a music.
+   *
+   * @param id Music id.
+   * @param data Patch payload.
+   */
   async patch(id: number, data: Record<string, unknown>): Promise<Music> {
     return apiJson<Music>(`music/${id}`, {
       method: 'PATCH',
@@ -74,6 +137,16 @@ export class MusicApi {
     })
   }
 
+  /**
+   * Imports a track from Spotify.
+   *
+   * Accepts either:
+   * - a Spotify track id
+   * - a full Spotify track URL
+   *
+   * @param trackId Spotify track id or URL.
+   * @returns Minimal imported music representation.
+   */
   async importFromSpotify(trackId: string): Promise<ImportedMusic> {
     if (trackId.includes('spotify.com')) {
       const match = trackId.match(/track\/([a-zA-Z0-9]+)(\?si=.*)?/)
@@ -81,19 +154,19 @@ export class MusicApi {
       trackId = match[1]
     }
 
-    const res = await apiJson<{
-      musicId: number;
-      title: string
-    }>(`music/import/spotify/${encodeURIComponent(trackId)}`, {
-      method: 'POST'
-    })
+    const res = await apiJson<{ musicId: number; title: string }>(
+      `music/import/spotify/${encodeURIComponent(trackId)}`,
+      { method: 'POST' }
+    )
 
-    return {
-      id: res.musicId,
-      title: res.title
-    }
+    return { id: res.musicId, title: res.title }
   }
 
+  /**
+   * Performs merged local + Spotify search.
+   *
+   * @param params Search parameters.
+   */
   async search(params: MusicSearchParams): Promise<MusicSearchResponse> {
     const usp = new URLSearchParams()
     usp.set('q', params.q)
@@ -103,8 +176,13 @@ export class MusicApi {
     return apiJson<MusicSearchResponse>(`music/search?${usp.toString()}`)
   }
 
+  /**
+   * Convenience wrapper to read a user's library (favorites).
+   *
+   * @param userId User id.
+   */
   async getUserLibrary(userId: number): Promise<Music[]> {
-    return apiJson<Music[]>(`users/${userId}/favorites`);
+    return apiJson<Music[]>(`users/${userId}/favorites`)
   }
 }
 

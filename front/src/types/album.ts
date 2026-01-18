@@ -1,5 +1,8 @@
-import type {Artist} from './artist'
+import type { Artist } from './artist'
 
+/**
+ * Lightweight album item returned by the backend new releases endpoint.
+ */
 export interface NewReleaseAlbumItem {
   albumId: string
   name: string
@@ -9,6 +12,9 @@ export interface NewReleaseAlbumItem {
   artists: Artist[]
 }
 
+/**
+ * New releases response payload.
+ */
 export interface NewReleaseAlbumsResponse {
   items: NewReleaseAlbumItem[]
   meta: {
@@ -19,6 +25,9 @@ export interface NewReleaseAlbumsResponse {
   }
 }
 
+/**
+ * Minimal Spotify track fields returned for album track listings.
+ */
 export interface AlbumTrackSpotify {
   id: string
   name: string
@@ -29,6 +38,9 @@ export interface AlbumTrackSpotify {
   albumPicture: string | null
 }
 
+/**
+ * Album track item combining Spotify info and local import status.
+ */
 export interface AlbumTrackItem {
   spotify: AlbumTrackSpotify
   local: {
@@ -37,6 +49,9 @@ export interface AlbumTrackItem {
   }
 }
 
+/**
+ * Album tracks response payload.
+ */
 export interface AlbumTracksResponse {
   album: NewReleaseAlbumItem
   tracks: AlbumTrackItem[]
