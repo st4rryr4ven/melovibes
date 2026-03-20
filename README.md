@@ -1,8 +1,6 @@
 # 🎵 Melovibes - Plateforme de Critiques Musicales
 
 ## 🌍 Déploiement & Dépôts
-* **URL Frontend :** [INSÉRER LIEN ICI]
-* **URL Backend (API) :** [INSÉRER LIEN ICI]
 * **Dépôt Code Source :** https://gitlabinfo.iutmontp.univ-montp2.fr/bussierea/sites-de-critiques
 
 ---
@@ -52,10 +50,6 @@ L'investissement a été réparti équitablement (33.3% par membre) pour couvrir
     * Ajout et gestion des critères de notation multiples sur les reviews.
 * **Intégrations :** * Lien avec l'API Spotify pour la récupération et l'import des données.
     * Système d'envoi de mail automatique lors de la suppression d'un compte.
----
-
-## 🚀 Installation et Lancement en Local
-TO DO
 ---
 
 ## 🔐 Comptes de Test
